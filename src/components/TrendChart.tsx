@@ -99,27 +99,28 @@ const TrendChart: React.FC<TrendChartProps> = ({ data }) => {
             <div className="flex items-center bg-gray-100 rounded-lg p-0.5">
               <button 
                 onClick={handlePrev}
-                className="p-1 hover:bg-white hover:shadow-sm rounded-md transition-all text-gray-600"
+                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 hover:shadow-sm rounded-md transition-all text-gray-600 dark:text-gray-300"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
               <button 
                 onClick={handleNext}
                 disabled={pageOffset === 0}
-                className="p-1 hover:bg-white hover:shadow-sm rounded-md transition-all text-gray-600 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:shadow-none"
+                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 hover:shadow-sm rounded-md transition-all text-gray-600 dark:text-gray-300 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:shadow-none"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
           )}
 
-          <div className="flex bg-gray-100 rounded-lg p-1 gap-1">
+          <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1 gap-1">
             <button
               onClick={() => handleRangeChange('1M')}
               className={clsx(
                 "px-2 py-1 rounded-md text-xs font-medium transition-colors",
-                range === '1M' ? "bg-white text-purple-600 shadow-sm" : "text-gray-500 hover:text-gray-700"
+                range === '1M' ? "bg-white dark:bg-gray-600 shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
               )}
+              style={range === '1M' ? { color: 'var(--accent-primary)' } : undefined}
             >
               1M
             </button>
@@ -128,8 +129,9 @@ const TrendChart: React.FC<TrendChartProps> = ({ data }) => {
                 onClick={() => handleRangeChange('1Y')}
                 className={clsx(
                   "px-2 py-1 rounded-md text-xs font-medium transition-colors",
-                  range === '1Y' ? "bg-white text-purple-600 shadow-sm" : "text-gray-500 hover:text-gray-700"
+                  range === '1Y' ? "bg-white dark:bg-gray-600 shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                 )}
+                style={range === '1Y' ? { color: 'var(--accent-primary)' } : undefined}
               >
                 1Y
               </button>
@@ -139,8 +141,9 @@ const TrendChart: React.FC<TrendChartProps> = ({ data }) => {
                 onClick={() => handleRangeChange('ALL')}
                 className={clsx(
                   "px-2 py-1 rounded-md text-xs font-medium transition-colors",
-                  range === 'ALL' ? "bg-white text-purple-600 shadow-sm" : "text-gray-500 hover:text-gray-700"
+                  range === 'ALL' ? "bg-white dark:bg-gray-600 shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                 )}
+                style={range === 'ALL' ? { color: 'var(--accent-primary)' } : undefined}
               >
                 ALL
               </button>
@@ -166,10 +169,10 @@ const TrendChart: React.FC<TrendChartProps> = ({ data }) => {
                 <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} className="dark:stroke-gray-700" />
             <XAxis 
               dataKey="displayDate" 
-              stroke="#6b7280" 
+              stroke="#9ca3af" 
               tick={{ fill: '#6b7280', fontSize: 10 }}
               tickLine={false}
               axisLine={false}
@@ -177,7 +180,7 @@ const TrendChart: React.FC<TrendChartProps> = ({ data }) => {
               dy={10}
             />
             <YAxis 
-              stroke="#6b7280" 
+              stroke="#9ca3af" 
               tick={{ fill: '#6b7280', fontSize: 10 }}
               tickLine={false}
               axisLine={false}

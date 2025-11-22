@@ -45,6 +45,13 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
     const [isAiProcessing, setIsAiProcessing] = useState(false);
     const [aiProposedNote, setAiProposedNote] = useState<{ note: Note, date: Date } | null>(null);
 
+    const convertTo12Hour = (time24: string): string => {
+        const [hours, minutes] = time24.split(':').map(Number);
+        const period = hours >= 12 ? 'PM' : 'AM';
+        const hours12 = hours % 12 || 12;
+        return `${hours12}:${minutes.toString().padStart(2, '0')} ${period}`;
+    };
+
     useEffect(() => {
         if (initialSelectedDate) {
             setCurrentMonth(initialSelectedDate);
@@ -361,7 +368,7 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
                                 >
                                     <div className="flex justify-between items-start mb-2">
                                         <h4 className="font-bold">{note.title}</h4>
-                                        <span className="text-xs font-bold opacity-70 bg-white/50 px-2 py-1 rounded-md">{note.time}</span>
+                                        <span className="text-xs font-bold opacity-70 bg-white/50 px-2 py-1 rounded-md">{convertTo12Hour(note.time)}</span>
                                     </div>
                                     <p className="text-sm opacity-80 mb-3">{note.description}</p>
                                     <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -471,7 +478,7 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
                                 <div className="space-y-4">
                                     <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
                                         <p className="font-bold text-blue-900">{aiProposedNote.note.title}</p>
-                                        <p className="text-sm text-blue-700">{format(aiProposedNote.date, 'PPPP')} at {aiProposedNote.note.time}</p>
+                                        <p className="text-sm text-blue-700">{format(aiProposedNote.date, 'PPPP')} at {convertTo12Hour(aiProposedNote.note.time)}</p>
                                         <p className="text-sm text-blue-600 mt-2">{aiProposedNote.note.description}</p>
                                     </div>
                                     <div className="flex gap-3">

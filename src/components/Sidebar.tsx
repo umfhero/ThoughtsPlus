@@ -18,7 +18,6 @@ interface SidebarProps {
 const navItems = [
     { id: 'dashboard', icon: Home, label: 'Dashboard' },
     { id: 'stats', icon: BarChart2, label: 'Creator Stats' },
-    { id: 'settings', icon: Settings, label: 'Settings' },
 ] as const;
 
 const months = [
@@ -66,14 +65,14 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                     transition={{ type: "spring", stiffness: 300, damping: 30 }}
                     className="h-full w-[240px] p-4"
                 >
-                    <div className="h-full rounded-3xl bg-white/80 backdrop-blur-xl border border-white/50 shadow-2xl flex flex-col overflow-hidden">
+                    <div className="h-full rounded-3xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border border-white/50 dark:border-gray-700/50 shadow-2xl flex flex-col overflow-hidden transition-colors">
                         {/* Logo Area */}
                         <div className="p-6 flex items-center gap-3">
                             <div className="w-10 h-10 flex items-center justify-center shrink-0">
                                 <img src={logoPng} alt="Logo" className="w-10 h-10" />
                             </div>
                             <div className="flex flex-col">
-                                <span className="font-bold text-lg tracking-tight text-gray-900">Calendar+</span>
+                                <span className="font-bold text-lg tracking-tight text-gray-900 dark:text-gray-100">Calendar+</span>
                             </div>
                         </div>
 
@@ -84,28 +83,31 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                                     key={item.id}
                                     onClick={() => setPage(item.id)}
                                     className={clsx(
-                                        "w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-200 group relative",
+                                        "w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-300 group relative",
                                         currentPage === item.id
-                                            ? "bg-gray-900 text-white shadow-lg shadow-gray-900/20"
-                                            : "text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+                                            ? "bg-gray-900 dark:bg-gray-700 text-white shadow-lg shadow-gray-900/20 dark:shadow-gray-950/30"
+                                            : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100"
                                     )}
                                 >
-                                    <item.icon className={clsx("w-5 h-5 shrink-0", currentPage === item.id ? "text-blue-400" : "group-hover:text-gray-900")} />
-                                    <span className="font-medium text-sm">
-                                        {item.label}
-                                    </span>
                                     {currentPage === item.id && (
                                         <motion.div
-                                            layoutId="activeIndicator"
-                                            className="absolute right-3 w-1.5 h-1.5 rounded-full bg-blue-400"
+                                            layoutId="activeBg"
+                                            className="absolute inset-0 bg-gray-900 dark:bg-gray-700 rounded-xl"
+                                            transition={{ type: "spring", stiffness: 400, damping: 30 }}
                                         />
                                     )}
+                                    <motion.div
+                                        whileHover={{ scale: 1.2, rotate: [0, -10, 10, -10, 0] }}
+                                        transition={{ duration: 0.5 }}
+                                        className="relative z-10"
+                                    >
+                                        <item.icon className={clsx("w-5 h-5 shrink-0")} style={currentPage === item.id ? { color: 'var(--accent-primary)' } : undefined} />
+                                    </motion.div>
+                                    <span className="font-medium text-sm relative z-10">
+                                        {item.label}
+                                    </span>
                                 </button>
                             ))}
-
-                            <div className="pt-4 pb-2">
-                                <div className="h-px bg-gray-200 mx-2 mb-4" />
-                            </div>
 
                             {/* Calendar Dropdown */}
                             <div className="space-y-1">
@@ -115,15 +117,30 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                                         setIsCalendarOpen(!isCalendarOpen);
                                     }}
                                     className={clsx(
-                                        "w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-200 group",
+                                        "w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-300 group relative",
                                         currentPage === 'calendar'
                                             ? "bg-gray-900 text-white shadow-lg shadow-gray-900/20"
                                             : "text-gray-500 hover:bg-gray-100 hover:text-gray-900"
                                     )}
                                 >
-                                    <CalendarIcon className={clsx("w-5 h-5 shrink-0", currentPage === 'calendar' ? "text-blue-400" : "group-hover:text-gray-900")} />
-                                    <span className="font-medium text-sm flex-1 text-left">Calendar</span>
-                                    {isCalendarOpen ? <ChevronDown className="w-4 h-4 opacity-50" /> : <ChevronRight className="w-4 h-4 opacity-50" />}
+                                    {currentPage === 'calendar' && (
+                                        <motion.div
+                                            layoutId="activeBg"
+                                            className="absolute inset-0 bg-gray-900 rounded-xl"
+                                            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                                        />
+                                    )}
+                                    <motion.div
+                                        whileHover={{ scale: 1.2, rotate: [0, -10, 10, -10, 0] }}
+                                        transition={{ duration: 0.5 }}
+                                        className="relative z-10"
+                                    >
+                                        <CalendarIcon className={clsx("w-5 h-5 shrink-0")} style={currentPage === 'calendar' ? { color: 'var(--accent-primary)' } : undefined} />
+                                    </motion.div>
+                                    <span className="font-medium text-sm flex-1 text-left relative z-10">Calendar</span>
+                                    <div className="relative z-10">
+                                        {isCalendarOpen ? <ChevronDown className="w-4 h-4 opacity-50" /> : <ChevronRight className="w-4 h-4 opacity-50" />}
+                                    </div>
                                 </button>
 
                                 <AnimatePresence>
@@ -167,6 +184,41 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                                     )}
                                 </AnimatePresence>
                             </div>
+
+                            {/* Spacer to push Settings to bottom */}
+                            <div className="flex-1" />
+
+                            {/* Settings at bottom */}
+                            <div className="pt-4 pb-2">
+                                <div className="h-px bg-gray-200 mx-2 mb-4" />
+                            </div>
+                            <button
+                                onClick={() => setPage('settings')}
+                                className={clsx(
+                                    "w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-300 group relative",
+                                    currentPage === 'settings'
+                                        ? "bg-gray-900 text-white shadow-lg shadow-gray-900/20"
+                                        : "text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+                                )}
+                            >
+                                {currentPage === 'settings' && (
+                                    <motion.div
+                                        layoutId="activeBg"
+                                        className="absolute inset-0 bg-gray-900 rounded-xl"
+                                        transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                                    />
+                                )}
+                                <motion.div
+                                    whileHover={{ scale: 1.2, rotate: [0, -10, 10, -10, 0] }}
+                                    transition={{ duration: 0.5 }}
+                                    className="relative z-10"
+                                >
+                                    <Settings className={clsx("w-5 h-5 shrink-0")} style={currentPage === 'settings' ? { color: 'var(--accent-primary)' } : undefined} />
+                                </motion.div>
+                                <span className="font-medium text-sm relative z-10">
+                                    Settings
+                                </span>
+                            </button>
                         </div>
                     </div>
                 </motion.div>

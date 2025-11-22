@@ -1,8 +1,8 @@
 {
-  "name": "calendar-pro",
+  "name": "calendar-plus",
   "version": "1.0.0",
   "main": "dist-electron/main.js",
-  "description": "Premium Calendar App",
+  "description": "Calendar Plus App",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build && electron-builder",
@@ -39,10 +39,17 @@
     "vite-plugin-electron-renderer": "^0.14.5"
   },
   "build": {
-    "appId": "com.calendar.pro",
-    "productName": "Calendar Pro",
+    "appId": "com.calendarplus.app",
+    "productName": "Calendar Plus",
+    "extraResources": [
+      {
+        "from": "public/calendar_icon_181520.ico",
+        "to": "calendar_icon_181520.ico"
+      }
+    ],
     "win": {
       "target": "nsis",
+      "icon": "src/assets/calendar_icon_181520.png",
       "signingHashAlgorithms": [
         "sha256"
       ],

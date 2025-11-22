@@ -26,24 +26,12 @@ function App() {
 
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [currentMonth, setCurrentMonth] = useState(new Date());
-    const [userName, setUserName] = useState("");
+    const [userName] = useState("Majid");
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
     useEffect(() => {
         loadNotes();
-        loadUserName();
     }, []);
-
-    const loadUserName = async () => {
-        try {
-            // @ts-ignore
-            const name = await window.ipcRenderer.invoke('get-username');
-            setUserName(name);
-        } catch (e) {
-            console.error("Failed to get username", e);
-            setUserName("User");
-        }
-    };
 
     const loadNotes = async () => {
         // @ts-ignore
@@ -87,14 +75,14 @@ function App() {
     };
 
     return (
-        <div className="flex h-screen bg-[#F3F4F6] text-gray-900 overflow-hidden selection:bg-blue-500/30 font-sans">
+        <div className="flex h-screen bg-[#F3F4F6] dark:bg-gray-900 text-gray-900 dark:text-gray-100 overflow-hidden selection:bg-blue-500/30 font-sans transition-colors">
             {/* Custom Title Bar Drag Region */}
             <div className="absolute top-0 left-0 w-full h-8 z-50 app-drag-region" style={{ WebkitAppRegion: 'drag' } as any} />
 
-            {/* Premium Light Background Gradients */}
+            {/* Premium Background Gradients */}
             <div className="fixed inset-0 z-0 pointer-events-none">
-                <div className="absolute top-[-10%] left-[-10%] w-[600px] h-[600px] rounded-full bg-blue-400/20 blur-[120px]" />
-                <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] rounded-full bg-purple-400/20 blur-[120px]" />
+                <div className="absolute top-[-10%] left-[-10%] w-[600px] h-[600px] rounded-full bg-blue-400/20 dark:bg-blue-600/10 blur-[120px] transition-colors" />
+                <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] rounded-full bg-purple-400/20 dark:bg-purple-600/10 blur-[120px] transition-colors" />
             </div>
 
             <div className="relative z-20 flex w-full h-full pt-8">

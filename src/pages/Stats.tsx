@@ -150,20 +150,20 @@ export function StatsPage() {
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.5 }}
-                    className="p-6 rounded-2xl bg-gray-900 shadow-xl"
+                    className="p-8 rounded-[2rem] bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50 flex flex-col" style={{ height: '400px' }}
                 >
-                    <div className="flex justify-between items-center mb-6">
-                        <div>
-                            <h2 className="text-xl font-bold text-white">Player Activity Trend</h2>
-                            <p className="text-gray-400 text-sm">Daily active players across all islands</p>
+                    <div className="flex items-center gap-4 mb-6">
+                        <div className="p-4 rounded-2xl bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400">
+                            <TrendingUp className="w-7 h-7" />
                         </div>
-                        <div className="flex gap-2">
-                            <span className="px-3 py-1 rounded-full bg-white/10 text-white text-xs font-medium">
-                                Last {historicalStats.trendData.length} Days
-                            </span>
+                        <div>
+                            <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Player Activity Trend</h2>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Weekly player engagement</p>
                         </div>
                     </div>
-                    <TrendChart data={historicalStats.trendData} />
+                    <div className="flex-1 w-full min-h-0">
+                        <TrendChart data={historicalStats.trendData} />
+                    </div>
                 </motion.div>
             )}
 

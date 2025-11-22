@@ -26,3 +26,19 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   @apply bg-gray-400;
 }
+
+/* Dark mode scrollbar */
+.dark ::-webkit-scrollbar-thumb {
+  @apply bg-gray-600;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-500;
+}
+
+/* Accent color system - CSS variables set by ThemeContext */
+:root {
+  --accent-primary: rgb(59, 130, 246);
+  --accent-secondary: rgb(37, 99, 235);
+  --accent-light: rgb(219, 234, 254);
+}

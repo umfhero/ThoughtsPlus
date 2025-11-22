@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { Calendar as CalendarIcon, ArrowUpRight, ListTodo } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
-import { format, isAfter, parseISO } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { NotesData, Note } from '../App';
 import clsx from 'clsx';
 import { BASELINE_STATS, processStatsData, StatsData as HistoricalStatsData } from '../utils/statsManager';
@@ -21,31 +21,61 @@ export function Dashboard({ notes, onNavigateToNote, userName }: DashboardProps)
     const [stats, setStats] = useState<any>(null);
     const [historicalStats, setHistoricalStats] = useState<HistoricalStatsData | null>(null);
     const [aiSummary, setAiSummary] = useState<string | null>(null);
+    const [eventTab, setEventTab] = useState<'upcoming' | 'notCompleted'>('upcoming');
 
-    const getCountdown = (targetDate: Date): string => {
+    const convertTo12Hour = (time24: string): string => {
+        const [hours, minutes] = time24.split(':').map(Number);
+        const period = hours >= 12 ? 'PM' : 'AM';
+        const hours12 = hours % 12 || 12;
+        return `${hours12}:${minutes.toString().padStart(2, '0')} ${period}`;
+    };
+
+    const getCountdown = (targetDate: Date, eventTime: string): string => {
         const now = new Date();
-        const diff = targetDate.getTime() - now.getTime();
         
-        if (diff < 0) return 'Past event';
+        // Parse event time and create full datetime
+        const [hours, minutes] = eventTime.split(':').map(Number);
+        const eventDateTime = new Date(targetDate);
+        eventDateTime.setHours(hours, minutes, 0, 0);
         
-        const hours = Math.floor(diff / (1000 * 60 * 60));
-        const days = Math.floor(hours / 24);
-        const months = Math.floor(days / 30);
-        const weeks = Math.floor(days / 7);
+        // Set both dates to start of day for calendar day comparison
+        const nowStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const targetStart = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
         
-        if (hours < 1) return 'Less than an hour';
-        if (hours < 24) return `${hours} hour${hours !== 1 ? 's' : ''} left`;
-        if (days === 0) return 'Today';
-        if (days === 1) return 'Tomorrow';
-        if (days === 2) return '2 days';
-        if (days < 7) return `${days} days`;
-        if (days < 30) {
-            const remainingDays = days % 7;
+        const dayDiff = Math.round((targetStart.getTime() - nowStart.getTime()) / (1000 * 60 * 60 * 24));
+        
+        if (eventDateTime.getTime() < now.getTime()) return 'Past event';
+        
+        // Check if it's today
+        if (dayDiff === 0) {
+            const hoursDiff = (eventDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+            if (hoursDiff < 1) {
+                const minutesDiff = Math.round(hoursDiff * 60);
+                if (minutesDiff < 1) return 'Now';
+                return `${minutesDiff} minute${minutesDiff !== 1 ? 's' : ''} left`;
+            }
+            if (hoursDiff < 24) {
+                const wholeHours = Math.floor(hoursDiff);
+                return `${wholeHours} hour${wholeHours !== 1 ? 's' : ''} left`;
+            }
+            return 'Today';
+        }
+        
+        if (dayDiff === 1) return 'Tomorrow';
+        if (dayDiff === 2) return '2 days';
+        if (dayDiff < 7) return `${dayDiff} days`;
+        
+        const weeks = Math.floor(dayDiff / 7);
+        const remainingDays = dayDiff % 7;
+        
+        if (dayDiff < 30) {
             if (remainingDays === 0) {
                 return `${weeks} week${weeks !== 1 ? 's' : ''}`;
             }
             return `${weeks} week${weeks !== 1 ? 's' : ''} and ${remainingDays} day${remainingDays !== 1 ? 's' : ''} left`;
         }
+        
+        const months = Math.floor(dayDiff / 30);
         if (months === 1) return '1 month away';
         return `${months} months away`;
     };
@@ -56,10 +86,18 @@ export function Dashboard({ notes, onNavigateToNote, userName }: DashboardProps)
     const containerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        const savedWidth = localStorage.getItem('dashboardLeftWidth');
-        if (savedWidth) {
-            setLeftWidth(parseFloat(savedWidth));
-        }
+        const loadSavedWidth = async () => {
+            try {
+                // @ts-ignore
+                const savedWidth = await window.ipcRenderer.invoke('get-device-setting', 'dashboardLeftWidth');
+                if (savedWidth) {
+                    setLeftWidth(parseFloat(savedWidth));
+                }
+            } catch (e) {
+                console.error('Failed to load divider position', e);
+            }
+        };
+        loadSavedWidth();
     }, []);
 
     const handleMouseDown = (e: React.MouseEvent) => {
@@ -83,7 +121,9 @@ export function Dashboard({ notes, onNavigateToNote, userName }: DashboardProps)
         const handleMouseUp = () => {
             if (isDragging) {
                 setIsDragging(false);
-                localStorage.setItem('dashboardLeftWidth', leftWidth.toString());
+                // Save to device-specific settings
+                // @ts-ignore
+                window.ipcRenderer.invoke('save-device-setting', 'dashboardLeftWidth', leftWidth.toString());
             }
         };
 
@@ -121,19 +161,32 @@ export function Dashboard({ notes, onNavigateToNote, userName }: DashboardProps)
 
     // Get upcoming events
     const getUpcomingEvents = () => {
-        const allEvents: { date: Date; note: Note }[] = [];
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        const allEvents: { date: Date; note: Note; isOverdue: boolean }[] = [];
+        const now = new Date();
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
         Object.entries(notes).forEach(([dateStr, dayNotes]) => {
             const date = parseISO(dateStr);
-            if (isAfter(date, today) || date.getTime() === today.getTime()) {
-                dayNotes.forEach(note => {
-                    allEvents.push({ date, note });
-                });
-            }
+            dayNotes.forEach(note => {
+                // Parse the note's time and create full datetime
+                const [hours, minutes] = note.time.split(':').map(Number);
+                const eventDateTime = new Date(date);
+                eventDateTime.setHours(hours, minutes, 0, 0);
+                
+                const eventDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+                const isToday = eventDate.getTime() === todayStart.getTime();
+                const isOverdue = eventDateTime.getTime() < now.getTime();
+                
+                // Auto-upgrade to high priority if due today
+                if (isToday && note.importance !== 'high') {
+                    note.importance = 'high';
+                }
+                
+                // Include all future events and overdue events
+                allEvents.push({ date: eventDateTime, note, isOverdue });
+            });
         });
-        return allEvents.sort((a, b) => a.date.getTime() - b.date.getTime()).slice(0, 5);
+        return allEvents.sort((a, b) => a.date.getTime() - b.date.getTime());
     };
 
     const upcomingEvents = getUpcomingEvents();
@@ -235,17 +288,17 @@ export function Dashboard({ notes, onNavigateToNote, userName }: DashboardProps)
                     <motion.h1
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="text-5xl font-bold text-gray-800 mb-3 tracking-tight"
+                        className="text-5xl font-bold text-gray-800 dark:text-gray-100 mb-3 tracking-tight"
                     >
                         {getGreeting()}
                     </motion.h1>
-                    <p className="text-gray-500 text-lg">Here's your daily overview.</p>
+                    <p className="text-gray-500 dark:text-gray-400 text-lg">Here's your daily overview.</p>
                 </div>
                 <div className="text-right">
-                    <h2 className="text-6xl font-bold text-gray-900 tracking-tighter">
+                    <h2 className="text-6xl font-bold text-gray-900 dark:text-gray-100 tracking-tighter">
                         {format(time, 'h:mm a')}
                     </h2>
-                    <p className="text-gray-500 font-medium mt-2 text-lg">
+                    <p className="text-gray-500 dark:text-gray-400 font-medium mt-2 text-lg">
                         {format(time, 'EEEE, MMMM do')}
                     </p>
                 </div>
@@ -259,24 +312,55 @@ export function Dashboard({ notes, onNavigateToNote, userName }: DashboardProps)
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 }}
-                    whileHover={{ y: -5 }}
-                    className="p-8 rounded-[2rem] bg-white border border-gray-100 shadow-xl shadow-gray-200/50 flex flex-col h-full relative group"
+                    whileHover={{ 
+                        y: -8, 
+                        scale: 1.02,
+                        boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15)'
+                    }}
+                    className="p-8 rounded-[2rem] bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50 flex flex-col h-full relative group transition-colors"
                 >
-                    <div className="flex items-center gap-4 mb-6">
-                        <div className="p-4 rounded-2xl bg-blue-50 text-blue-600">
+                    <div className="flex items-center gap-4 mb-4">
+                        <div className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-900/30" style={{ color: 'var(--accent-primary)' }}>
                             <CalendarIcon className="w-7 h-7" />
                         </div>
                         <div>
-                            <p className="text-sm font-medium text-gray-400 uppercase tracking-wider">Upcoming</p>
-                            <h3 className="text-3xl font-bold text-gray-800">{upcomingEvents.length} Events</h3>
+                            <p className="text-sm font-medium text-gray-400 dark:text-gray-300 uppercase tracking-wider">Events</p>
+                            <h3 className="text-3xl font-bold text-gray-800 dark:text-gray-100">{upcomingEvents.length} Total</h3>
                         </div>
                     </div>
 
+                    <div className="flex gap-2 mb-4">
+                        <button
+                            onClick={() => setEventTab('upcoming')}
+                            className={clsx(
+                                "flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all",
+                                eventTab === 'upcoming'
+                                    ? "bg-white dark:bg-gray-700 shadow-md"
+                                    : "bg-gray-50 dark:bg-gray-800 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+                            )}
+                            style={eventTab === 'upcoming' ? { color: 'var(--accent-primary)' } : undefined}
+                        >
+                            Upcoming ({upcomingEvents.filter(e => !e.isOverdue).length})
+                        </button>
+                        <button
+                            onClick={() => setEventTab('notCompleted')}
+                            className={clsx(
+                                "flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all",
+                                eventTab === 'notCompleted'
+                                    ? "bg-white dark:bg-gray-700 shadow-md"
+                                    : "bg-gray-50 dark:bg-gray-800 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+                            )}
+                            style={eventTab === 'notCompleted' ? { color: 'var(--accent-primary)' } : undefined}
+                        >
+                            Not Completed ({upcomingEvents.filter(e => e.isOverdue).length})
+                        </button>
+                    </div>
+
                     <div className="space-y-4 flex-1 overflow-y-auto pr-2 custom-scrollbar">
-                        {upcomingEvents.length === 0 ? (
-                            <p className="text-gray-400 text-sm">No upcoming events.</p>
+                        {upcomingEvents.filter(e => eventTab === 'upcoming' ? !e.isOverdue : e.isOverdue).length === 0 ? (
+                            <p className="text-gray-400 dark:text-gray-500 text-sm">{eventTab === 'upcoming' ? 'No upcoming events.' : 'No overdue events.'}</p>
                         ) : (
-                            upcomingEvents.map(({ date, note }) => (
+                            upcomingEvents.filter(e => eventTab === 'upcoming' ? !e.isOverdue : e.isOverdue).slice(0, 10).map(({ date, note }) => (
                                 <motion.div
                                     key={note.id}
                                     whileHover={{ scale: 1.02 }}
@@ -289,8 +373,8 @@ export function Dashboard({ notes, onNavigateToNote, userName }: DashboardProps)
                                     <div className="flex justify-between items-start mb-1">
                                         <span className="font-bold text-sm">{note.title}</span>
                                         <div className="text-right">
-                                            <div className="text-xs opacity-70">{format(date, 'MMM d')}</div>
-                                            <div className="text-[10px] opacity-60 font-semibold">{getCountdown(date)}</div>
+                                            <div className="text-xs opacity-70">{format(date, 'MMM d')} {convertTo12Hour(note.time)}</div>
+                                            <div className="text-[10px] opacity-60 font-semibold">{getCountdown(date, note.time)}</div>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2 text-xs opacity-80">
@@ -319,16 +403,20 @@ export function Dashboard({ notes, onNavigateToNote, userName }: DashboardProps)
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.2 }}
-                    whileHover={{ y: -5 }}
-                    className="p-8 rounded-[2rem] bg-gradient-to-br from-purple-50 to-blue-50 border border-purple-100 shadow-xl flex flex-col h-full"
+                    whileHover={{ 
+                        y: -8, 
+                        scale: 1.02,
+                        boxShadow: '0 20px 60px rgba(147, 51, 234, 0.2)'
+                    }}
+                    className="p-8 rounded-[2rem] bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border border-purple-100 dark:border-purple-800 shadow-xl flex flex-col h-full transition-colors"
                 >
                     <div className="flex items-center gap-4 mb-6">
-                        <div className="p-4 rounded-2xl bg-purple-100 text-purple-600">
+                        <div className="p-4 rounded-2xl bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400">
                             <ArrowUpRight className="w-7 h-7" />
                         </div>
                         <div>
-                            <p className="text-sm font-medium text-gray-400 uppercase tracking-wider">Weekly Trends</p>
-                            <h3 className="text-2xl font-bold text-gray-800">Performance</h3>
+                            <p className="text-sm font-medium text-gray-400 dark:text-gray-300 uppercase tracking-wider">Weekly Trends</p>
+                            <h3 className="text-2xl font-bold text-gray-800 dark:text-white">Performance</h3>
                         </div>
                     </div>
 
@@ -337,10 +425,10 @@ export function Dashboard({ notes, onNavigateToNote, userName }: DashboardProps)
                         {historicalStats && historicalStats.trendData.length > 0 ? (
                             <TrendChart data={historicalStats.trendData} />
                         ) : (
-                            <div className="h-full flex items-center justify-center bg-white/50 rounded-xl border-2 border-dashed border-purple-200">
+                            <div className="h-full flex items-center justify-center bg-white/50 dark:bg-gray-700/50 rounded-xl border-2 border-dashed border-purple-200 dark:border-purple-700">
                                 <div className="text-center">
-                                    <p className="text-sm font-medium text-gray-500">Trend Graph</p>
-                                    <p className="text-xs text-gray-400 mt-1">No historical data available</p>
+                                    <p className="text-sm font-medium text-gray-500 dark:text-gray-300">Trend Graph</p>
+                                    <p className="text-xs text-gray-400 dark:text-gray-400 mt-1">No historical data available</p>
                                 </div>
                             </div>
                         )}
@@ -353,81 +441,85 @@ export function Dashboard({ notes, onNavigateToNote, userName }: DashboardProps)
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.25 }}
-                whileHover={{ y: -5 }}
-                className="p-8 rounded-[2rem] bg-gradient-to-br from-white to-yellow-50/30 border border-white/60 shadow-xl shadow-gray-200/50 relative overflow-hidden"
+                whileHover={{ 
+                    y: -8, 
+                    scale: 1.01,
+                    boxShadow: '0 25px 70px rgba(0, 0, 0, 0.15)'
+                }}
+                className="p-8 rounded-[2rem] bg-gradient-to-br from-white to-yellow-50/30 dark:from-gray-800 dark:to-purple-900/20 border border-white/60 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50 relative overflow-hidden transition-colors"
             >
                 <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-blue-500/5 to-purple-500/5 rounded-full blur-3xl pointer-events-none z-0" />
 
                 <div className="flex items-center justify-between mb-8 relative z-10">
                     <div className="flex items-center gap-4">
-                        <div className="p-2 rounded-2xl bg-purple-50/80 backdrop-blur-sm border border-purple-100">
+                        <div className="p-2 rounded-2xl bg-purple-50/80 dark:bg-purple-900/30 backdrop-blur-sm border border-purple-100 dark:border-purple-800">
                             <img src={MaizSticker} alt="Maiz Studio" className="w-16 h-16 object-contain" />
                         </div>
                         <div>
-                            <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">Fortnite Creative</p>
-                            <h3 className="text-3xl font-bold text-gray-800">Live Stats (8 Maps)</h3>
+                            <p className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fortnite Creative</p>
+                            <h3 className="text-3xl font-bold text-gray-800 dark:text-gray-100">Live Stats (8 Maps)</h3>
                         </div>
                     </div>
                     <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         onClick={loadStats}
-                        className="px-6 py-3 rounded-xl bg-white/80 backdrop-blur-sm border border-gray-200 shadow-lg shadow-gray-100 text-sm font-bold text-gray-700 hover:text-blue-600 transition-colors"
+                        className="px-6 py-3 rounded-xl bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm border border-gray-200 dark:border-gray-600 shadow-lg shadow-gray-100 dark:shadow-gray-900 text-sm font-bold text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                     >
                         Refresh Data
                     </motion.button>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 relative z-10">
-                    <div className="p-6 rounded-2xl bg-white/80 backdrop-blur-sm shadow-sm border border-gray-100">
+                    <div className="p-6 rounded-2xl bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm shadow-sm border border-gray-100 dark:border-gray-600">
                         <div className="flex justify-between items-start mb-2">
-                            <p className="text-sm font-medium text-gray-400">Total Minutes Played</p>
+                            <p className="text-sm font-medium text-gray-400 dark:text-gray-300">Total Minutes Played</p>
                             <ArrowUpRight className="w-4 h-4 text-green-500" />
                         </div>
-                        <p className="text-3xl font-bold text-gray-800">
+                        <p className="text-3xl font-bold text-gray-800 dark:text-white">
                             <span className="hidden xl:inline">{(BASELINE_STATS.totalMinutesPlayed + (stats?.fortnite?.raw?.minutesPlayed || 0)).toLocaleString()}</span>
                             <span className="xl:hidden">{formatCompactNumber(BASELINE_STATS.totalMinutesPlayed + (stats?.fortnite?.raw?.minutesPlayed || 0))}</span>
                         </p>
-                        <div className="mt-2 text-xs text-gray-400">
+                        <div className="mt-2 text-xs text-gray-400 dark:text-gray-400">
                             <span>Across all maps</span>
                         </div>
                     </div>
-                    <div className="p-6 rounded-2xl bg-white/80 backdrop-blur-sm shadow-sm border border-gray-100">
+                    <div className="p-6 rounded-2xl bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm shadow-sm border border-gray-100 dark:border-gray-600">
                         <div className="flex justify-between items-start mb-2">
-                            <p className="text-sm font-medium text-gray-400">Unique Players</p>
+                            <p className="text-sm font-medium text-gray-400 dark:text-gray-300">Unique Players</p>
                             <ArrowUpRight className="w-4 h-4 text-green-500" />
                         </div>
-                        <p className="text-3xl font-bold text-gray-800">
+                        <p className="text-3xl font-bold text-gray-800 dark:text-white">
                             <span className="hidden xl:inline">{(BASELINE_STATS.totalUniquePlayers + (stats?.fortnite?.raw?.uniquePlayers || 0)).toLocaleString()}</span>
                             <span className="xl:hidden">{formatCompactNumber(BASELINE_STATS.totalUniquePlayers + (stats?.fortnite?.raw?.uniquePlayers || 0))}</span>
                         </p>
-                        <div className="mt-2 text-xs text-gray-400">
+                        <div className="mt-2 text-xs text-gray-400 dark:text-gray-400">
                             <span>Total reach</span>
                         </div>
                     </div>
-                    <div className="p-6 rounded-2xl bg-white/80 backdrop-blur-sm shadow-sm border border-gray-100">
+                    <div className="p-6 rounded-2xl bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm shadow-sm border border-gray-100 dark:border-gray-600">
                         <div className="flex justify-between items-start mb-2">
-                            <p className="text-sm font-medium text-gray-400">Total Favorites</p>
+                            <p className="text-sm font-medium text-gray-400 dark:text-gray-300">Total Favorites</p>
                             <ArrowUpRight className="w-4 h-4 text-green-500" />
                         </div>
-                        <p className="text-3xl font-bold text-gray-800">
+                        <p className="text-3xl font-bold text-gray-800 dark:text-white">
                             <span className="hidden xl:inline">{(BASELINE_STATS.totalFavorites + (stats?.fortnite?.raw?.favorites || 0)).toLocaleString()}</span>
                             <span className="xl:hidden">{formatCompactNumber(BASELINE_STATS.totalFavorites + (stats?.fortnite?.raw?.favorites || 0))}</span>
                         </p>
-                        <div className="mt-2 text-xs text-gray-400">
+                        <div className="mt-2 text-xs text-gray-400 dark:text-gray-400">
                             <span>Community love</span>
                         </div>
                     </div>
-                    <div className="p-6 rounded-2xl bg-white/80 backdrop-blur-sm shadow-sm border border-gray-100">
+                    <div className="p-6 rounded-2xl bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm shadow-sm border border-gray-100 dark:border-gray-600">
                         <div className="flex justify-between items-start mb-2">
-                            <p className="text-sm font-medium text-gray-400">Total Plays</p>
+                            <p className="text-sm font-medium text-gray-400 dark:text-gray-300">Total Plays</p>
                             <ArrowUpRight className="w-4 h-4 text-green-500" />
                         </div>
-                        <p className="text-3xl font-bold text-gray-800">
+                        <p className="text-3xl font-bold text-gray-800 dark:text-white">
                             <span className="hidden xl:inline">{(BASELINE_STATS.totalLifetimePlays + (stats?.fortnite?.raw?.plays || 0)).toLocaleString()}</span>
                             <span className="xl:hidden">{formatCompactNumber(BASELINE_STATS.totalLifetimePlays + (stats?.fortnite?.raw?.plays || 0))}</span>
                         </p>
-                        <div className="mt-2 text-xs text-gray-400">
+                        <div className="mt-2 text-xs text-gray-400 dark:text-gray-400">
                             <span>Game sessions</span>
                         </div>
                     </div>

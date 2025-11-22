@@ -12,27 +12,95 @@ process.env.VITE_PUBLIC = app.isPackaged ? process.env.DIST : path.join(__dirnam
 
 let win: BrowserWindow | null
 
-const DEFAULT_DATA_PATH = path.join(app.getPath('userData'), 'calendar-data.json');
+const ONEDRIVE_DATA_PATH = 'C:\\Users\\umfhe\\OneDrive - Middlesex University\\CalendarPlus\\calendar-data.json';
+const DEFAULT_DATA_PATH = ONEDRIVE_DATA_PATH;
 let currentDataPath = DEFAULT_DATA_PATH;
 
+// Device-specific settings (stored locally, not synced)
+const DEVICE_SETTINGS_PATH = path.join(app.getPath('userData'), 'device-settings.json');
+let deviceSettings: any = {};
+
+// Global settings (synced across devices)
+let globalSettingsPath = '';
+
 async function loadSettings() {
-    const settingsPath = path.join(app.getPath('userData'), 'settings.json');
+    // Load device-specific settings (local)
     try {
-        if (existsSync(settingsPath)) {
-            const settings = JSON.parse(await fs.readFile(settingsPath, 'utf-8'));
-            if (settings.dataPath) currentDataPath = settings.dataPath;
+        if (existsSync(DEVICE_SETTINGS_PATH)) {
+            deviceSettings = JSON.parse(await fs.readFile(DEVICE_SETTINGS_PATH, 'utf-8'));
         }
     } catch (e) {
-        console.error('Failed to load settings', e);
+        console.error('Failed to load device settings', e);
+    }
+
+    // Load global settings (from OneDrive folder)
+    try {
+        const oneDriveDir = path.dirname(ONEDRIVE_DATA_PATH);
+        if (!existsSync(oneDriveDir)) {
+            await fs.mkdir(oneDriveDir, { recursive: true });
+        }
+        globalSettingsPath = path.join(oneDriveDir, 'settings.json');
+        if (existsSync(globalSettingsPath)) {
+            const settings = JSON.parse(await fs.readFile(globalSettingsPath, 'utf-8'));
+            if (settings.dataPath) currentDataPath = settings.dataPath;
+        } else {
+            currentDataPath = ONEDRIVE_DATA_PATH;
+        }
+    } catch (e) {
+        console.error('Failed to load global settings', e);
+        currentDataPath = ONEDRIVE_DATA_PATH;
+    }
+}
+
+async function saveDeviceSettings() {
+    try {
+        await fs.writeFile(DEVICE_SETTINGS_PATH, JSON.stringify(deviceSettings, null, 2));
+    } catch (e) {
+        console.error('Failed to save device settings', e);
+    }
+}
+
+async function loadGlobalSettings() {
+    try {
+        if (existsSync(globalSettingsPath)) {
+            return JSON.parse(await fs.readFile(globalSettingsPath, 'utf-8'));
+        }
+        return {};
+    } catch (e) {
+        console.error('Failed to load global settings', e);
+        return {};
+    }
+}
+
+async function saveGlobalSettings(settings: any) {
+    try {
+        const oneDriveDir = path.dirname(ONEDRIVE_DATA_PATH);
+        if (!existsSync(oneDriveDir)) {
+            await fs.mkdir(oneDriveDir, { recursive: true });
+        }
+        await fs.writeFile(globalSettingsPath, JSON.stringify(settings, null, 2));
+    } catch (e) {
+        console.error('Failed to save global settings', e);
     }
 }
 
 function createWindow() {
+    // Use the icon from the app resources
+    let iconPath: string;
+    if (process.platform === 'win32') {
+        iconPath = app.isPackaged 
+            ? path.join(process.resourcesPath, 'calendar_icon_181520.ico')
+            : path.join(process.env.VITE_PUBLIC || '', 'calendar_icon_181520.ico');
+    } else {
+        iconPath = path.join(process.env.VITE_PUBLIC || '', 'calendar_icon_181520.png');
+    }
+    
     win = new BrowserWindow({
         width: 1200, height: 800, frame: false, titleBarStyle: 'hidden',
         titleBarOverlay: { color: '#00000000', symbolColor: '#4b5563', height: 30 },
         webPreferences: { preload: path.join(__dirname, 'preload.js'), nodeIntegration: false, contextIsolation: true },
-        backgroundColor: '#00000000'
+        backgroundColor: '#00000000',
+        icon: iconPath
     })
     Menu.setApplicationMenu(null);
     win.webContents.on('did-finish-load', () => win?.webContents.send('main-process-message', (new Date).toLocaleString()))
@@ -46,6 +114,11 @@ function createWindow() {
 
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit() })
 app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow() })
+
+// Set app user model ID for Windows to ensure proper taskbar icon
+if (process.platform === 'win32') {
+    app.setAppUserModelId('com.calendarplus.app');
+}
 
 app.whenReady().then(async () => {
     await loadSettings();
@@ -95,32 +168,46 @@ app.whenReady().then(async () => {
                 win?.webContents.executeJavaScript(`console.log("✅ ${metric}: ${total}")`);
             }
 
-            const statsPath = path.join(app.getPath('userData'), 'fortnite-stats-history.json');
-            let history: any = { snapshots: [], allTime: { minutesPlayed: 0, uniquePlayers: 0, favorites: 0, plays: 0 } };
+            // Save stats to OneDrive folder for cross-device sync
+            const oneDriveDir = path.dirname(currentDataPath);
+            const statsPath = path.join(oneDriveDir, 'fortnite-stats-history.json');
+            let history: any = { snapshots: [], weeklyData: {}, allTime: { minutesPlayed: 0, uniquePlayers: 0, favorites: 0, plays: 0 } };
             try {
                 if (existsSync(statsPath)) history = JSON.parse(await fs.readFile(statsPath, 'utf-8'));
+                if (!history.weeklyData) history.weeklyData = {};
             } catch { }
 
-            const today = new Date().toISOString().split('T')[0];
+            // Use ISO week number for deduplication
+            const currentTime = new Date();
+            const startOfYear = new Date(currentTime.getFullYear(), 0, 1);
+            const weekNumber = Math.ceil((((currentTime.getTime() - startOfYear.getTime()) / 86400000) + startOfYear.getDay() + 1) / 7);
+            const weekKey = `${currentTime.getFullYear()}-W${weekNumber}`;
+            
+            const today = currentTime.toISOString().split('T')[0];
             const existing = history.snapshots.find((s: any) => s.date === today);
 
-            if (!existing) {
-                history.snapshots.push({ date: today, ...results });
-                const dayMaxes: any = {};
-                history.snapshots.forEach((s: any) => {
-                    if (!dayMaxes[s.date] || s.minutesPlayed > dayMaxes[s.date].minutesPlayed) dayMaxes[s.date] = s;
-                });
+            // Check if this week's data already exists
+            if (!history.weeklyData[weekKey]) {
+                // New week - add the data
+                history.weeklyData[weekKey] = { date: today, ...results };
+                
+                if (!existing) {
+                    history.snapshots.push({ date: today, week: weekKey, ...results });
+                }
+                
+                // Recalculate all-time stats from weekly data (prevents duplicates)
                 history.allTime = { minutesPlayed: 0, uniquePlayers: 0, favorites: 0, plays: 0 };
-                Object.values(dayMaxes).forEach((s: any) => {
-                    history.allTime.minutesPlayed += s.minutesPlayed || 0;
-                    history.allTime.uniquePlayers = Math.max(history.allTime.uniquePlayers, s.uniquePlayers || 0);
-                    history.allTime.favorites = Math.max(history.allTime.favorites, s.favorites || 0);
-                    history.allTime.plays += s.plays || 0;
+                Object.values(history.weeklyData).forEach((weekData: any) => {
+                    history.allTime.minutesPlayed += weekData.minutesPlayed || 0;
+                    history.allTime.uniquePlayers = Math.max(history.allTime.uniquePlayers, weekData.uniquePlayers || 0);
+                    history.allTime.favorites = Math.max(history.allTime.favorites, weekData.favorites || 0);
+                    history.allTime.plays += weekData.plays || 0;
                 });
+                
                 await fs.writeFile(statsPath, JSON.stringify(history, null, 2));
-                win?.webContents.executeJavaScript(`console.log("💾 Saved ${today} snapshot")`);
+                win?.webContents.executeJavaScript(`console.log("💾 Saved week ${weekKey} snapshot")`);
             } else {
-                win?.webContents.executeJavaScript(`console.log("ℹ️ Using cached all-time data")`);
+                win?.webContents.executeJavaScript(`console.log("ℹ️ Week ${weekKey} already recorded - using cached data")`);
             }
 
             const fmt = (n: number) => n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1000 ? (n / 1000).toFixed(1) + 'K' : n.toString();
@@ -155,6 +242,10 @@ app.whenReady().then(async () => {
 
     ipcMain.handle('get-data', async () => {
         try {
+            const dir = path.dirname(currentDataPath);
+            if (!existsSync(dir)) {
+                await fs.mkdir(dir, { recursive: true });
+            }
             if (!existsSync(currentDataPath)) return { notes: {} };
             return JSON.parse(await fs.readFile(currentDataPath, 'utf-8'));
         } catch { return { notes: {} }; }
@@ -162,9 +253,17 @@ app.whenReady().then(async () => {
 
     ipcMain.handle('save-data', async (_, data) => {
         try {
+            const dir = path.dirname(currentDataPath);
+            if (!existsSync(dir)) {
+                await fs.mkdir(dir, { recursive: true });
+            }
             await fs.writeFile(currentDataPath, JSON.stringify(data, null, 2));
             return { success: true };
         } catch (e) { return { success: false, error: e }; }
+    });
+
+    ipcMain.handle('get-current-data-path', async () => {
+        return currentDataPath;
     });
 
     ipcMain.handle('select-data-folder', async () => {
@@ -172,17 +271,71 @@ app.whenReady().then(async () => {
         if (!result.canceled && result.filePaths.length > 0) {
             const newPath = path.join(result.filePaths[0], 'calendar-data.json');
             currentDataPath = newPath;
-            const settingsPath = path.join(app.getPath('userData'), 'settings.json');
-            await fs.writeFile(settingsPath, JSON.stringify({ dataPath: newPath }));
+            await saveGlobalSettings({ dataPath: newPath });
             return newPath;
         }
         return null;
+    });
+
+    // Device-specific settings (divider position, etc.)
+    ipcMain.handle('get-device-setting', async (_, key) => {
+        return deviceSettings[key];
+    });
+
+    ipcMain.handle('save-device-setting', async (_, key, value) => {
+        deviceSettings[key] = value;
+        await saveDeviceSettings();
+        return { success: true };
+    });
+
+    // Global settings (theme, etc.)
+    ipcMain.handle('get-global-setting', async (_, key) => {
+        try {
+            if (existsSync(globalSettingsPath)) {
+                const settings = JSON.parse(await fs.readFile(globalSettingsPath, 'utf-8'));
+                return settings[key];
+            }
+        } catch { }
+        return null;
+    });
+
+    ipcMain.handle('save-global-setting', async (_, key, value) => {
+        try {
+            let settings: any = {};
+            if (existsSync(globalSettingsPath)) {
+                settings = JSON.parse(await fs.readFile(globalSettingsPath, 'utf-8'));
+            }
+            settings[key] = value;
+            await saveGlobalSettings(settings);
+            return { success: true };
+        } catch (e) { return { success: false, error: e }; }
     });
 
     ipcMain.handle('get-auto-launch', () => app.getLoginItemSettings().openAtLogin);
     ipcMain.handle('set-auto-launch', (_, openAtLogin) => {
         app.setLoginItemSettings({ openAtLogin, path: app.getPath('exe') });
         return app.getLoginItemSettings().openAtLogin;
+    });
+
+    // Global settings handlers for theme and accent color
+    ipcMain.handle('get-global-setting', async (_, key: string) => {
+        try {
+            const settings = await loadGlobalSettings();
+            return settings[key] || null;
+        } catch (e) {
+            return null;
+        }
+    });
+
+    ipcMain.handle('save-global-setting', async (_, key: string, value: any) => {
+        try {
+            const settings = await loadGlobalSettings();
+            settings[key] = value;
+            await saveGlobalSettings(settings);
+            return true;
+        } catch (e) {
+            return false;
+        }
     });
 
     ipcMain.handle('get-username', () => 'Majid');
