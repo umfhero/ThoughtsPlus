@@ -11,14 +11,17 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@types/papaparse": "^5.5.0",
     "cheerio": "^1.1.2",
     "clsx": "^2.1.0",
     "date-fns": "^3.3.1",
     "dotenv": "^17.2.3",
     "framer-motion": "^11.0.8",
     "lucide-react": "^0.344.0",
+    "papaparse": "^5.5.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "recharts": "^3.4.1",
     "tailwind-merge": "^2.2.1"
   },
   "devDependencies": {
@@ -40,7 +43,9 @@
     "productName": "Calendar Pro",
     "win": {
       "target": "nsis",
-      "signingHashAlgorithms": ["sha256"],
+      "signingHashAlgorithms": [
+        "sha256"
+      ],
       "sign": null
     },
     "nsis": {

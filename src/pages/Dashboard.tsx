@@ -1,9 +1,11 @@
 import { motion } from 'framer-motion';
-import { Clock, Calendar as CalendarIcon, ArrowUpRight, ListTodo } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { Clock, Calendar as CalendarIcon, ArrowUpRight, ListTodo, GripVertical } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
 import { format, isAfter, parseISO } from 'date-fns';
 import { NotesData, Note } from '../App';
 import clsx from 'clsx';
+import { BASELINE_STATS, processStatsData, StatsData as HistoricalStatsData } from '../utils/statsManager';
+import TrendChart from '../components/TrendChart';
 
 interface DashboardProps {
     notes: NotesData;
@@ -14,12 +16,64 @@ interface DashboardProps {
 
 export function Dashboard({ notes, onNavigateToNote, userName }: DashboardProps) {
     const [time, setTime] = useState(new Date());
+    // @ts-ignore
     const [stats, setStats] = useState<any>(null);
+    const [historicalStats, setHistoricalStats] = useState<HistoricalStatsData | null>(null);
     const [aiSummary, setAiSummary] = useState<string | null>(null);
+    
+    // Resizable layout state
+    const [leftWidth, setLeftWidth] = useState(66); // Percentage
+    const [isDragging, setIsDragging] = useState(false);
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const savedWidth = localStorage.getItem('dashboardLeftWidth');
+        if (savedWidth) {
+            setLeftWidth(parseFloat(savedWidth));
+        }
+    }, []);
+
+    const handleMouseDown = (e: React.MouseEvent) => {
+        setIsDragging(true);
+        e.preventDefault();
+    };
+
+    useEffect(() => {
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!isDragging || !containerRef.current) return;
+            
+            const containerRect = containerRef.current.getBoundingClientRect();
+            const newLeftWidth = ((e.clientX - containerRect.left) / containerRect.width) * 100;
+            
+            // Limit width between 30% and 70%
+            if (newLeftWidth >= 30 && newLeftWidth <= 70) {
+                setLeftWidth(newLeftWidth);
+            }
+        };
+
+        const handleMouseUp = () => {
+            if (isDragging) {
+                setIsDragging(false);
+                localStorage.setItem('dashboardLeftWidth', leftWidth.toString());
+            }
+        };
+
+        if (isDragging) {
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+        }
+
+        return () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [isDragging, leftWidth]);
 
     useEffect(() => {
         const timer = setInterval(() => setTime(new Date()), 1000);
         loadStats();
+        const hData = processStatsData();
+        setHistoricalStats(hData);
         return () => clearInterval(timer);
     }, []);
 
@@ -161,15 +215,16 @@ export function Dashboard({ notes, onNavigateToNote, userName }: DashboardProps)
                 </div>
             </div>
 
-            {/* Quick Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                {/* Upcoming Events - WIDENED */}
+            {/* Quick Stats Grid - Resizable */}
+            <div ref={containerRef} className="flex flex-col md:flex-row gap-8 h-96 select-none">
+                {/* Upcoming Events - Resizable Left Column */}
                 <motion.div
+                    style={{ width: `${leftWidth}%` }}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 }}
                     whileHover={{ y: -5 }}
-                    className="p-8 rounded-[2rem] bg-white border border-gray-100 shadow-xl shadow-gray-200/50 flex flex-col h-96 col-span-2"
+                    className="p-8 rounded-[2rem] bg-white border border-gray-100 shadow-xl shadow-gray-200/50 flex flex-col h-full relative group"
                 >
                     <div className="flex items-center gap-4 mb-6">
                         <div className="p-4 rounded-2xl bg-blue-50 text-blue-600">
@@ -211,13 +266,22 @@ export function Dashboard({ notes, onNavigateToNote, userName }: DashboardProps)
                     </div>
                 </motion.div>
 
-                {/* Weekly Trends Graph - REPLACES CURSEFORGE */}
+                {/* Resizable Handle */}
+                <div
+                    className="hidden md:flex w-4 items-center justify-center cursor-col-resize hover:bg-gray-100 rounded-full transition-colors group"
+                    onMouseDown={handleMouseDown}
+                >
+                    <div className="h-12 w-1 bg-gray-300 rounded-full group-hover:bg-blue-400 transition-colors" />
+                </div>
+
+                {/* Weekly Trends Graph - Resizable Right Column */}
                 <motion.div
+                    style={{ width: `${100 - leftWidth}%` }}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.2 }}
                     whileHover={{ y: -5 }}
-                    className="p-8 rounded-[2rem] bg-gradient-to-br from-purple-50 to-blue-50 border border-purple-100 shadow-xl shadow-purple-200/50"
+                    className="p-8 rounded-[2rem] bg-gradient-to-br from-purple-50 to-blue-50 border border-purple-100 shadow-xl shadow-purple-200/50 flex flex-col h-full"
                 >
                     <div className="flex items-center gap-4 mb-6">
                         <div className="p-4 rounded-2xl bg-purple-100 text-purple-600">
@@ -229,12 +293,18 @@ export function Dashboard({ notes, onNavigateToNote, userName }: DashboardProps)
                         </div>
                     </div>
 
-                    {/* Placeholder for trend graph */}
-                    <div className="h-48 flex items-center justify-center bg-white/50 rounded-xl border-2 border-dashed border-purple-200">
-                        <div className="text-center">
-                            <p className="text-sm font-medium text-gray-500">Trend Graph</p>
-                            <p className="text-xs text-gray-400 mt-1">Baseline data needed</p>
-                        </div>
+                    {/* Trend Graph */}
+                    <div className="flex-1 w-full min-h-0">
+                        {historicalStats && historicalStats.trendData.length > 0 ? (
+                            <TrendChart data={historicalStats.trendData} />
+                        ) : (
+                            <div className="h-full flex items-center justify-center bg-white/50 rounded-xl border-2 border-dashed border-purple-200">
+                                <div className="text-center">
+                                    <p className="text-sm font-medium text-gray-500">Trend Graph</p>
+                                    <p className="text-xs text-gray-400 mt-1">No historical data available</p>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </motion.div>
             </div>
@@ -276,7 +346,7 @@ export function Dashboard({ notes, onNavigateToNote, userName }: DashboardProps)
                             <ArrowUpRight className="w-4 h-4 text-green-500" />
                         </div>
                         <p className="text-3xl font-bold text-gray-800">
-                            {stats ? stats.fortnite.minutesPlayed : 'Loading...'}
+                            {BASELINE_STATS.totalMinutesPlayed.toLocaleString()}
                         </p>
                         <div className="mt-2 text-xs text-gray-400">
                             <span>Across all maps</span>
@@ -288,7 +358,7 @@ export function Dashboard({ notes, onNavigateToNote, userName }: DashboardProps)
                             <ArrowUpRight className="w-4 h-4 text-green-500" />
                         </div>
                         <p className="text-3xl font-bold text-gray-800">
-                            {stats ? stats.fortnite.uniquePlayers : 'Loading...'}
+                            {BASELINE_STATS.totalUniquePlayers.toLocaleString()}
                         </p>
                         <div className="mt-2 text-xs text-gray-400">
                             <span>Total reach</span>
@@ -300,7 +370,7 @@ export function Dashboard({ notes, onNavigateToNote, userName }: DashboardProps)
                             <ArrowUpRight className="w-4 h-4 text-green-500" />
                         </div>
                         <p className="text-3xl font-bold text-gray-800">
-                            {stats ? stats.fortnite.favorites : 'Loading...'}
+                            {BASELINE_STATS.totalFavorites.toLocaleString()}
                         </p>
                         <div className="mt-2 text-xs text-gray-400">
                             <span>Community love</span>
@@ -312,7 +382,7 @@ export function Dashboard({ notes, onNavigateToNote, userName }: DashboardProps)
                             <ArrowUpRight className="w-4 h-4 text-green-500" />
                         </div>
                         <p className="text-3xl font-bold text-gray-800">
-                            {stats ? stats.fortnite.plays : 'Loading...'}
+                            {BASELINE_STATS.totalLifetimePlays.toLocaleString()}
                         </p>
                         <div className="mt-2 text-xs text-gray-400">
                             <span>Game sessions</span>
