@@ -23,6 +23,7 @@ export interface NotesData {
 function App() {
     const [currentPage, setCurrentPage] = useState<Page>('dashboard');
     const [notes, setNotes] = useState<NotesData>({});
+    const [isLoading, setIsLoading] = useState(true);
 
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -34,10 +35,14 @@ function App() {
     }, []);
 
     const loadNotes = async () => {
-        // @ts-ignore
-        const data = await window.ipcRenderer.invoke('get-data');
-        if (data && data.notes) {
-            setNotes(data.notes);
+        try {
+            // @ts-ignore
+            const data = await window.ipcRenderer.invoke('get-data');
+            if (data && data.notes) {
+                setNotes(data.notes);
+            }
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -105,6 +110,7 @@ function App() {
                                     onNavigateToNote={handleNavigateToNote}
                                     userName={userName}
                                     onAddNote={handleAddNote}
+                                    isLoading={isLoading}
                                 />
                             )}
                             {currentPage === 'calendar' && (

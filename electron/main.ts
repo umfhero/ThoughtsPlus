@@ -155,6 +155,7 @@ app.whenReady().then(async () => {
             IMPORTANT: 
             1. Keep the response strictly under 80 words.
             2. Use **bold** markdown for key words (like event names, dates, or priorities).
+            3. Use British English spelling and terminology (e.g. 'colour', 'centre', 'programme', 'organise').
             
             Here are the notes:
             ${JSON.stringify(notes)}
@@ -166,6 +167,41 @@ app.whenReady().then(async () => {
         } catch (error) {
             console.error("Gemini API Error:", error);
             return "I'm having trouble generating your briefing right now. Please try again later.";
+        }
+    });
+
+    ipcMain.handle('parse-natural-language-note', async (_, input) => {
+        try {
+            if (!process.env.GEMINI_API_KEY) throw new Error("API Key missing");
+            
+            const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+            const model = genAI.getGenerativeModel({ model: process.env.GEMINI_MODEL || "gemini-1.5-flash" });
+            
+            const now = new Date();
+            const prompt = `
+            You are a smart calendar assistant.
+            Current Date/Time: ${now.toISOString()} (${now.toLocaleDateString('en-GB', { weekday: 'long' })})
+            
+            User Input: "${input}"
+            
+            Extract the event details into a JSON object with these fields:
+            - title: Short summary (max 5 words). Use British English.
+            - descriptionOptions: Generate 3 distinct, helpful, professional, and slightly detailed description options based on the input context. Do not just copy the input. Use British English spelling (e.g. 'colour', 'centre', 'programme', 'organise').
+            - date: YYYY-MM-DD format. NOTE: If the user says "next week" without a specific day, assume it means exactly 7 days from today.
+            - time: HH:mm format (24h). Default to "09:00" if not specified.
+            - importance: "low", "medium", or "high" (infer from urgency/tone)
+            
+            Return ONLY the JSON object. No markdown formatting.
+            `;
+            
+            const result = await model.generateContent(prompt);
+            const text = (await result.response).text();
+            // Clean up potential markdown code blocks
+            const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
+            return JSON.parse(jsonStr);
+        } catch (error) {
+            console.error("Gemini Parse Error:", error);
+            return null;
         }
     });
 

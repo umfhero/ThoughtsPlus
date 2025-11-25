@@ -13,9 +13,10 @@ interface DashboardProps {
     onNavigateToNote: (date: Date, noteId: string) => void;
     userName: string;
     onAddNote: (note: Note, date: Date) => void;
+    isLoading?: boolean;
 }
 
-export function Dashboard({ notes, onNavigateToNote, userName }: DashboardProps) {
+export function Dashboard({ notes, onNavigateToNote, userName, isLoading = false }: DashboardProps) {
     const [time, setTime] = useState(new Date());
     // @ts-ignore
     const [stats, setStats] = useState<any>(null);
@@ -200,16 +201,25 @@ export function Dashboard({ notes, onNavigateToNote, userName }: DashboardProps)
                 const isToday = eventDate.getTime() === todayStart.getTime();
                 const isOverdue = eventDateTime.getTime() < now.getTime();
                 
+                // Create a copy to avoid mutation
+                const effectiveNote = { ...note };
+                
                 // Auto-upgrade to high priority if due today
-                if (isToday && note.importance !== 'high') {
-                    note.importance = 'high';
+                if (isToday && effectiveNote.importance !== 'high') {
+                    effectiveNote.importance = 'high';
                 }
                 
                 // Include all future events and overdue events
-                allEvents.push({ date: eventDateTime, note, isOverdue });
+                allEvents.push({ date: eventDateTime, note: effectiveNote, isOverdue });
             });
         });
-        return allEvents.sort((a, b) => a.date.getTime() - b.date.getTime());
+        
+        // Stable sort
+        return allEvents.sort((a, b) => {
+            const timeDiff = a.date.getTime() - b.date.getTime();
+            if (timeDiff !== 0) return timeDiff;
+            return a.note.title.localeCompare(b.note.title);
+        });
     };
 
     const upcomingEvents = getUpcomingEvents();
@@ -217,22 +227,41 @@ export function Dashboard({ notes, onNavigateToNote, userName }: DashboardProps)
     // Effect to generate AI summary
     useEffect(() => {
         const fetchBriefing = async () => {
+            // If loading, do nothing (wait for data)
+            if (isLoading) return;
+
             // If we have no notes, just set default message and return
+            // Do NOT clear cache here, as this might be just the initial loading state
             if (upcomingEvents.length === 0) {
                  setAiSummary("No upcoming events scheduled. Enjoy your free time!");
                  return;
             }
 
-            // Only show loading state if it's not the first render (or if we have no cache)
-            if (!isFirstRender.current || !aiSummary) {
-                setIsBriefingLoading(true);
+            const eventsHash = JSON.stringify(upcomingEvents.map(e => ({
+                id: e.note.id,
+                title: e.note.title,
+                time: e.note.time,
+                date: format(e.date, 'yyyy-MM-dd'),
+                importance: e.note.importance
+            })));
+            
+            const cachedHash = localStorage.getItem('dashboard_events_hash');
+            const cachedSummary = localStorage.getItem('dashboard_ai_summary');
+
+            // If data hasn't changed and we have a summary, use it and don't fetch
+            if (eventsHash === cachedHash && cachedSummary) {
+                setAiSummary(cachedSummary);
+                return;
             }
+
+            setIsBriefingLoading(true);
 
             try {
                 // @ts-ignore
                 const summary = await window.ipcRenderer.invoke('generate-ai-overview', upcomingEvents);
                 setAiSummary(summary);
                 localStorage.setItem('dashboard_ai_summary', summary);
+                localStorage.setItem('dashboard_events_hash', eventsHash);
             } catch (error) {
                 console.error("Failed to get AI summary:", error);
                 if (!aiSummary) setAiSummary("Unable to generate briefing at this time.");
@@ -241,18 +270,13 @@ export function Dashboard({ notes, onNavigateToNote, userName }: DashboardProps)
             }
         };
 
-        // Skip fetch on first render if we have cache, but maybe we want to refresh silently?
-        // User said "on start it shows instantly".
-        // If we fetch immediately, we might overwrite the instant show with loading.
-        // So let's fetch, but only set loading state if it's NOT first render OR if we don't have cache.
         fetchBriefing();
-        isFirstRender.current = false;
-
+        
         // Update every hour
         const interval = setInterval(fetchBriefing, 60 * 60 * 1000);
 
         return () => clearInterval(interval);
-    }, [notes]); // Re-run when notes change
+    }, [notes, isLoading]); // Re-run when notes change
 
     const importanceColors = {
         low: 'bg-green-50 text-green-700 border-green-100',
@@ -315,6 +339,59 @@ export function Dashboard({ notes, onNavigateToNote, userName }: DashboardProps)
                         {format(time, 'EEEE, MMMM do')}
                     </p>
                 </div>
+            </div>
+
+            {/* Overview Section: Event Summary */}
+            <div className="grid grid-cols-1 gap-8">
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                    className="p-8 rounded-[2rem] bg-white border border-gray-100 shadow-xl shadow-gray-200/50"
+                >
+                    <div className="flex items-center gap-4 mb-6">
+                        <div className="p-4 rounded-2xl bg-indigo-50 text-indigo-600">
+                            <ListTodo className="w-7 h-7" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium text-gray-400 uppercase tracking-wider">Overview</p>
+                            <h3 className="text-2xl font-bold text-gray-800">Your Briefing</h3>
+                        </div>
+                    </div>
+                    <div className="p-6 rounded-2xl bg-gradient-to-br from-indigo-50 to-white border border-indigo-100 min-h-[100px] flex items-center">
+                        <AnimatePresence mode="wait">
+                            {isBriefingLoading ? (
+                                <motion.div 
+                                    key="loading"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    className="flex items-center gap-3 text-indigo-600 w-full"
+                                >
+                                    <Loader className="w-5 h-5 animate-spin flex-shrink-0" />
+                                    <motion.p 
+                                        key={loadingMessage}
+                                        initial={{ opacity: 0, y: 5 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -5 }}
+                                        className="text-sm font-medium"
+                                    >
+                                        {loadingMessage}
+                                    </motion.p>
+                                </motion.div>
+                            ) : (
+                                <motion.p 
+                                    key="content"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    className="text-lg text-gray-700 leading-relaxed font-medium text-justify w-full"
+                                >
+                                    {aiSummary ? renderFormattedText(aiSummary) : "Analyzing your schedule..."}
+                                </motion.p>
+                            )}
+                        </AnimatePresence>
+                    </div>
+                </motion.div>
             </div>
 
             {/* Quick Stats Grid - Resizable */}
@@ -538,61 +615,6 @@ export function Dashboard({ notes, onNavigateToNote, userName }: DashboardProps)
                     </div>
                 </div>
             </motion.div>
-
-
-            {/* Bottom Section: Event Summary */}
-            <div className="grid grid-cols-1 gap-8">
-                {/* Event Summary */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
-                    className="p-8 rounded-[2rem] bg-white border border-gray-100 shadow-xl shadow-gray-200/50"
-                >
-                    <div className="flex items-center gap-4 mb-6">
-                        <div className="p-4 rounded-2xl bg-indigo-50 text-indigo-600">
-                            <ListTodo className="w-7 h-7" />
-                        </div>
-                        <div>
-                            <p className="text-sm font-medium text-gray-400 uppercase tracking-wider">Overview</p>
-                            <h3 className="text-2xl font-bold text-gray-800">Your Briefing</h3>
-                        </div>
-                    </div>
-                    <div className="p-6 rounded-2xl bg-gradient-to-br from-indigo-50 to-white border border-indigo-100 min-h-[100px] flex items-center">
-                        <AnimatePresence mode="wait">
-                            {isBriefingLoading ? (
-                                <motion.div 
-                                    key="loading"
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    exit={{ opacity: 0 }}
-                                    className="flex items-center gap-3 text-indigo-600 w-full"
-                                >
-                                    <Loader className="w-5 h-5 animate-spin flex-shrink-0" />
-                                    <motion.p 
-                                        key={loadingMessage}
-                                        initial={{ opacity: 0, y: 5 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: -5 }}
-                                        className="text-sm font-medium"
-                                    >
-                                        {loadingMessage}
-                                    </motion.p>
-                                </motion.div>
-                            ) : (
-                                <motion.p 
-                                    key="content"
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    className="text-lg text-gray-700 leading-relaxed font-medium text-justify w-full"
-                                >
-                                    {aiSummary ? renderFormattedText(aiSummary) : "Analyzing your schedule..."}
-                                </motion.p>
-                            )}
-                        </AnimatePresence>
-                    </div>
-                </motion.div>
-            </div>
         </div>
     );
 }

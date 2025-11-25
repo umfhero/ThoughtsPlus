@@ -12,7 +12,8 @@ import {
     eachDayOfInterval,
     isSameMonth,
     isSameDay,
-    isToday
+    isToday,
+    parseISO
 } from 'date-fns';
 import clsx from 'clsx';
 import { NotesData, Note } from '../App';
@@ -43,7 +44,8 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
     const [isAiModalOpen, setIsAiModalOpen] = useState(false);
     const [aiInput, setAiInput] = useState('');
     const [isAiProcessing, setIsAiProcessing] = useState(false);
-    const [aiProposedNote, setAiProposedNote] = useState<{ note: Note, date: Date } | null>(null);
+    const [aiProposedNote, setAiProposedNote] = useState<{ note: Note, date: Date, options: string[] } | null>(null);
+    const [selectedOptionIndex, setSelectedOptionIndex] = useState(0);
 
     const convertTo12Hour = (time24: string): string => {
         const [hours, minutes] = time24.split(':').map(Number);
@@ -165,37 +167,34 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
         if (!aiInput.trim()) return;
         setIsAiProcessing(true);
 
-        // Simulate AI processing
-        setTimeout(async () => {
-            const today = new Date();
-            const nextWeek = new Date(today);
-            nextWeek.setDate(today.getDate() + 7);
+        try {
+            // @ts-ignore
+            const result = await window.ipcRenderer.invoke('parse-natural-language-note', aiInput);
+            
+            if (result) {
+                const targetDate = parseISO(result.date);
+                const options = result.descriptionOptions || [result.description];
+                
+                const note: Note = {
+                    id: crypto.randomUUID(),
+                    title: result.title,
+                    description: options[0], // Default to first option
+                    summary: result.title,
+                    time: result.time,
+                    importance: result.importance
+                };
 
-            let targetDate = selectedDate || today;
-            if (aiInput.toLowerCase().includes('next week')) targetDate = nextWeek;
-            if (aiInput.toLowerCase().includes('tomorrow')) {
-                targetDate = new Date(today);
-                targetDate.setDate(today.getDate() + 1);
+                setAiProposedNote({ note, date: targetDate, options });
+                setSelectedOptionIndex(0);
+            } else {
+                // Fallback if AI fails
+                console.error("AI failed to parse note");
             }
-
-            let summary = "AI Generated Event";
-            try {
-                // @ts-ignore
-                summary = await window.ipcRenderer.invoke('summarize-text', aiInput);
-            } catch (e) { }
-
-            const note: Note = {
-                id: crypto.randomUUID(),
-                title: summary.length > 20 ? summary.substring(0, 20) + "..." : summary,
-                description: aiInput,
-                summary: summary,
-                time: "13:00",
-                importance: 'medium'
-            };
-
-            setAiProposedNote({ note, date: targetDate });
+        } catch (error) {
+            console.error("Error processing AI note:", error);
+        } finally {
             setIsAiProcessing(false);
-        }, 1500);
+        }
     };
 
     const confirmAiNote = () => {
@@ -203,7 +202,13 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
             const dateKey = format(aiProposedNote.date, 'yyyy-MM-dd');
             const updatedNotes = { ...notes };
             if (!updatedNotes[dateKey]) updatedNotes[dateKey] = [];
-            updatedNotes[dateKey].push(aiProposedNote.note);
+            
+            // Use the note exactly as it is in the state (it contains the edited values)
+            const finalNote = {
+                ...aiProposedNote.note
+            };
+            
+            updatedNotes[dateKey].push(finalNote);
             saveNotes(updatedNotes);
 
             setAiProposedNote(null);
@@ -239,7 +244,7 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
 
     return (
         <div className="h-full flex gap-6 p-8 overflow-hidden relative">
-            <div className="flex-1 flex flex-col h-full">
+            <motion.div layout className="flex-1 flex flex-col h-full">
                 <div className="flex items-center justify-between mb-8">
                     <div>
                         <h2 className="text-3xl font-bold text-gray-800">
@@ -339,11 +344,12 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
                         </AnimatePresence>
                     </div>
                 </div>
-            </div>
+            </motion.div>
 
-            <AnimatePresence>
+            <AnimatePresence mode="popLayout">
                 {isPanelOpen && selectedDate && (
                     <motion.div
+                        key="side-panel"
                         initial={{ x: 300, opacity: 0 }}
                         animate={{ x: 0, opacity: 1 }}
                         exit={{ x: 300, opacity: 0 }}
@@ -477,22 +483,103 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
                             ) : (
                                 <div className="space-y-4">
                                     <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
-                                        <p className="font-bold text-blue-900">{aiProposedNote.note.title}</p>
-                                        <p className="text-sm text-blue-700">{format(aiProposedNote.date, 'PPPP')} at {convertTo12Hour(aiProposedNote.note.time)}</p>
-                                        <p className="text-sm text-blue-600 mt-2">{aiProposedNote.note.description}</p>
+                                        <div className="flex flex-col gap-3 mb-4">
+                                            <input 
+                                                type="text" 
+                                                value={aiProposedNote.note.title}
+                                                onChange={(e) => setAiProposedNote({
+                                                    ...aiProposedNote,
+                                                    note: { ...aiProposedNote.note, title: e.target.value }
+                                                })}
+                                                className="font-bold text-blue-900 text-lg bg-transparent border-b border-blue-200 focus:border-blue-500 focus:outline-none px-1 w-full"
+                                                placeholder="Event Title"
+                                            />
+                                            
+                                            <div className="flex gap-2 flex-wrap">
+                                                <input 
+                                                    type="date"
+                                                    value={format(aiProposedNote.date, 'yyyy-MM-dd')}
+                                                    onChange={(e) => {
+                                                        if (!e.target.value) return;
+                                                        const newDate = parseISO(e.target.value);
+                                                        setAiProposedNote({
+                                                            ...aiProposedNote,
+                                                            date: newDate
+                                                        });
+                                                    }}
+                                                    className="bg-white/50 border border-blue-200 rounded-lg px-2 py-1 text-sm text-blue-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                />
+                                                <input 
+                                                    type="time"
+                                                    value={aiProposedNote.note.time}
+                                                    onChange={(e) => setAiProposedNote({
+                                                        ...aiProposedNote,
+                                                        note: { ...aiProposedNote.note, time: e.target.value }
+                                                    })}
+                                                    className="bg-white/50 border border-blue-200 rounded-lg px-2 py-1 text-sm text-blue-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                />
+                                                <select
+                                                    value={aiProposedNote.note.importance}
+                                                    onChange={(e) => setAiProposedNote({
+                                                        ...aiProposedNote,
+                                                        note: { ...aiProposedNote.note, importance: e.target.value as any }
+                                                    })}
+                                                    className="bg-white/50 border border-blue-200 rounded-lg px-2 py-1 text-sm text-blue-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                >
+                                                    <option value="low">Low Priority</option>
+                                                    <option value="medium">Medium Priority</option>
+                                                    <option value="high">High Priority</option>
+                                                    <option value="misc">Miscellaneous</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="space-y-2">
+                                            <p className="text-xs font-bold text-blue-400 uppercase tracking-wider">Select Base Description:</p>
+                                            {aiProposedNote.options.map((option, idx) => (
+                                                <div 
+                                                    key={idx}
+                                                    onClick={() => {
+                                                        setSelectedOptionIndex(idx);
+                                                        setAiProposedNote({
+                                                            ...aiProposedNote,
+                                                            note: { ...aiProposedNote.note, description: option }
+                                                        });
+                                                    }}
+                                                    className={clsx(
+                                                        "p-3 rounded-lg border text-sm cursor-pointer transition-all",
+                                                        selectedOptionIndex === idx 
+                                                            ? "bg-white border-blue-500 shadow-md ring-1 ring-blue-500" 
+                                                            : "bg-white/50 border-blue-200 hover:bg-white hover:border-blue-300"
+                                                    )}
+                                                >
+                                                    {option}
+                                                </div>
+                                            ))}
+                                            
+                                            <p className="text-xs font-bold text-blue-400 uppercase tracking-wider mt-4">Edit Description:</p>
+                                            <textarea
+                                                value={aiProposedNote.note.description}
+                                                onChange={(e) => setAiProposedNote({
+                                                    ...aiProposedNote,
+                                                    note: { ...aiProposedNote.note, description: e.target.value }
+                                                })}
+                                                className="w-full h-24 bg-white border border-blue-200 rounded-xl p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/50 resize-none"
+                                            />
+                                        </div>
                                     </div>
                                     <div className="flex gap-3">
                                         <button
                                             onClick={() => setAiProposedNote(null)}
                                             className="flex-1 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold"
                                         >
-                                            Edit
+                                            Back
                                         </button>
                                         <button
                                             onClick={confirmAiNote}
-                                            className="flex-1 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white font-bold"
+                                            className="flex-1 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white font-bold shadow-lg shadow-green-500/30"
                                         >
-                                            Confirm
+                                            Confirm & Add
                                         </button>
                                     </div>
                                 </div>
