@@ -25,7 +25,6 @@ export function Dashboard({ notes, onNavigateToNote, userName, isLoading = false
     const [isBriefingLoading, setIsBriefingLoading] = useState(false);
     const [loadingMessage, setLoadingMessage] = useState("Analyzing your schedule...");
     const [eventTab, setEventTab] = useState<'upcoming' | 'notCompleted'>('upcoming');
-    const isFirstRender = useRef(true);
 
     const loadingMessages = [
         "Pretending to understand your abbreviations...",

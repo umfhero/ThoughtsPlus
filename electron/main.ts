@@ -5,7 +5,12 @@ import { existsSync } from 'node:fs'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import dotenv from 'dotenv'
 
-dotenv.config()
+// Load environment variables from .env file
+const envPath = app.isPackaged
+    ? path.join(app.getAppPath(), '.env')
+    : path.join(__dirname, '../.env');
+
+dotenv.config({ path: envPath });
 
 process.env.DIST = path.join(__dirname, '../dist')
 process.env.VITE_PUBLIC = app.isPackaged ? process.env.DIST : path.join(__dirname, '../public')
@@ -60,17 +65,17 @@ async function saveDeviceSettings() {
     }
 }
 
-async function loadGlobalSettings() {
-    try {
-        if (existsSync(globalSettingsPath)) {
-            return JSON.parse(await fs.readFile(globalSettingsPath, 'utf-8'));
-        }
-        return {};
-    } catch (e) {
-        console.error('Failed to load global settings', e);
-        return {};
-    }
-}
+// async function loadGlobalSettings() {
+//     try {
+//         if (existsSync(globalSettingsPath)) {
+//             return JSON.parse(await fs.readFile(globalSettingsPath, 'utf-8'));
+//         }
+//         return {};
+//     } catch (e) {
+//         console.error('Failed to load global settings', e);
+//         return {};
+//     }
+// }
 
 async function saveGlobalSettings(settings: any) {
     try {
