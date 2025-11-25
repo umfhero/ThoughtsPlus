@@ -128,11 +128,44 @@ app.whenReady().then(async () => {
         try {
             if (!process.env.GEMINI_API_KEY) return text.slice(0, 50) + '...';
             const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+            const model = genAI.getGenerativeModel({ model: process.env.GEMINI_MODEL || "gemini-1.5-flash" });
             const result = await model.generateContent(text);
             return (await result.response).text();
         } catch (error) {
             return text.slice(0, 50) + '...';
+        }
+    });
+
+    ipcMain.handle('generate-ai-overview', async (_, notes) => {
+        try {
+            if (!process.env.GEMINI_API_KEY) return "Please configure your Gemini API key to receive your personalized briefing.";
+            
+            const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+            const model = genAI.getGenerativeModel({ model: process.env.GEMINI_MODEL || "gemini-1.5-flash" });
+            
+            const prompt = `
+            You are a helpful personal assistant. 
+            Analyze the following notes and provide a comforting briefing for the user. 
+            Focus on priorities and timelines. 
+            Tell the user what to focus on first based on the dates and importance.
+            
+            For example if there is a revision for a exam in 2 weeks and a society event in 1 week, say roughly something about focus on your society as its the soonest and make sure you are revising everyday for your upcoming exam!
+            
+            Keep the tone comforting and encouraging.
+            IMPORTANT: 
+            1. Keep the response strictly under 80 words.
+            2. Use **bold** markdown for key words (like event names, dates, or priorities).
+            
+            Here are the notes:
+            ${JSON.stringify(notes)}
+            `;
+            
+            const result = await model.generateContent(prompt);
+            const response = await result.response;
+            return response.text();
+        } catch (error) {
+            console.error("Gemini API Error:", error);
+            return "I'm having trouble generating your briefing right now. Please try again later.";
         }
     });
 
@@ -315,27 +348,6 @@ app.whenReady().then(async () => {
     ipcMain.handle('set-auto-launch', (_, openAtLogin) => {
         app.setLoginItemSettings({ openAtLogin, path: app.getPath('exe') });
         return app.getLoginItemSettings().openAtLogin;
-    });
-
-    // Global settings handlers for theme and accent color
-    ipcMain.handle('get-global-setting', async (_, key: string) => {
-        try {
-            const settings = await loadGlobalSettings();
-            return settings[key] || null;
-        } catch (e) {
-            return null;
-        }
-    });
-
-    ipcMain.handle('save-global-setting', async (_, key: string, value: any) => {
-        try {
-            const settings = await loadGlobalSettings();
-            settings[key] = value;
-            await saveGlobalSettings(settings);
-            return true;
-        } catch (e) {
-            return false;
-        }
     });
 
     ipcMain.handle('get-username', () => 'Majid');

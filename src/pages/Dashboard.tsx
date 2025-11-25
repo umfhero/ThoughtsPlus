@@ -1,5 +1,5 @@
-import { motion } from 'framer-motion';
-import { Calendar as CalendarIcon, ArrowUpRight, ListTodo } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Calendar as CalendarIcon, ArrowUpRight, ListTodo, Loader } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { format, parseISO } from 'date-fns';
 import { NotesData, Note } from '../App';
@@ -20,8 +20,31 @@ export function Dashboard({ notes, onNavigateToNote, userName }: DashboardProps)
     // @ts-ignore
     const [stats, setStats] = useState<any>(null);
     const [historicalStats, setHistoricalStats] = useState<HistoricalStatsData | null>(null);
-    const [aiSummary, setAiSummary] = useState<string | null>(null);
+    const [aiSummary, setAiSummary] = useState<string | null>(() => localStorage.getItem('dashboard_ai_summary'));
+    const [isBriefingLoading, setIsBriefingLoading] = useState(false);
+    const [loadingMessage, setLoadingMessage] = useState("Analyzing your schedule...");
     const [eventTab, setEventTab] = useState<'upcoming' | 'notCompleted'>('upcoming');
+    const isFirstRender = useRef(true);
+
+    const loadingMessages = [
+        "Pretending to understand your abbreviations...",
+        "Hallucinating... I mean, summarizing...",
+        "99% done (the other 1% is making up this percentage)...",
+        "Overcomplicating what could've been a bullet list...",
+        "Loading your life's lore..."
+    ];
+
+    // Effect for loading messages
+    useEffect(() => {
+        if (!isBriefingLoading) return;
+        let index = 0;
+        setLoadingMessage(loadingMessages[0]);
+        const interval = setInterval(() => {
+            index = (index + 1) % loadingMessages.length;
+            setLoadingMessage(loadingMessages[index]);
+        }, 2000);
+        return () => clearInterval(interval);
+    }, [isBriefingLoading]);
 
     const convertTo12Hour = (time24: string): string => {
         const [hours, minutes] = time24.split(':').map(Number);
@@ -191,65 +214,45 @@ export function Dashboard({ notes, onNavigateToNote, userName }: DashboardProps)
 
     const upcomingEvents = getUpcomingEvents();
 
-    // Effect to generate AI summary of upcoming events (scheduled at 10am and 1am)
+    // Effect to generate AI summary
     useEffect(() => {
-        const generateSummary = async () => {
-            if (upcomingEvents.length > 0) {
-                const eventsText = upcomingEvents.map(({ date, note }) =>
-                    `${format(date, 'MMM d, yyyy')} at ${note.time}: ${note.title} (${note.importance} priority)`
-                ).join('\n');
+        const fetchBriefing = async () => {
+            // If we have no notes, just set default message and return
+            if (upcomingEvents.length === 0) {
+                 setAiSummary("No upcoming events scheduled. Enjoy your free time!");
+                 return;
+            }
 
-                const prompt = `You are a helpful personal assistant. Create a brief, encouraging daily briefing for ${userName} based on their upcoming events. Keep it conversational and motivating (2-3 sentences max).\n\nUpcoming events:\n${eventsText}\n\nBriefing:`;
+            // Only show loading state if it's not the first render (or if we have no cache)
+            if (!isFirstRender.current || !aiSummary) {
+                setIsBriefingLoading(true);
+            }
 
-                try {
-                    // @ts-ignore
-                    const summary = await window.ipcRenderer.invoke('summarize-text', prompt);
-                    setAiSummary(summary);
-                    // Store the summary with timestamp
-                    localStorage.setItem('lastSummary', summary);
-                    localStorage.setItem('lastSummaryTime', new Date().toISOString());
-                } catch (error) {
-                    console.error("Failed to get AI summary:", error);
-                    setAiSummary("Your schedule is looking good! Stay focused on your upcoming tasks.");
-                }
-            } else {
-                setAiSummary("No upcoming events scheduled. Enjoy your free time and stay productive!");
+            try {
+                // @ts-ignore
+                const summary = await window.ipcRenderer.invoke('generate-ai-overview', upcomingEvents);
+                setAiSummary(summary);
+                localStorage.setItem('dashboard_ai_summary', summary);
+            } catch (error) {
+                console.error("Failed to get AI summary:", error);
+                if (!aiSummary) setAiSummary("Unable to generate briefing at this time.");
+            } finally {
+                setIsBriefingLoading(false);
             }
         };
 
-        const shouldGenerateSummary = () => {
-            const lastSummaryTime = localStorage.getItem('lastSummaryTime');
-            if (!lastSummaryTime) return true;
+        // Skip fetch on first render if we have cache, but maybe we want to refresh silently?
+        // User said "on start it shows instantly".
+        // If we fetch immediately, we might overwrite the instant show with loading.
+        // So let's fetch, but only set loading state if it's NOT first render OR if we don't have cache.
+        fetchBriefing();
+        isFirstRender.current = false;
 
-            const lastGenerated = new Date(lastSummaryTime);
-            const now = new Date();
-            const hourNow = now.getHours();
-
-            // Check if we've crossed a generation threshold (10am or 1am)
-            const lastHour = lastGenerated.getHours();
-            const isMorningTime = hourNow >= 10 && lastHour < 10;
-            const isNightTime = hourNow >= 1 && hourNow < 10 && lastHour >= 10;
-
-            return isMorningTime || isNightTime || (now.getTime() - lastGenerated.getTime() > 12 * 60 * 60 * 1000);
-        };
-
-        // Load cached summary or generate new one
-        const cachedSummary = localStorage.getItem('lastSummary');
-        if (cachedSummary && !shouldGenerateSummary()) {
-            setAiSummary(cachedSummary);
-        } else {
-            generateSummary();
-        }
-
-        // Set up interval to check every hour if we need to regenerate
-        const interval = setInterval(() => {
-            if (shouldGenerateSummary()) {
-                generateSummary();
-            }
-        }, 60 * 60 * 1000); // Check every hour
+        // Update every hour
+        const interval = setInterval(fetchBriefing, 60 * 60 * 1000);
 
         return () => clearInterval(interval);
-    }, [upcomingEvents.length, userName]);
+    }, [notes]); // Re-run when notes change
 
     const importanceColors = {
         low: 'bg-green-50 text-green-700 border-green-100',
@@ -278,6 +281,16 @@ export function Dashboard({ notes, onNavigateToNote, userName }: DashboardProps)
             notation: "compact",
             maximumFractionDigits: 1
         }).format(num);
+    };
+
+    const renderFormattedText = (text: string) => {
+        const parts = text.split(/(\*\*.*?\*\*)/g);
+        return parts.map((part, index) => {
+            if (part.startsWith('**') && part.endsWith('**')) {
+                return <strong key={index} className="font-bold text-indigo-700">{part.slice(2, -2)}</strong>;
+            }
+            return part;
+        });
     };
 
     return (
@@ -545,10 +558,38 @@ export function Dashboard({ notes, onNavigateToNote, userName }: DashboardProps)
                             <h3 className="text-2xl font-bold text-gray-800">Your Briefing</h3>
                         </div>
                     </div>
-                    <div className="p-6 rounded-2xl bg-gradient-to-br from-indigo-50 to-white border border-indigo-100">
-                        <p className="text-lg text-gray-700 leading-relaxed font-medium">
-                            {aiSummary || "Analyzing your schedule..."}
-                        </p>
+                    <div className="p-6 rounded-2xl bg-gradient-to-br from-indigo-50 to-white border border-indigo-100 min-h-[100px] flex items-center">
+                        <AnimatePresence mode="wait">
+                            {isBriefingLoading ? (
+                                <motion.div 
+                                    key="loading"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    className="flex items-center gap-3 text-indigo-600 w-full"
+                                >
+                                    <Loader className="w-5 h-5 animate-spin flex-shrink-0" />
+                                    <motion.p 
+                                        key={loadingMessage}
+                                        initial={{ opacity: 0, y: 5 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -5 }}
+                                        className="text-sm font-medium"
+                                    >
+                                        {loadingMessage}
+                                    </motion.p>
+                                </motion.div>
+                            ) : (
+                                <motion.p 
+                                    key="content"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    className="text-lg text-gray-700 leading-relaxed font-medium text-justify w-full"
+                                >
+                                    {aiSummary ? renderFormattedText(aiSummary) : "Analyzing your schedule..."}
+                                </motion.p>
+                            )}
+                        </AnimatePresence>
                     </div>
                 </motion.div>
             </div>
