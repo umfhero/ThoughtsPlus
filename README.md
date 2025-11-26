@@ -17,21 +17,6 @@
 - (Optional) Integration hooks for external calendar APIs (e.g., Google Calendar)
 - Offline-first architecture with local persistence
 
-## Tech Stack
-
-- **Frontend:** React 18, TypeScript, Vite, Tailwind CSS
-- **Desktop Runtime:** Electron
-- **Data Handling:** Local storage, CSV parsing for analytics
-- **Build Tooling:** Vite, PostCSS
-- **Visualization:** Custom chart components
-
-## Security & Privacy
-
-- This project is for personal use. Do **not** commit sensitive data or API keys.
-- If you fork or clone, create your own `.env` file for local configuration.
-
----
-
 ## Screenshots
 
 The following screenshots are taken from the app and live in the `git/` folder.
@@ -51,3 +36,20 @@ The following screenshots are taken from the app and live in the `git/` folder.
 - **Creator Stats**
 
   ![Creator Stats](git/creatorstats.png)
+
+---
+
+## Tech Stack
+
+- **Frontend:** React 18, TypeScript, Vite, Tailwind CSS
+- **Desktop Runtime:** Electron
+- **Data Handling:** Local storage, CSV parsing for analytics
+- **Build Tooling:** Vite, PostCSS
+- **Visualization:** Custom chart components
+
+## Security & Privacy
+
+- This project is for personal use. Do **not** commit sensitive data or API keys.
+- If you fork or clone, create your own `.env` file for local configuration.
+
+---
