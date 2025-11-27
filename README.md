@@ -3,6 +3,14 @@
   CalendarPlus
 </h1>
 
+![GitHub stars](https://img.shields.io/github/stars/umfhero/CalendarPlus?style=social)
+![GitHub forks](https://img.shields.io/github/forks/umfhero/CalendarPlus?style=social)
+![GitHub last commit](https://img.shields.io/github/last-commit/umfhero/CalendarPlus)
+![GitHub repo size](https://img.shields.io/github/repo-size/umfhero/CalendarPlus)
+![GitHub issues](https://img.shields.io/github/issues/umfhero/CalendarPlus)
+![GitHub pull requests](https://img.shields.io/github/issues-pr/umfhero/CalendarPlus)
+![Top Language](https://img.shields.io/github/languages/top/umfhero/CalendarPlus)
+
 ---
 
 **CalendarPlus** is a Windows desktop calendar application engineered for personal productivity, event management and calendar data visualization. This project is developed for private use, but the codebase is open for review and local experimentation by others.
