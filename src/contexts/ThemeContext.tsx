@@ -10,12 +10,12 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 const accentColors = {
-    blue: { primary: 'rgb(59, 130, 246)', secondary: 'rgb(37, 99, 235)', light: 'rgb(219, 234, 254)' },
-    purple: { primary: 'rgb(168, 85, 247)', secondary: 'rgb(147, 51, 234)', light: 'rgb(243, 232, 255)' },
-    green: { primary: 'rgb(34, 197, 94)', secondary: 'rgb(22, 163, 74)', light: 'rgb(220, 252, 231)' },
-    pink: { primary: 'rgb(236, 72, 153)', secondary: 'rgb(219, 39, 119)', light: 'rgb(252, 231, 243)' },
-    orange: { primary: 'rgb(249, 115, 22)', secondary: 'rgb(234, 88, 12)', light: 'rgb(255, 237, 213)' },
-    red: { primary: 'rgb(239, 68, 68)', secondary: 'rgb(220, 38, 38)', light: 'rgb(254, 226, 226)' },
+    blue: { primary: 'rgb(59, 130, 246)', secondary: 'rgb(37, 99, 235)', light: 'rgb(219, 234, 254)', darkPrimary: 'rgb(96, 165, 250)' },
+    purple: { primary: 'rgb(168, 85, 247)', secondary: 'rgb(147, 51, 234)', light: 'rgb(243, 232, 255)', darkPrimary: 'rgb(192, 132, 252)' },
+    green: { primary: 'rgb(34, 197, 94)', secondary: 'rgb(22, 163, 74)', light: 'rgb(220, 252, 231)', darkPrimary: 'rgb(74, 222, 128)' },
+    pink: { primary: 'rgb(236, 72, 153)', secondary: 'rgb(219, 39, 119)', light: 'rgb(252, 231, 243)', darkPrimary: 'rgb(244, 114, 182)' },
+    orange: { primary: 'rgb(249, 115, 22)', secondary: 'rgb(234, 88, 12)', light: 'rgb(255, 237, 213)', darkPrimary: 'rgb(251, 146, 60)' },
+    red: { primary: 'rgb(239, 68, 68)', secondary: 'rgb(220, 38, 38)', light: 'rgb(254, 226, 226)', darkPrimary: 'rgb(248, 113, 113)' },
 };
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
@@ -60,7 +60,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         } else {
             // Preset color
             const colors = accentColors[accentColor as keyof typeof accentColors] || accentColors.blue;
-            document.documentElement.style.setProperty('--accent-primary', colors.primary);
+            document.documentElement.style.setProperty('--accent-primary', theme === 'dark' ? colors.darkPrimary : colors.primary);
             document.documentElement.style.setProperty('--accent-secondary', colors.secondary);
             document.documentElement.style.setProperty('--accent-light', colors.light);
         }

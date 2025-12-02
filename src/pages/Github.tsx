@@ -27,6 +27,7 @@ interface UserProfile {
 export function GithubPage() {
     const [repos, setRepos] = useState<Repo[]>([]);
     const [profile, setProfile] = useState<UserProfile | null>(null);
+    const [readme, setReadme] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -37,18 +38,29 @@ export function GithubPage() {
     const fetchGithubData = async () => {
         try {
             setLoading(true);
-            const [userRes, reposRes] = await Promise.all([
+            const [userRes, reposRes, readmeRes] = await Promise.all([
                 fetch('https://api.github.com/users/umfhero'),
-                fetch('https://api.github.com/users/umfhero/repos?sort=updated&per_page=100')
+                fetch('https://api.github.com/users/umfhero/repos?sort=updated&per_page=100'),
+                fetch('https://api.github.com/repos/umfhero/umfhero/readme', {
+                    headers: { 'Accept': 'application/vnd.github.html' }
+                })
             ]);
 
             if (!userRes.ok || !reposRes.ok) throw new Error('Failed to fetch Github data');
 
             const userData = await userRes.json();
             const reposData = await reposRes.json();
+            
+            // Filter out umfhero repo
+            const filteredRepos = reposData.filter((repo: Repo) => repo.name !== 'umfhero');
 
             setProfile(userData);
-            setRepos(reposData);
+            setRepos(filteredRepos);
+
+            if (readmeRes.ok) {
+                const readmeHtml = await readmeRes.text();
+                setReadme(readmeHtml);
+            }
         } catch (err) {
             setError('Failed to load Github data. Please check your internet connection.');
             console.error(err);
@@ -112,6 +124,20 @@ export function GithubPage() {
                             </div>
                         </div>
                     </div>
+                </motion.div>
+            )}
+
+            {/* Readme Section */}
+            {readme && (
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-white dark:bg-gray-800 rounded-[2rem] p-8 shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden"
+                >
+                    <div 
+                        className="prose dark:prose-invert max-w-none"
+                        dangerouslySetInnerHTML={{ __html: readme }}
+                    />
                 </motion.div>
             )}
 

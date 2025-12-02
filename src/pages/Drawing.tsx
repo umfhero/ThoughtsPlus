@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Save, Trash2, Undo, PenTool } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export function DrawingPage() {
@@ -17,7 +17,6 @@ export function DrawingPage() {
 
     const handleResize = () => {
         // TODO: Handle resize without losing drawing data
-        // For now, we might just want to set canvas size once or handle it better
     };
 
     const loadDrawing = async () => {
@@ -64,8 +63,11 @@ export function DrawingPage() {
             const ctx = canvas.getContext('2d');
             if (ctx) {
                 const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                
                 ctx.beginPath();
-                ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+                ctx.moveTo((e.clientX - rect.left) * scaleX, (e.clientY - rect.top) * scaleY);
                 ctx.strokeStyle = color;
                 ctx.lineWidth = brushSize;
                 ctx.lineCap = 'round';
@@ -81,7 +83,10 @@ export function DrawingPage() {
             const ctx = canvas.getContext('2d');
             if (ctx) {
                 const rect = canvas.getBoundingClientRect();
-                ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+
+                ctx.lineTo((e.clientX - rect.left) * scaleX, (e.clientY - rect.top) * scaleY);
                 ctx.stroke();
             }
         }
@@ -106,59 +111,78 @@ export function DrawingPage() {
     };
 
     return (
-        <div className="p-6 h-full flex flex-col space-y-4">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">Drawing Board</h1>
-                    <p className="text-gray-500 dark:text-gray-400">Sketch your ideas</p>
-                </div>
-                <div className="flex items-center gap-4">
-                    <span className="text-sm text-gray-500 dark:text-gray-400">{savedStatus}</span>
-                    <button
-                        onClick={clearCanvas}
-                        className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 transition-colors"
-                        title="Clear Canvas"
-                    >
-                        <Trash2 className="w-5 h-5" />
-                    </button>
-                </div>
+        <div className="h-full flex flex-col relative bg-gray-50 dark:bg-gray-900">
+            <div className="absolute top-6 left-6 z-10">
+                <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">Drawing Board</h1>
+                <p className="text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                    Sketch your ideas
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                        {savedStatus}
+                    </span>
+                </p>
             </div>
 
-            <div className="flex items-center gap-4 p-4 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
-                <div className="flex items-center gap-2">
-                    <PenTool className="w-5 h-5 text-gray-500" />
-                    <input
-                        type="color"
-                        value={color}
-                        onChange={(e) => setColor(e.target.value)}
-                        className="w-8 h-8 rounded cursor-pointer border-0"
-                    />
-                </div>
-                <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-500">Size:</span>
-                    <input
-                        type="range"
-                        min="1"
-                        max="20"
-                        value={brushSize}
-                        onChange={(e) => setBrushSize(parseInt(e.target.value))}
-                        className="w-32"
-                    />
-                </div>
-            </div>
-
-            <div className="flex-1 bg-white dark:bg-gray-800 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden relative">
+            <div className="flex-1 overflow-hidden relative cursor-crosshair">
                 <canvas
                     ref={canvasRef}
-                    width={1200}
-                    height={800}
+                    width={1920}
+                    height={1080}
                     onMouseDown={startDrawing}
                     onMouseMove={draw}
                     onMouseUp={stopDrawing}
                     onMouseLeave={stopDrawing}
-                    className="w-full h-full cursor-crosshair touch-none"
+                    className="w-full h-full touch-none bg-white dark:bg-gray-800"
                 />
             </div>
+
+            {/* Floating Toolbar */}
+            <motion.div 
+                initial={{ y: 50, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                className="absolute bottom-8 left-1/2 transform -translate-x-1/2 bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 flex items-center gap-6 z-20"
+            >
+                <div className="flex items-center gap-3">
+                    <div 
+                        className="w-10 h-10 rounded-full border-2 border-gray-200 dark:border-gray-600 overflow-hidden cursor-pointer relative shadow-sm"
+                        style={{ backgroundColor: color }}
+                    >
+                        <input
+                            type="color"
+                            value={color}
+                            onChange={(e) => setColor(e.target.value)}
+                            className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                        />
+                    </div>
+                </div>
+                
+                <div className="h-8 w-px bg-gray-200 dark:bg-gray-700" />
+
+                <div className="flex items-center gap-3">
+                    <span className="text-xs font-bold text-gray-400 uppercase">Size</span>
+                    <input
+                        type="range"
+                        min="1"
+                        max="50"
+                        value={brushSize}
+                        onChange={(e) => setBrushSize(parseInt(e.target.value))}
+                        className="w-32 accent-blue-500"
+                    />
+                    <div 
+                        className="rounded-full bg-gray-900 dark:bg-white"
+                        style={{ width: Math.min(brushSize, 24), height: Math.min(brushSize, 24) }}
+                    />
+                </div>
+
+                <div className="h-8 w-px bg-gray-200 dark:bg-gray-700" />
+
+                <button
+                    onClick={clearCanvas}
+                    className="p-2 rounded-xl hover:bg-red-50 text-red-500 hover:text-red-600 transition-colors"
+                    title="Clear Canvas"
+                >
+                    <Trash2 className="w-5 h-5" />
+                </button>
+            </motion.div>
         </div>
     );
 }

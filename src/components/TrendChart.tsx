@@ -82,21 +82,21 @@ const TrendChart: React.FC<TrendChartProps> = ({ data }) => {
     <div ref={containerRef} className="h-full w-full flex flex-col">
       <div className="flex justify-between items-center mb-4 px-2">
         <div>
-          <h3 className="text-sm font-bold text-gray-900">Active Players Trend</h3>
+          <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">Active Players Trend</h3>
           <div className="flex items-center gap-2">
              <span className={clsx(
                "text-xs font-bold",
-               trendPercentage >= 0 ? "text-green-600" : "text-red-600"
+               trendPercentage >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
              )}>
                {trendPercentage > 0 ? '+' : ''}{trendPercentage.toFixed(1)}%
              </span>
-             <span className="text-xs text-gray-500">{getDateRangeLabel()}</span>
+             <span className="text-xs text-gray-500 dark:text-gray-400">{getDateRangeLabel()}</span>
           </div>
         </div>
         
         <div className="flex items-center gap-2">
           {range !== 'ALL' && (
-            <div className="flex items-center bg-gray-100 rounded-lg p-0.5">
+            <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5">
               <button 
                 onClick={handlePrev}
                 className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 hover:shadow-sm rounded-md transition-all text-gray-600 dark:text-gray-300"
