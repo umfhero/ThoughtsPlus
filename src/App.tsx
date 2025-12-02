@@ -6,6 +6,7 @@ import { StatsPage } from './pages/Stats';
 import { SettingsPage } from './pages/Settings';
 import { DrawingPage } from './pages/Drawing';
 import { GithubPage } from './pages/Github';
+import { AiQuickAddModal } from './components/AiQuickAddModal';
 
 export type Page = 'dashboard' | 'calendar' | 'stats' | 'settings' | 'drawing' | 'github';
 
@@ -31,9 +32,22 @@ function App() {
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [userName] = useState("Majid");
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const [isAiModalOpen, setIsAiModalOpen] = useState(false);
 
     useEffect(() => {
         loadNotes();
+    }, []);
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.ctrlKey && e.key.toLowerCase() === 'm') {
+                e.preventDefault();
+                setIsAiModalOpen(true);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
 
     const loadNotes = async () => {
@@ -132,6 +146,12 @@ function App() {
                     </div>
                 </main>
             </div>
+
+            <AiQuickAddModal 
+                isOpen={isAiModalOpen}
+                onClose={() => setIsAiModalOpen(false)}
+                onSave={handleAddNote}
+            />
         </div>
     );
 }

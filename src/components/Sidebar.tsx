@@ -26,10 +26,21 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
 
     // Handle keyboard shortcuts
     useEffect(() => {
+        let timeoutId: NodeJS.Timeout;
+
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.ctrlKey) {
-                setShowShortcuts(true);
+                if (!e.repeat) {
+                    setShowShortcuts(true);
+                    if (timeoutId) clearTimeout(timeoutId);
+                    timeoutId = setTimeout(() => {
+                        setShowShortcuts(false);
+                    }, 2000);
+                }
                 
+                const pages: Page[] = ['dashboard', 'calendar', 'drawing', 'stats', 'github', 'settings'];
+                const currentIndex = pages.indexOf(currentPage);
+
                 switch(e.key.toLowerCase()) {
                     case 's':
                         e.preventDefault();
@@ -55,6 +66,18 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                         e.preventDefault();
                         setPage('github');
                         break;
+                    case 'arrowup':
+                        e.preventDefault();
+                        if (currentIndex > 0) {
+                            setPage(pages[currentIndex - 1]);
+                        }
+                        break;
+                    case 'arrowdown':
+                        e.preventDefault();
+                        if (currentIndex < pages.length - 1) {
+                            setPage(pages[currentIndex + 1]);
+                        }
+                        break;
                 }
             }
         };
@@ -62,6 +85,7 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
         const handleKeyUp = (e: KeyboardEvent) => {
             if (!e.ctrlKey) {
                 setShowShortcuts(false);
+                if (timeoutId) clearTimeout(timeoutId);
             }
         };
 
@@ -71,8 +95,9 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
         return () => {
             window.removeEventListener('keydown', handleKeyDown);
             window.removeEventListener('keyup', handleKeyUp);
+            if (timeoutId) clearTimeout(timeoutId);
         };
-    }, [toggleSidebar, setPage]);
+    }, [toggleSidebar, setPage, currentPage]);
 
     // Auto-minimize calendar dropdown if not on calendar page
     useEffect(() => {
@@ -123,7 +148,7 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                         </div>
 
                         {/* Navigation */}
-                        <div className="flex-1 px-4 py-2 space-y-2 overflow-y-auto custom-scrollbar">
+                        <div className="flex-1 flex flex-col px-4 py-2 space-y-2 overflow-y-auto custom-scrollbar">
                             {/* Dashboard */}
                             <button
                                 onClick={() => setPage('dashboard')}

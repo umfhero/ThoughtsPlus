@@ -20,7 +20,9 @@
     "lucide-react": "^0.344.0",
     "papaparse": "^5.5.3",
     "react": "^18.2.0",
+    "react-activity-calendar": "^3.0.1",
     "react-dom": "^18.2.0",
+    "react-github-calendar": "^5.0.0",
     "recharts": "^3.4.1",
     "tailwind-merge": "^2.2.1"
   },

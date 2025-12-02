@@ -1,6 +1,18 @@
 import { useState, useEffect } from 'react';
 import { Github, Star, GitFork, ExternalLink, Code } from 'lucide-react';
 import { motion } from 'framer-motion';
+import ActivityCalendar, { Activity } from 'react-activity-calendar';
+import { useTheme } from '../contexts/ThemeContext';
+import { fetchGithubContributions } from '../utils/github';
+
+function hexToRgb(hex: string) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+    } : null;
+}
 
 interface Repo {
     id: number;
@@ -30,20 +42,43 @@ export function GithubPage() {
     const [readme, setReadme] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+    const [contributions, setContributions] = useState<Activity[]>([]);
+    const { accentColor, theme } = useTheme();
+
+    const years = Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - i);
 
     useEffect(() => {
         fetchGithubData();
     }, []);
 
+    useEffect(() => {
+        if (profile) {
+            loadContributions(selectedYear);
+        }
+    }, [selectedYear, profile]);
+
+    const loadContributions = async (year: number) => {
+        if (!profile) return;
+        const data = await fetchGithubContributions(profile.login, year);
+        setContributions(data);
+    };
+
     const fetchGithubData = async () => {
         try {
             setLoading(true);
+            
+            // Check for token in env
+            const token = import.meta.env.VITE_GITHUB_TOKEN;
+            const headers: HeadersInit = { 'Accept': 'application/vnd.github.html' };
+            if (token) {
+                headers['Authorization'] = `token ${token}`;
+            }
+
             const [userRes, reposRes, readmeRes] = await Promise.all([
-                fetch('https://api.github.com/users/umfhero'),
-                fetch('https://api.github.com/users/umfhero/repos?sort=updated&per_page=100'),
-                fetch('https://api.github.com/repos/umfhero/umfhero/readme', {
-                    headers: { 'Accept': 'application/vnd.github.html' }
-                })
+                fetch('https://api.github.com/users/umfhero', token ? { headers: { 'Authorization': `token ${token}` } } : undefined),
+                fetch('https://api.github.com/users/umfhero/repos?sort=updated&per_page=100', token ? { headers: { 'Authorization': `token ${token}` } } : undefined),
+                fetch('https://api.github.com/repos/umfhero/umfhero/readme', { headers })
             ]);
 
             if (!userRes.ok || !reposRes.ok) throw new Error('Failed to fetch Github data');
@@ -87,6 +122,20 @@ export function GithubPage() {
 
     return (
         <div className="p-10 h-full overflow-y-auto space-y-8">
+            <style>{`
+                .github-readme p:first-of-type img {
+                    display: inline-block !important;
+                    margin: 0 4px 4px 0 !important;
+                }
+                .github-readme img {
+                    max-width: 100%;
+                    height: auto;
+                }
+                .github-readme {
+                    font-size: 0.9em;
+                }
+            `}</style>
+
             {/* Profile Header */}
             {profile && (
                 <motion.div 
@@ -126,19 +175,55 @@ export function GithubPage() {
                     </div>
 
                     {/* Contributions Graph */}
-                    <div className="mb-8 overflow-hidden rounded-xl border border-gray-100 dark:border-gray-700">
-                        <img 
-                            src={`https://ghchart.rshah.org/${profile.login}`} 
-                            alt="Github Contributions" 
-                            className="w-full dark:invert dark:hue-rotate-180"
-                        />
+                    <div className="mb-8">
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Contributions</h2>
+                            <div className="flex gap-2">
+                                {years.map(year => (
+                                    <button
+                                        key={year}
+                                        onClick={() => setSelectedYear(year)}
+                                        className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                                            selectedYear === year
+                                                ? 'text-white'
+                                                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                                        }`}
+                                        style={selectedYear === year ? { backgroundColor: accentColor } : undefined}
+                                    >
+                                        {year}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="overflow-hidden rounded-xl bg-white dark:bg-gray-800 p-4 border border-gray-100 dark:border-gray-700 flex justify-center">
+                            <ActivityCalendar 
+                                data={contributions}
+                                colorScheme={theme}
+                                theme={(() => {
+                                    const rgb = hexToRgb(accentColor);
+                                    if (!rgb) return undefined;
+                                    const { r, g, b } = rgb;
+                                    return {
+                                        light: ['#ebedf0', `rgba(${r}, ${g}, ${b}, 0.4)`, `rgba(${r}, ${g}, ${b}, 0.6)`, `rgba(${r}, ${g}, ${b}, 0.8)`, `rgba(${r}, ${g}, ${b}, 1)`],
+                                        dark: ['#161b22', `rgba(${r}, ${g}, ${b}, 0.4)`, `rgba(${r}, ${g}, ${b}, 0.6)`, `rgba(${r}, ${g}, ${b}, 0.8)`, `rgba(${r}, ${g}, ${b}, 1)`],
+                                    };
+                                })()}
+                                labels={{
+                                    totalCount: '{{count}} contributions in {{year}}',
+                                }}
+                                blockSize={12}
+                                blockMargin={4}
+                                fontSize={12}
+                                showWeekdayLabels
+                            />
+                        </div>
                     </div>
 
                     {/* Readme Section */}
                     {readme && (
                         <div className="border-t border-gray-100 dark:border-gray-700 pt-8">
                             <div 
-                                className="prose dark:prose-invert max-w-none prose-headings:no-underline prose-a:no-underline [&_.anchor]:hidden"
+                                className="github-readme prose dark:prose-invert max-w-none prose-headings:no-underline prose-a:no-underline [&_.anchor]:hidden"
                                 dangerouslySetInnerHTML={{ __html: readme }}
                             />
                         </div>

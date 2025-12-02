@@ -7,6 +7,9 @@ import clsx from 'clsx';
 import { BASELINE_STATS, processStatsData, StatsData as HistoricalStatsData } from '../utils/statsManager';
 import TrendChart from '../components/TrendChart';
 import MaizSticker from '../assets/MaizStudioSticker.png';
+import ActivityCalendar, { Activity } from 'react-activity-calendar';
+import { useTheme } from '../contexts/ThemeContext';
+import { fetchGithubContributions } from '../utils/github';
 
 interface DashboardProps {
     notes: NotesData;
@@ -14,6 +17,15 @@ interface DashboardProps {
     userName: string;
     onAddNote: (note: Note, date: Date) => void;
     isLoading?: boolean;
+}
+
+function hexToRgb(hex: string) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+    } : null;
 }
 
 export function Dashboard({ notes, onNavigateToNote, userName, isLoading = false }: DashboardProps) {
@@ -25,6 +37,12 @@ export function Dashboard({ notes, onNavigateToNote, userName, isLoading = false
     const [isBriefingLoading, setIsBriefingLoading] = useState(false);
     const [loadingMessage, setLoadingMessage] = useState("Analyzing your schedule...");
     const [eventTab, setEventTab] = useState<'upcoming' | 'notCompleted'>('upcoming');
+    const [contributions, setContributions] = useState<Activity[]>([]);
+    const { accentColor, theme } = useTheme();
+
+    useEffect(() => {
+        fetchGithubContributions('umfhero', new Date().getFullYear()).then(setContributions);
+    }, []);
 
     const loadingMessages = [
         "Pretending to understand your abbreviations...",
@@ -548,11 +566,28 @@ export function Dashboard({ notes, onNavigateToNote, userName, isLoading = false
                         <h3 className="text-2xl font-bold text-gray-800 dark:text-white">Contributions</h3>
                     </div>
                 </div>
-                <div className="overflow-hidden rounded-xl border border-gray-100 dark:border-gray-700">
-                    <img 
-                        src="https://ghchart.rshah.org/umfhero" 
-                        alt="Github Contributions" 
-                        className="w-full dark:invert dark:hue-rotate-180"
+                <div className="overflow-hidden rounded-xl border border-gray-100 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 flex justify-center">
+                    <ActivityCalendar 
+                        data={contributions}
+                        colorScheme={theme}
+                        theme={(() => {
+                            const rgb = hexToRgb(accentColor);
+                            if (!rgb) return undefined;
+                            const { r, g, b } = rgb;
+                            return {
+                                light: ['#ebedf0', `rgba(${r}, ${g}, ${b}, 0.4)`, `rgba(${r}, ${g}, ${b}, 0.6)`, `rgba(${r}, ${g}, ${b}, 0.8)`, `rgba(${r}, ${g}, ${b}, 1)`],
+                                dark: ['#161b22', `rgba(${r}, ${g}, ${b}, 0.4)`, `rgba(${r}, ${g}, ${b}, 0.6)`, `rgba(${r}, ${g}, ${b}, 0.8)`, `rgba(${r}, ${g}, ${b}, 1)`],
+                            };
+                        })()}
+                        labels={{
+                            totalCount: '{{count}} contributions in {{year}}',
+                        }}
+                        blockSize={12}
+                        blockMargin={4}
+                        fontSize={12}
+                        showWeekdayLabels
+                        hideTotalCount
+                        hideColorLegend
                     />
                 </div>
             </motion.div>
