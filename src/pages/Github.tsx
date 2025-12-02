@@ -175,7 +175,7 @@ export function GithubPage() {
                     </div>
 
                     {/* Contributions Graph */}
-                    <div className="mb-8">
+                    <div className="mb-2">
                         <div className="flex items-center justify-between mb-4">
                             <h2 className="text-xl font-bold text-gray-900 dark:text-white">Contributions</h2>
                             <div className="flex gap-2">
@@ -195,7 +195,7 @@ export function GithubPage() {
                                 ))}
                             </div>
                         </div>
-                        <div className="overflow-hidden rounded-xl bg-white dark:bg-gray-800 p-4 border border-gray-100 dark:border-gray-700 flex justify-center min-h-[160px] items-center">
+                        <div className="overflow-x-auto thin-scrollbar pb-2 rounded-xl bg-white dark:bg-gray-800 p-4 border border-gray-100 dark:border-gray-700 flex justify-center min-h-[160px] items-center">
                             {contributions.length > 0 ? (
                                 <ActivityCalendar 
                                     data={contributions}
@@ -228,7 +228,7 @@ export function GithubPage() {
 
                     {/* Readme Section */}
                     {readme && (
-                        <div className="border-t border-gray-100 dark:border-gray-700 pt-8">
+                        <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
                             <div 
                                 className="github-readme prose dark:prose-invert max-w-none prose-headings:no-underline prose-a:no-underline [&_.anchor]:hidden"
                                 dangerouslySetInnerHTML={{ __html: readme }}
