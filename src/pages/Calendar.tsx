@@ -179,7 +179,7 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
                     id: crypto.randomUUID(),
                     title: result.title,
                     description: options[0], // Default to first option
-                    summary: result.title,
+                    summary: options[0],
                     time: result.time,
                     importance: result.importance
                 };

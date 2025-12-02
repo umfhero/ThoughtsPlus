@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar as CalendarIcon, ArrowUpRight, ListTodo, Loader } from 'lucide-react';
+import { Calendar as CalendarIcon, ArrowUpRight, ListTodo, Loader, Circle } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { format, parseISO } from 'date-fns';
 import { NotesData, Note } from '../App';
@@ -291,6 +291,13 @@ export function Dashboard({ notes, onNavigateToNote, userName, isLoading = false
         misc: 'bg-blue-500'
     };
 
+    const importanceIconColors = {
+        low: 'text-green-500',
+        medium: 'text-orange-500',
+        high: 'text-red-500',
+        misc: 'text-blue-500'
+    };
+
     const getGreeting = () => {
         const hour = time.getHours();
         const firstName = userName.split(' ')[0] || 'User';
@@ -466,10 +473,10 @@ export function Dashboard({ notes, onNavigateToNote, userName, isLoading = false
                                             <div className="text-[10px] opacity-60 font-semibold">{getCountdown(date, note.time)}</div>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-2 text-xs opacity-80">
-                                        <div className={clsx("w-1.5 h-1.5 rounded-full", importanceDots[note.importance])} />
+                                    <div className="flex items-start gap-2 text-xs opacity-80">
+                                        <Circle className={clsx("w-2 h-2 mt-[3px] flex-shrink-0 fill-current", importanceIconColors[note.importance])} />
                                         <span className="break-words">
-                                            {note.summary || note.description || 'No description'}
+                                            {note.description || 'No description'}
                                         </span>
                                     </div>
                                 </motion.div>
