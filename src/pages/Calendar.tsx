@@ -58,6 +58,36 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
         return `${hours12}:${minutes.toString().padStart(2, '0')} ${period}`;
     };
 
+    const getAllNotes = () => {
+        const all: { date: Date, note: Note }[] = [];
+        Object.entries(notes).forEach(([dateStr, dayNotes]) => {
+            const date = parseISO(dateStr);
+            dayNotes.forEach(note => {
+                all.push({ date, note });
+            });
+        });
+        return all.sort((a, b) => {
+            const dateDiff = a.date.getTime() - b.date.getTime();
+            if (dateDiff !== 0) return dateDiff;
+            return a.note.time.localeCompare(b.note.time);
+        });
+    };
+
+    const isSearchActive = searchQuery.trim() !== '' || filterImportance !== 'all';
+
+    const filteredNotes = isSearchActive ? getAllNotes().filter(({ note }) => {
+        const matchesSearch = note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                              note.description.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesFilter = filterImportance === 'all' || note.importance === filterImportance;
+        return matchesSearch && matchesFilter;
+    }) : [];
+
+    useEffect(() => {
+        if (isSearchActive) {
+            setIsPanelOpen(true);
+        }
+    }, [isSearchActive]);
+
     useEffect(() => {
         if (initialSelectedDate) {
             setCurrentMonth(initialSelectedDate);
@@ -70,8 +100,6 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
     useEffect(() => {
         if (selectedDate) {
             resetForm();
-            setSearchQuery('');
-            setFilterImportance('all');
         }
     }, [selectedDate]);
 
@@ -138,9 +166,10 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
         resetForm();
     };
 
-    const handleDeleteNote = (noteId: string) => {
-        if (!selectedDate) return;
-        const dateKey = format(selectedDate, 'yyyy-MM-dd');
+    const handleDeleteNote = (noteId: string, date?: Date) => {
+        const targetDate = date || selectedDate;
+        if (!targetDate) return;
+        const dateKey = format(targetDate, 'yyyy-MM-dd');
         const existingNotes = notes[dateKey] || [];
         const newNotes = { ...notes, [dateKey]: existingNotes.filter(n => n.id !== noteId) };
         saveNotes(newNotes);
@@ -167,6 +196,8 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
     const onDateClick = (day: Date) => {
         setSelectedDate(day);
         setIsPanelOpen(true);
+        setSearchQuery('');
+        setFilterImportance('all');
     };
 
     const handleAiSubmit = async () => {
@@ -250,13 +281,40 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
 
     return (
         <div className="h-full flex gap-6 p-8 overflow-hidden relative">
-            <motion.div layout className="flex-1 flex flex-col h-full">
+            <motion.div layout className="flex-1 flex flex-col h-full min-w-0">
                 <div className="flex items-center justify-between mb-8">
-                    <div>
-                        <h2 className="text-3xl font-bold text-gray-800 dark:text-gray-100">
-                            {format(currentMonth, 'MMMM')} <span className="text-gray-400 dark:text-gray-500">{format(currentMonth, 'yyyy')}</span>
-                        </h2>
-                        <p className="text-gray-500 dark:text-gray-400">Manage your events and notes</p>
+                    <div className="flex items-center gap-8">
+                        <div>
+                            <h2 className="text-3xl font-bold text-gray-800 dark:text-gray-100">
+                                {format(currentMonth, 'MMMM')} <span className="text-gray-400 dark:text-gray-500">{format(currentMonth, 'yyyy')}</span>
+                            </h2>
+                            <p className="text-gray-500 dark:text-gray-400">Manage your events and notes</p>
+                        </div>
+
+                        <div className="flex items-center gap-3 bg-white dark:bg-gray-800 p-1.5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                            <div className="relative">
+                                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                <input
+                                    type="text"
+                                    placeholder="Search events..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="pl-9 pr-4 py-1.5 text-sm bg-transparent border-none focus:ring-0 w-48 text-gray-700 dark:text-gray-200 placeholder-gray-400"
+                                />
+                            </div>
+                            <div className="h-4 w-px bg-gray-200 dark:bg-gray-700" />
+                            <select
+                                value={filterImportance}
+                                onChange={(e) => setFilterImportance(e.target.value as any)}
+                                className="text-sm bg-transparent border-none focus:ring-0 text-gray-600 dark:text-gray-300 py-1.5 pr-8 cursor-pointer"
+                            >
+                                <option value="all">All Priority</option>
+                                <option value="high">High</option>
+                                <option value="medium">Medium</option>
+                                <option value="low">Low</option>
+                                <option value="misc">Misc</option>
+                            </select>
+                        </div>
                     </div>
 
                     <div className="flex items-center gap-2 bg-white dark:bg-gray-800 p-1.5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
@@ -353,60 +411,80 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
             </motion.div>
 
             <AnimatePresence mode="popLayout">
-                {isPanelOpen && selectedDate && (
+                {isPanelOpen && (selectedDate || isSearchActive) && (
                     <motion.div
                         key="side-panel"
                         initial={{ x: 300, opacity: 0 }}
                         animate={{ x: 0, opacity: 1 }}
                         exit={{ x: 300, opacity: 0 }}
-                        className="w-96 bg-white/80 backdrop-blur-xl rounded-[2rem] border border-white/60 shadow-2xl p-6 flex flex-col h-full"
+                        className="w-96 shrink-0 bg-white/80 backdrop-blur-xl rounded-[2rem] border border-white/60 shadow-2xl p-6 flex flex-col h-full"
                     >
                         <div className="flex justify-between items-center mb-6">
                             <div>
-                                <h3 className="text-2xl font-bold text-gray-800">{format(selectedDate, 'EEEE')}</h3>
-                                <p className="text-gray-500">{format(selectedDate, 'MMMM do, yyyy')}</p>
+                                {isSearchActive ? (
+                                    <>
+                                        <h3 className="text-2xl font-bold text-gray-800">Search Results</h3>
+                                        <p className="text-gray-500">{filteredNotes.length} events found</p>
+                                    </>
+                                ) : (
+                                    <>
+                                        <h3 className="text-2xl font-bold text-gray-800">{format(selectedDate!, 'EEEE')}</h3>
+                                        <p className="text-gray-500">{format(selectedDate!, 'MMMM do, yyyy')}</p>
+                                    </>
+                                )}
                             </div>
                             <button onClick={() => setIsPanelOpen(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
                                 <X className="w-5 h-5 text-gray-500" />
                             </button>
                         </div>
-
-                        <div className="flex gap-2 mb-4">
-                            <div className="relative flex-1">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-3 h-3 text-gray-400" />
-                                <input 
-                                    type="text"
-                                    placeholder="Search..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full pl-8 pr-2 py-1.5 rounded-lg bg-gray-50 border border-gray-200 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                                />
-                            </div>
-                            <div className="relative">
-                                <Filter className="absolute left-2 top-1/2 transform -translate-y-1/2 w-3 h-3 text-gray-400" />
-                                <select
-                                    value={filterImportance}
-                                    onChange={(e) => setFilterImportance(e.target.value)}
-                                    className="pl-7 pr-6 py-1.5 rounded-lg bg-gray-50 border border-gray-200 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 appearance-none cursor-pointer"
-                                >
-                                    <option value="all">All</option>
-                                    <option value="high">High</option>
-                                    <option value="medium">Med</option>
-                                    <option value="low">Low</option>
-                                    <option value="misc">Misc</option>
-                                </select>
-                            </div>
-                        </div>
-
                         <div className="flex-1 overflow-y-auto custom-scrollbar space-y-4 mb-6">
-                            {(notes[format(selectedDate, 'yyyy-MM-dd')] || [])
-                                .filter(note => {
-                                    const matchesSearch = note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                                          note.description.toLowerCase().includes(searchQuery.toLowerCase());
-                                    const matchesFilter = filterImportance === 'all' || note.importance === filterImportance;
-                                    return matchesSearch && matchesFilter;
-                                })
-                                .map((note) => (
+                            {isSearchActive ? (
+                                filteredNotes.length > 0 ? (
+                                    filteredNotes.map(({ date, note }) => (
+                                        <motion.div
+                                            layout
+                                            key={note.id}
+                                            onClick={() => {
+                                                setSelectedDate(date);
+                                                if (!isSameMonth(date, currentMonth)) {
+                                                    setCurrentMonth(date);
+                                                }
+                                            }}
+                                            className={clsx("p-4 rounded-xl border group relative cursor-pointer hover:shadow-md transition-all", importanceColors[note.importance])}
+                                        >
+                                            <div className="flex justify-between items-start mb-2">
+                                                <div>
+                                                    <h4 className="font-bold">{note.title}</h4>
+                                                    <div className="text-xs opacity-70 mt-1 font-semibold">
+                                                        {format(date, 'MMM d, yyyy')} • {convertTo12Hour(note.time)}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <p className="text-sm opacity-80 mb-3">{note.description}</p>
+                                            <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setSelectedDate(date);
+                                                    loadNoteForEditing(note);
+                                                }} className="p-1.5 hover:bg-white/50 rounded-lg transition-colors">
+                                                    <Edit2 className="w-3.5 h-3.5" />
+                                                </button>
+                                                <button onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleDeleteNote(note.id, date);
+                                                }} className="p-1.5 hover:bg-red-100 text-red-600 rounded-lg transition-colors">
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
+                                        </motion.div>
+                                    ))
+                                ) : (
+                                    <div className="text-center py-10 text-gray-400">
+                                        <p>No matching events found</p>
+                                    </div>
+                                )
+                            ) : (
+                                (notes[format(selectedDate, 'yyyy-MM-dd')] || []).map((note) => (
                                 <motion.div
                                     layout
                                     key={note.id}
@@ -426,8 +504,9 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
                                         </button>
                                     </div>
                                 </motion.div>
-                            ))}
-                            {(!notes[format(selectedDate, 'yyyy-MM-dd')] || notes[format(selectedDate, 'yyyy-MM-dd')].length === 0) && (
+                            ))
+                            )}
+                            {!isSearchActive && (!notes[format(selectedDate, 'yyyy-MM-dd')] || notes[format(selectedDate, 'yyyy-MM-dd')].length === 0) && (
                                 <div className="text-center py-10 text-gray-400">
                                     <p>No events for this day</p>
                                 </div>
