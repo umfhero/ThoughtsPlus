@@ -7,6 +7,7 @@ import { SettingsPage } from './pages/Settings';
 import { DrawingPage } from './pages/Drawing';
 import { GithubPage } from './pages/Github';
 import { AiQuickAddModal } from './components/AiQuickAddModal';
+import { ShortcutsOverlay } from './components/ShortcutsOverlay';
 
 export type Page = 'dashboard' | 'calendar' | 'stats' | 'settings' | 'drawing' | 'github';
 
@@ -44,11 +45,16 @@ function App() {
                 e.preventDefault();
                 setIsAiModalOpen(true);
             }
+            if (e.key === 'Escape') {
+                if (isAiModalOpen) {
+                    setIsAiModalOpen(false);
+                }
+            }
         };
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, []);
+    }, [isAiModalOpen]);
 
     const loadNotes = async () => {
         try {
@@ -152,6 +158,8 @@ function App() {
                 onClose={() => setIsAiModalOpen(false)}
                 onSave={handleAddNote}
             />
+            
+            <ShortcutsOverlay />
         </div>
     );
 }
