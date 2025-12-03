@@ -211,6 +211,16 @@ export function SettingsPage() {
                         </div>
                     </div>
                 </motion.div>
+
+                {/* About Section */}
+                <div className="text-center pt-8 pb-4">
+                    <p className="text-gray-400 dark:text-gray-500 text-sm">
+                        Calendar Plus v2.0.0
+                    </p>
+                    <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">
+                        © 2025 Calendar Plus
+                    </p>
+                </div>
             </div>
         </div>
     );

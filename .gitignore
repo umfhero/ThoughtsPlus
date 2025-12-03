@@ -7,3 +7,5 @@ release
 .DS_Store
 builder-cache
 release-packager
+release-packager-v2
+
