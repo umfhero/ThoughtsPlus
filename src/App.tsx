@@ -45,10 +45,17 @@ function App() {
                 e.preventDefault();
                 setIsAiModalOpen(true);
             }
+            
             if (e.key === 'Escape') {
                 if (isAiModalOpen) {
                     setIsAiModalOpen(false);
+                } else {
+                    setIsSidebarCollapsed(true);
                 }
+            }
+
+            if (e.key === 'Control') {
+                setIsSidebarCollapsed(false);
             }
         };
 

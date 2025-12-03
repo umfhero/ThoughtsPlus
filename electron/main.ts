@@ -1,10 +1,13 @@
 import { app, BrowserWindow, ipcMain, dialog, Menu } from 'electron'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import fs from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import os from 'node:os'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import dotenv from 'dotenv'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // Load environment variables from .env file
 const envPath = app.isPackaged
