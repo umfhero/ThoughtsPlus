@@ -51,16 +51,15 @@
       },
       ".env"
     ],
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json"
+    ],
     "win": {
       "target": [
         {
           "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "portable",
           "arch": [
             "x64"
           ]
@@ -70,10 +69,16 @@
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "installerIcon": "src/assets/calendar_icon_181520.png",
+      "uninstallerIcon": "src/assets/calendar_icon_181520.png"
     },
     "directories": {
       "output": "release"
-    }
+    },
+    "compression": "maximum"
   }
 }
