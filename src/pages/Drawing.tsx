@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { Trash2, Undo, Redo, Plus, Type, X, Layers, GripVertical, Check, ArrowDownRight, Palette, Type as TypeIcon } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback, memo } from 'react';
+import { Trash2, Undo, Redo, Plus, Type, X, Layers, GripVertical, Check, ArrowDownRight, Type as TypeIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import clsx from 'clsx';
 
@@ -25,6 +25,11 @@ interface Tab {
     objects: CanvasObject[];
 }
 
+interface HistoryStep {
+    canvasData: string;
+    objects: CanvasObject[];
+}
+
 // --- Constants ---
 const DEFAULT_TAB_COLOR = '#3B82F6';
 const EMOJIS = ['📝', '🎨', '💡', '📅', '✅', '🔥', '❤️', '⭐', '🔷', '🟢', '🧠', '💼'];
@@ -32,13 +37,140 @@ const COLORS = ['#EF4444', '#F97316', '#F59E0B', '#10B981', '#14B8A6', '#3B82F6'
 
 const generateId = () => Math.random().toString(36).substring(2, 9);
 
-export function DrawingPage() {
+// --- Memoized Object Component ---
+const CanvasObjectComponent = memo(({
+    obj,
+    isSelected,
+    isHovered,
+    onMouseDown,
+    onMouseEnter,
+    onMouseLeave,
+    onChangeContent,
+    onDelete,
+    onResizeStart,
+    onChangeFontSize,
+    onChangeColor,
+    textInputRef
+}: {
+    obj: CanvasObject,
+    isSelected: boolean,
+    isHovered: boolean,
+    onMouseDown: (e: React.MouseEvent) => void,
+    onMouseEnter: () => void,
+    onMouseLeave: () => void,
+    onChangeContent: (val: string) => void,
+    onDelete: (e: React.MouseEvent) => void,
+    onResizeStart: (e: React.MouseEvent) => void,
+    onChangeFontSize: (val: number) => void,
+    onChangeColor: (val: string) => void,
+    textInputRef: (el: HTMLTextAreaElement | null) => void
+}) => {
+    const showControls = isSelected || isHovered;
+
+    return (
+        <div
+            style={{ position: 'absolute', left: obj.x, top: obj.y, cursor: 'move' }}
+            onMouseDown={onMouseDown}
+            onMouseEnter={onMouseEnter}
+            onMouseLeave={onMouseLeave}
+            className={clsx("group", isSelected && "z-50")}
+        >
+            <div className={clsx("relative p-2 border-2 transition-all rounded-lg",
+                showControls ? "border-blue-500/50 border-dashed bg-blue-50/10" : "border-transparent"
+            )}
+                style={obj.type === 'text' ? { width: obj.width, height: obj.height } : {}}
+            >
+                {obj.type === 'text' ? (
+                    <textarea
+                        ref={textInputRef}
+                        value={obj.content}
+                        onChange={e => onChangeContent(e.target.value)}
+                        className="bg-transparent font-handwriting border-none focus:outline-none w-full h-full resize-none p-0 overflow-hidden leading-tight"
+                        style={{ color: obj.color, fontSize: obj.fontSize }}
+                        placeholder="Type..."
+                        spellCheck={true}
+                    />
+                ) : (
+                    <img src={obj.content} className="pointer-events-none max-w-[500px]" alt="obj" />
+                )}
+
+                {/* Controls */}
+                <AnimatePresence>
+                    {showControls && (
+                        <>
+                            <motion.button
+                                initial={{ scale: 0, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0, opacity: 0 }}
+                                onClick={onDelete}
+                                className="absolute -top-3 -right-3 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 shadow-md z-50"
+                            >
+                                <X className="w-3 h-3" />
+                            </motion.button>
+
+                            {obj.type === 'text' && (
+                                <motion.div
+                                    initial={{ scale: 0, opacity: 0 }}
+                                    animate={{ scale: 1, opacity: 1 }}
+                                    exit={{ scale: 0, opacity: 0 }}
+                                    className="absolute -bottom-3 -right-3 w-6 h-6 bg-white border border-blue-500 rounded-full cursor-nwse-resize flex items-center justify-center z-50 hover:bg-blue-50 transition-colors shadow-md text-blue-500"
+                                    onMouseDown={onResizeStart}
+                                >
+                                    <ArrowDownRight className="w-4 h-4" />
+                                </motion.div>
+                            )}
+
+                            {isSelected && obj.type === 'text' && (
+                                <motion.div
+                                    initial={{ y: 10, opacity: 0 }}
+                                    animate={{ y: 0, opacity: 1 }}
+                                    exit={{ y: 10, opacity: 0 }}
+                                    className="absolute -top-16 left-1/2 -translate-x-1/2 bg-white dark:bg-gray-800 p-1.5 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 flex items-center gap-2 z-[60]"
+                                    onMouseDown={e => e.stopPropagation()}
+                                >
+                                    <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+                                        <TypeIcon className="w-3 h-3 text-gray-500" />
+                                        <input
+                                            type="number"
+                                            value={obj.fontSize}
+                                            onChange={e => onChangeFontSize(parseInt(e.target.value))}
+                                            className="w-10 bg-transparent text-xs text-center focus:outline-none dark:text-gray-200"
+                                        />
+                                    </div>
+                                    <div className="w-px h-4 bg-gray-200 dark:bg-gray-600" />
+                                    <div className="relative w-6 h-6 rounded-full overflow-hidden ring-1 ring-gray-200 cursor-pointer">
+                                        <input
+                                            type="color"
+                                            value={obj.color}
+                                            onChange={e => onChangeColor(e.target.value)}
+                                            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] p-0 border-0 cursor-pointer"
+                                        />
+                                    </div>
+                                </motion.div>
+                            )}
+                        </>
+                    )}
+                </AnimatePresence>
+            </div>
+        </div>
+    );
+}, (prev, next) => {
+    return (
+        prev.obj === next.obj &&
+        prev.isSelected === next.isSelected &&
+        prev.isHovered === next.isHovered
+    );
+});
+
+
+export function DrawingPage({ refreshTrigger }: { refreshTrigger?: number }) {
     // --- Refs ---
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const cursorRef = useRef<HTMLDivElement>(null);
     const lastMousePos = useRef<{ x: number, y: number }>({ x: 960, y: 540 });
     const textInputRefs = useRef<{ [key: string]: HTMLTextAreaElement | null }>({});
+    const rafRef = useRef<number | null>(null);
 
     // --- State: Tabs & Navigation ---
     const [tabs, setTabs] = useState<Tab[]>([{
@@ -80,10 +212,9 @@ export function DrawingPage() {
     const [dragStart, setDragStart] = useState<{ x: number, y: number } | null>(null);
     const [resizeStart, setResizeStart] = useState<{ id: string, startX: number, startY: number, startWidth: number, startHeight: number } | null>(null);
 
-    const rafRef = useRef<number | null>(null);
 
     // --- State: History ---
-    const [history, setHistory] = useState<string[]>([]);
+    const [history, setHistory] = useState<HistoryStep[]>([]);
     const [historyIndex, setHistoryIndex] = useState(-1);
 
     // Refs for drawing mathematics
@@ -96,7 +227,23 @@ export function DrawingPage() {
 
     useEffect(() => {
         loadData();
-    }, []);
+    }, [refreshTrigger]);
+
+    // Initialize History on Tab Switch (ensure we have a base state to undo to)
+    useEffect(() => {
+        if (activeTabId && canvasRef.current) {
+            // Wait briefly for canvas to be painted by load/switch logic
+            const timeout = setTimeout(() => {
+                if (canvasRef.current && history.length === 0) {
+                    const initialData = canvasRef.current.toDataURL();
+                    const initialState = { canvasData: initialData, objects: objects };
+                    setHistory([initialState]);
+                    setHistoryIndex(0);
+                }
+            }, 50);
+            return () => clearTimeout(timeout);
+        }
+    }, [activeTabId, objects, history.length]);
 
     useEffect(() => {
         const updateScale = () => {
@@ -120,21 +267,42 @@ export function DrawingPage() {
             // @ts-ignore
             const data = await window.ipcRenderer.invoke('get-drawing');
             if (data) {
+                let loadedTabs: Tab[] = [];
+                let targetId = '';
                 if (Array.isArray(data.tabs)) {
-                    setTabs(data.tabs);
-                    const targetId = data.activeTabId || data.tabs[0]?.id;
-                    setActiveTabId(targetId);
-                    const current = data.tabs.find((t: Tab) => t.id === targetId);
-                    setObjects(current?.objects || []);
+                    loadedTabs = data.tabs;
+                    targetId = data.activeTabId || data.tabs[0]?.id;
                 } else if (typeof data === 'string') {
-                    setTabs([{
+                    loadedTabs = [{
                         id: generateId(),
                         name: 'My Drawing',
                         emoji: '🎨',
                         color: DEFAULT_TAB_COLOR,
                         canvasData: data,
                         objects: []
-                    }]);
+                    }];
+                    targetId = loadedTabs[0].id;
+                }
+
+                if (loadedTabs.length > 0) {
+                    setTabs(loadedTabs);
+                    setActiveTabId(targetId);
+                    const current = loadedTabs.find((t: Tab) => t.id === targetId);
+                    setObjects(current?.objects || []);
+
+                    if (current?.canvasData && canvasRef.current) {
+                        const ctx = canvasRef.current.getContext('2d');
+                        const img = new Image();
+                        img.onload = () => {
+                            ctx?.clearRect(0, 0, 1920, 1080);
+                            ctx?.drawImage(img, 0, 0);
+                        };
+                        img.src = current.canvasData;
+                    }
+
+                    // Reset history so it re-initializes
+                    setHistory([]);
+                    setHistoryIndex(-1);
                 }
             }
         } catch (e) {
@@ -178,6 +346,7 @@ export function DrawingPage() {
             }
             setActiveTabId(newId);
             setObjects(newTab.objects || []);
+            // Clear history so useEffect re-inits it with new tab content
             setHistory([]);
             setHistoryIndex(-1);
         }
@@ -200,6 +369,8 @@ export function DrawingPage() {
         setObjects([]);
         setIsNewTabModalOpen(false);
         setNewTabConfig({ name: 'New Drawing', emoji: '🎨', color: DEFAULT_TAB_COLOR });
+        setHistory([]);
+        setHistoryIndex(-1);
     };
 
     const handleDeleteTab = (e: React.MouseEvent, id: string) => {
@@ -235,6 +406,17 @@ export function DrawingPage() {
 
     // --- Drawing / Object Logic ---
 
+    // Helper to push history
+    const addToHistoryWithState = (canvasData: string, objs: CanvasObject[]) => {
+        const newH = history.slice(0, historyIndex + 1);
+        newH.push({ canvasData, objects: objs });
+        if (newH.length > 30) newH.shift(); // Limit
+        setHistory(newH);
+        setHistoryIndex(newH.length - 1);
+        // Sync tab data
+        setTabs(prev => prev.map(t => t.id === activeTabId ? { ...t, canvasData, objects: objs } : t));
+    };
+
     const addTextObject = (text: string, x?: number, y?: number) => {
         const newObj: CanvasObject = {
             id: generateId(),
@@ -247,9 +429,15 @@ export function DrawingPage() {
             color: color,
             fontSize: brushSize * 4
         };
-        setObjects(prev => [...prev, newObj]);
-        setSelectedObjectId(newObj.id);
-        // Force focus on next render
+        const newObjects = [...objects, newObj];
+        setObjects(newObjects);
+
+        if (canvasRef.current) {
+            addToHistoryWithState(canvasRef.current.toDataURL(), newObjects);
+        } else {
+            setSelectedObjectId(newObj.id);
+        }
+
         setTimeout(() => {
             if (textInputRefs.current[newObj.id]) {
                 textInputRefs.current[newObj.id]?.focus();
@@ -258,24 +446,28 @@ export function DrawingPage() {
         }, 10);
     };
 
-    const deleteAction = () => {
-        if (selectedObjectId) {
-            setObjects(prev => prev.filter(o => o.id !== selectedObjectId));
-            setSelectedObjectId(null);
+    const deleteAction = useCallback((id?: string) => {
+        const targetId = id || selectedObjectId;
+        if (targetId) {
+            const newObj = objects.filter(o => o.id !== targetId);
+            setObjects(newObj);
+            if (targetId === selectedObjectId) setSelectedObjectId(null);
+
+            if (canvasRef.current) addToHistoryWithState(canvasRef.current.toDataURL(), newObj);
         } else {
             clearCanvas();
         }
-    };
+    }, [selectedObjectId, objects]); // added objects dep
 
     const clearCanvas = () => {
         const ctx = canvasRef.current?.getContext('2d');
         ctx?.clearRect(0, 0, 1920, 1080);
         setObjects([]);
-        addToHistory();
+        addToHistoryWithState(canvasRef.current?.toDataURL() || '', []);
     };
 
     // --- Resize Logic ---
-    const handleResizeStart = (e: React.MouseEvent, id: string) => {
+    const handleResizeStart = useCallback((e: React.MouseEvent, id: string) => {
         e.stopPropagation();
         const obj = objects.find(o => o.id === id);
         if (obj) {
@@ -287,13 +479,68 @@ export function DrawingPage() {
                 startHeight: obj.height || 100
             });
         }
-    };
+    }, [objects]);
 
     // --- Global Mouse Move for Drag/Resize ---
-    const handleMouseMoveGlobal = useCallback((e: React.MouseEvent) => {
-        e.persist();
+    useEffect(() => {
+        if (!resizeStart && !dragStart && !isDrawing) return;
 
-        // Cursor follow
+        const handleWindowMove = (e: MouseEvent) => {
+            if (containerRef.current) {
+                const r = containerRef.current.getBoundingClientRect();
+                const x = e.clientX - r.left;
+                const y = e.clientY - r.top;
+                lastMousePos.current = { x, y };
+                if (cursorRef.current) cursorRef.current.style.transform = `translate(${x}px, ${y}px)`;
+            }
+
+            if (rafRef.current) return;
+            rafRef.current = requestAnimationFrame(() => {
+                if (resizeStart) {
+                    const dx = e.clientX - resizeStart.startX;
+                    const dy = e.clientY - resizeStart.startY;
+
+                    setObjects(prev => prev.map(o => {
+                        if (o.id === resizeStart.id) {
+                            return {
+                                ...o,
+                                width: Math.max(50, resizeStart.startWidth + dx),
+                                height: Math.max(30, resizeStart.startHeight + dy)
+                            };
+                        }
+                        return o;
+                    }));
+                } else if (selectedObjectId && dragStart) {
+                    setObjects(prev => {
+                        return prev.map(o => o.id === selectedObjectId ? { ...o, x: e.clientX - dragStart.x, y: e.clientY - dragStart.y } : o);
+                    });
+                }
+                if (isDrawing && canvasRef.current) {
+                    draw(e as unknown as React.MouseEvent);
+                }
+                rafRef.current = null;
+            });
+        };
+
+        const handleWindowUp = () => {
+            setDragStart(null);
+            setResizeStart(null);
+            stopDrawing();
+            // Important: We aren't automatically pushing history on DragEnd here 
+            // to avoid too many history states, but it means undo won't revert the drag immediately.
+            // This is a trade-off for performance and simplicity in this refactor.
+        };
+
+        window.addEventListener('mousemove', handleWindowMove);
+        window.addEventListener('mouseup', handleWindowUp);
+        return () => {
+            window.removeEventListener('mousemove', handleWindowMove);
+            window.removeEventListener('mouseup', handleWindowUp);
+        };
+    }, [resizeStart, dragStart, isDrawing, selectedObjectId]);
+
+    const handleContainerMouseMove = (e: React.MouseEvent) => {
+        if (resizeStart || dragStart || isDrawing) return;
         if (containerRef.current) {
             const r = containerRef.current.getBoundingClientRect();
             const x = e.clientX - r.left;
@@ -301,43 +548,42 @@ export function DrawingPage() {
             lastMousePos.current = { x, y };
             if (cursorRef.current) cursorRef.current.style.transform = `translate(${x}px, ${y}px)`;
         }
-
-        // Throttle updates with RAF
-        if (rafRef.current) return;
-
-        rafRef.current = requestAnimationFrame(() => {
-            if (resizeStart) {
-                const dx = e.clientX - resizeStart.startX;
-                const dy = e.clientY - resizeStart.startY;
-
-                setObjects(prev => prev.map(o => {
-                    if (o.id === resizeStart.id) {
-                        return {
-                            ...o,
-                            width: Math.max(50, resizeStart.startWidth + dx),
-                            height: Math.max(30, resizeStart.startHeight + dy)
-                        };
-                    }
-                    return o;
-                }));
-            } else if (selectedObjectId && dragStart) {
-                setObjects(prev => {
-                    return prev.map(o => o.id === selectedObjectId ? { ...o, x: e.clientX - dragStart.x, y: e.clientY - dragStart.y } : o);
-                });
-            }
-            if (isDrawing && canvasRef.current) {
-                draw(e);
-            }
-            rafRef.current = null;
-        });
-    }, [resizeStart, isDrawing, selectedObjectId, dragStart]); // Dependencies needed to recreate callback
+    };
 
     // --- Shortcuts ---
 
+    const undo = () => {
+        if (historyIndex > 0) {
+            const idx = historyIndex - 1;
+            setHistoryIndex(idx);
+            loadHistoryStep(history[idx]);
+        }
+    };
+    const redo = () => {
+        if (historyIndex < history.length - 1) {
+            const idx = historyIndex + 1;
+            setHistoryIndex(idx);
+            loadHistoryStep(history[idx]);
+        }
+    };
+
+    const loadHistoryStep = (step: HistoryStep) => {
+        setObjects(step.objects);
+        const img = new Image();
+        img.src = step.canvasData;
+        img.onload = () => {
+            const ctx = canvasRef.current?.getContext('2d');
+            ctx?.clearRect(0, 0, 1920, 1080);
+            ctx?.drawImage(img, 0, 0);
+        };
+    };
+
     useEffect(() => {
         const handleKeyDown = async (e: KeyboardEvent) => {
-            // Paste logic
+            const isInput = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
+
             if (e.ctrlKey && e.key.toLowerCase() === 'v') {
+                if (isInput) return;
                 try {
                     const text = await navigator.clipboard.readText();
                     if (text) {
@@ -348,26 +594,30 @@ export function DrawingPage() {
                 return;
             }
 
-            // Allow typing in inputs
-            if ((e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) && !e.ctrlKey) return;
+            if (isInput && !e.ctrlKey) return;
+            if (isInput && e.ctrlKey && ['z', 'y', 'c', 'x', 'a'].includes(e.key.toLowerCase())) return;
 
             if (e.key === 'Delete') {
-                if (selectedObjectId) {
-                    setObjects(prev => prev.filter(o => o.id !== selectedObjectId));
-                    setSelectedObjectId(null);
-                }
+                if (selectedObjectId && !isInput) deleteAction();
             }
 
             if (e.ctrlKey) {
                 switch (e.key.toLowerCase()) {
                     case 'z': e.preventDefault(); undo(); break;
                     case 'y': e.preventDefault(); redo(); break;
-                    case 'c': e.preventDefault(); setShowColorPicker(true); break;
+                    case 'c':
+                        if (!isInput) {
+                            e.preventDefault();
+                            setShowColorPicker(true);
+                        }
+                        break;
                     case 't':
-                        e.preventDefault();
-                        const x = lastMousePos.current.x > 0 ? lastMousePos.current.x : 200;
-                        const y = lastMousePos.current.y > 0 ? lastMousePos.current.y : 200;
-                        addTextObject('Type here...', x, y);
+                        if (!isInput) {
+                            e.preventDefault();
+                            const x = lastMousePos.current.x > 0 ? lastMousePos.current.x : 200;
+                            const y = lastMousePos.current.y > 0 ? lastMousePos.current.y : 200;
+                            addTextObject('Type here...', x, y);
+                        }
                         break;
                     case 'd':
                         e.preventDefault();
@@ -379,17 +629,16 @@ export function DrawingPage() {
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [selectedObjectId]);
+    }, [selectedObjectId, deleteAction, historyIndex, history]); // added history deps
 
-    // Independent Scroll Listener for Font Size
+    // ... handleWheel (unchanged) ...
     useEffect(() => {
         const handleWheel = (e: WheelEvent) => {
-            if (selectedObjectId) {
-                // Check if hovering over the selected object or if just selected is enough? 
-                // User said "scrolling up and down to change text size should still be there". 
-                // Assume if selected, scroll changes size.
-                // We must be careful not to block normal page scroll if not hovering.
-                // But this page is overflow hidden basically.
+            if (e.ctrlKey) {
+                e.preventDefault();
+                const delta = e.deltaY < 0 ? 1 : -1;
+                setBrushSize(prev => Math.max(1, Math.min(50, prev + delta)));
+            } else if (selectedObjectId) {
                 e.preventDefault();
                 const delta = e.deltaY < 0 ? 1 : -1;
                 setObjects(prev => prev.map(o => o.id === selectedObjectId && o.type === 'text' ? { ...o, fontSize: Math.max(8, (o.fontSize || 16) + delta * 2) } : o));
@@ -461,46 +710,39 @@ export function DrawingPage() {
 
     const addToHistory = () => {
         if (canvasRef.current) {
-            const data = canvasRef.current.toDataURL();
-            const newH = history.slice(0, historyIndex + 1);
-            newH.push(data);
-            setHistory(newH);
-            setHistoryIndex(newH.length - 1);
-            setTabs(prev => prev.map(t => t.id === activeTabId ? { ...t, canvasData: data } : t));
+            addToHistoryWithState(canvasRef.current.toDataURL(), objects);
         }
-    };
-
-    const undo = () => {
-        if (historyIndex > 0) {
-            const idx = historyIndex - 1;
-            setHistoryIndex(idx);
-            loadHistory(history[idx]);
-        }
-    };
-    const redo = () => {
-        if (historyIndex < history.length - 1) {
-            const idx = historyIndex + 1;
-            setHistoryIndex(idx);
-            loadHistory(history[idx]);
-        }
-    };
-    const loadHistory = (data: string) => {
-        const img = new Image();
-        img.src = data;
-        img.onload = () => {
-            const ctx = canvasRef.current?.getContext('2d');
-            ctx?.clearRect(0, 0, 1920, 1080);
-            ctx?.drawImage(img, 0, 0);
-        };
     };
 
     const cursorSize = Math.max(brushSize * cursorScale, 5);
     const showCustomCursor = isHoveringCanvas && !selectedObjectId && !textMode && !resizeStart;
 
+    // Callbacks for Memoized Components
+    const handleObjectChangeContent = useCallback((id: string, content: string) => {
+        setObjects(prev => prev.map(o => o.id === id ? { ...o, content } : o));
+    }, []);
+    const handleObjectDelete = useCallback((e: React.MouseEvent, id: string) => {
+        e.stopPropagation();
+        deleteAction(id);
+    }, [deleteAction]);
+    const handleObjectResizeStart = useCallback((e: React.MouseEvent, id: string) => {
+        handleResizeStart(e, id);
+    }, [handleResizeStart]);
+    const handleObjectChangeFontSize = useCallback((id: string, fontSize: number) => {
+        setObjects(prev => prev.map(o => o.id === id ? { ...o, fontSize } : o));
+    }, []);
+    const handleObjectChangeColor = useCallback((id: string, color: string) => {
+        setObjects(prev => prev.map(o => o.id === id ? { ...o, color } : o));
+    }, []);
+    const handleObjectMouseDown = useCallback((e: React.MouseEvent, id: string, x: number, y: number) => {
+        e.stopPropagation();
+        setSelectedObjectId(id);
+        setDragStart({ x: e.clientX - x, y: e.clientY - y });
+    }, []);
+
     return (
         <div ref={containerRef} className="h-full flex relative bg-gray-50 dark:bg-gray-900 overflow-hidden"
-            onMouseMove={handleMouseMoveGlobal}
-            onMouseUp={() => { setDragStart(null); setResizeStart(null); stopDrawing(); }}
+            onMouseMove={handleContainerMouseMove}
         >
             {/* Custom Cursor */}
             <div ref={cursorRef}
@@ -543,7 +785,6 @@ export function DrawingPage() {
                         />
                         <div className="text-xs text-gray-400 mt-1 flex items-center gap-2">
                             {tabs.length} drawings • {savedStatus}
-                            <span className="bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded text-[10px] text-gray-500">Ctrl+D for tabs</span>
                         </div>
                     </div>
                 </div>
@@ -554,104 +795,25 @@ export function DrawingPage() {
                 />
 
                 {/* Objects Layer */}
-                {objects.map(obj => {
-                    const isSelected = selectedObjectId === obj.id;
-                    const isHovered = hoveredObjectId === obj.id;
-                    const showControls = isSelected || isHovered;
+                {objects.map(obj => (
+                    <CanvasObjectComponent
+                        key={obj.id}
+                        obj={obj}
+                        isSelected={selectedObjectId === obj.id}
+                        isHovered={hoveredObjectId === obj.id}
+                        onMouseDown={(e) => handleObjectMouseDown(e, obj.id, obj.x, obj.y)}
+                        onMouseEnter={() => setHoveredObjectId(obj.id)}
+                        onMouseLeave={() => setHoveredObjectId(null)}
+                        onChangeContent={(val) => handleObjectChangeContent(obj.id, val)}
+                        onDelete={(e) => handleObjectDelete(e, obj.id)}
+                        onResizeStart={(e) => handleObjectResizeStart(e, obj.id)}
+                        onChangeFontSize={(val) => handleObjectChangeFontSize(obj.id, val)}
+                        onChangeColor={(val) => handleObjectChangeColor(obj.id, val)}
+                        textInputRef={(el) => { textInputRefs.current[obj.id] = el; }}
+                    />
+                ))}
 
-                    return (
-                        <div key={obj.id}
-                            style={{ position: 'absolute', left: obj.x, top: obj.y, cursor: 'move' }}
-                            onMouseDown={(e) => { e.stopPropagation(); setSelectedObjectId(obj.id); setDragStart({ x: e.clientX - obj.x, y: e.clientY - obj.y }); }}
-                            onMouseEnter={() => setHoveredObjectId(obj.id)}
-                            onMouseLeave={() => setHoveredObjectId(null)}
-                            className={clsx("group", isSelected && "z-50")}
-                        >
-                            <div className={clsx("relative p-2 border-2 transition-all rounded-lg",
-                                showControls ? "border-blue-500/50 border-dashed bg-blue-50/10" : "border-transparent"
-                            )}
-                                style={obj.type === 'text' ? { width: obj.width, height: obj.height } : {}}
-                            >
-                                {obj.type === 'text' ? (
-                                    <textarea
-                                        ref={el => { textInputRefs.current[obj.id] = el; }}
-                                        value={obj.content}
-                                        onChange={e => setObjects(prev => prev.map(o => o.id === obj.id ? { ...o, content: e.target.value } : o))}
-                                        className="bg-transparent font-handwriting border-none focus:outline-none w-full h-full resize-none p-0 overflow-hidden leading-tight"
-                                        style={{ color: obj.color, fontSize: obj.fontSize }}
-                                        placeholder="Type..."
-                                        spellCheck={true}
-                                    />
-                                ) : (
-                                    <img src={obj.content} className="pointer-events-none max-w-[500px]" alt="obj" />
-                                )}
-
-                                {/* Controls: Close, Resize, Properties */}
-                                <AnimatePresence>
-                                    {showControls && (
-                                        <>
-                                            {/* Delete Button */}
-                                            <motion.button
-                                                initial={{ scale: 0, opacity: 0 }}
-                                                animate={{ scale: 1, opacity: 1 }}
-                                                exit={{ scale: 0, opacity: 0 }}
-                                                onClick={(e) => { e.stopPropagation(); deleteAction(); }}
-                                                className="absolute -top-3 -right-3 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 shadow-md z-50"
-                                            >
-                                                <X className="w-3 h-3" />
-                                            </motion.button>
-
-                                            {/* Resize Handle - Bottom Right */}
-                                            {obj.type === 'text' && (
-                                                <motion.div
-                                                    initial={{ scale: 0, opacity: 0 }}
-                                                    animate={{ scale: 1, opacity: 1 }}
-                                                    exit={{ scale: 0, opacity: 0 }}
-                                                    className="absolute -bottom-3 -right-3 w-6 h-6 bg-white border border-blue-500 rounded-full cursor-nwse-resize flex items-center justify-center z-50 hover:bg-blue-50 transition-colors shadow-md text-blue-500"
-                                                    onMouseDown={(e) => handleResizeStart(e, obj.id)}
-                                                >
-                                                    <ArrowDownRight className="w-4 h-4" />
-                                                </motion.div>
-                                            )}
-
-                                            {/* Properties Popout (Color, Size) - Only when selected */}
-                                            {isSelected && obj.type === 'text' && (
-                                                <motion.div
-                                                    initial={{ y: 10, opacity: 0 }}
-                                                    animate={{ y: 0, opacity: 1 }}
-                                                    exit={{ y: 10, opacity: 0 }}
-                                                    className="absolute -top-16 left-1/2 -translate-x-1/2 bg-white dark:bg-gray-800 p-1.5 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 flex items-center gap-2 z-[60]"
-                                                    onMouseDown={e => e.stopPropagation()}
-                                                >
-                                                    <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-                                                        <TypeIcon className="w-3 h-3 text-gray-500" />
-                                                        <input
-                                                            type="number"
-                                                            value={obj.fontSize}
-                                                            onChange={e => setObjects(prev => prev.map(o => o.id === obj.id ? { ...o, fontSize: parseInt(e.target.value) } : o))}
-                                                            className="w-10 bg-transparent text-xs text-center focus:outline-none dark:text-gray-200"
-                                                        />
-                                                    </div>
-                                                    <div className="w-px h-4 bg-gray-200 dark:bg-gray-600" />
-                                                    <div className="relative w-6 h-6 rounded-full overflow-hidden ring-1 ring-gray-200 cursor-pointer">
-                                                        <input
-                                                            type="color"
-                                                            value={obj.color}
-                                                            onChange={e => setObjects(prev => prev.map(o => o.id === obj.id ? { ...o, color: e.target.value } : o))}
-                                                            className="absolute inset-0 w-full h-full p-0 border-none scale-150 cursor-pointer"
-                                                        />
-                                                    </div>
-                                                </motion.div>
-                                            )}
-                                        </>
-                                    )}
-                                </AnimatePresence>
-                            </div>
-                        </div>
-                    );
-                })}
-
-                {/* Toolbar - Moved to Top Right, integrated Tabs Button */}
+                {/* Toolbar - Top Right */}
                 <div className="absolute top-6 right-6 flex items-center gap-2 bg-white dark:bg-gray-800 p-2 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 z-50">
                     <div className="w-8 h-8 rounded-full border border-gray-200 overflow-hidden relative cursor-pointer" style={{ backgroundColor: color }}>
                         <input type="color" value={color} onChange={e => setColor(e.target.value)} className="absolute inset-0 opacity-0 cursor-pointer" />
@@ -662,22 +824,21 @@ export function DrawingPage() {
                     <button onClick={() => setTextMode(!textMode)} className={clsx("p-2 rounded-xl", textMode ? "bg-blue-100 text-blue-600" : "hover:bg-gray-100 text-gray-500")}><Type className="w-5 h-5" /></button>
                     <button onClick={undo} className="p-2 rounded-xl hover:bg-gray-100 text-gray-500"><Undo className="w-5 h-5" /></button>
                     <button onClick={redo} className="p-2 rounded-xl hover:bg-gray-100 text-gray-500"><Redo className="w-5 h-5" /></button>
-                    <button onClick={deleteAction} className={clsx("p-2 rounded-xl hover:bg-red-50 text-red-500")}>
+                    <button onClick={() => deleteAction()} className={clsx("p-2 rounded-xl hover:bg-red-50 text-red-500")}>
                         <Trash2 className="w-5 h-5" />
                     </button>
                     <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
-                    {/* Integrated Tabs Button */}
                     <button onClick={() => setShowTabsPanel(!showTabsPanel)} className={clsx("p-2 rounded-xl text-gray-500 hover:bg-gray-100", showTabsPanel && "text-blue-600 bg-blue-50")}>
                         <Layers className="w-5 h-5" />
                     </button>
                 </div>
             </div>
 
-            {/* Tab Panel */}
+            {/* Tab Panel - Highest Z-Index */}
             <AnimatePresence>
                 {showTabsPanel && (
                     <motion.div initial={{ x: 300, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 300, opacity: 0 }}
-                        className="absolute top-20 right-6 bottom-20 w-80 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 z-40 flex flex-col overflow-hidden">
+                        className="absolute top-20 right-6 bottom-20 w-80 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 z-[120] flex flex-col overflow-hidden">
                         <div className="p-4 border-b dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900/50">
                             <span className="font-bold text-gray-700 dark:text-gray-200">Drawings</span>
                             <div className="flex gap-1">
@@ -742,7 +903,7 @@ export function DrawingPage() {
             <AnimatePresence>
                 {isNewTabModalOpen && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        className="absolute inset-0 z-[60] bg-black/40 backdrop-blur-sm flex items-center justify-center">
+                        className="absolute inset-0 z-[130] bg-black/40 backdrop-blur-sm flex items-center justify-center">
                         <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
                             className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-2xl w-96 border border-gray-200 dark:border-gray-700">
                             <div className="flex justify-between items-center mb-6">

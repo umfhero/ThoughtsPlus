@@ -9,6 +9,7 @@ interface AiQuickAddModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSave: (note: Note, date: Date) => void;
+    onSaveDrawing: (dataUrl: string) => void;
 }
 
 // Minimal Canvas Object for Quick Drawing
@@ -20,7 +21,7 @@ interface QuickCanvasObject {
     color: string;
 }
 
-export function AiQuickAddModal({ isOpen, onClose, onSave }: AiQuickAddModalProps) {
+export function AiQuickAddModal({ isOpen, onClose, onSave, onSaveDrawing }: AiQuickAddModalProps) {
     const [mode, setMode] = useState<'note' | 'drawing'>('note');
 
     // AI Note State
@@ -123,9 +124,7 @@ export function AiQuickAddModal({ isOpen, onClose, onSave }: AiQuickAddModalProp
     };
 
     const saveDrawingAsNote = () => {
-        // Convert canvas + text objects to a data URL or just save generic note
-        // For this demo, we'll save a generic note saying "Quick Drawing"
-        // Ideally we composite the text objects onto the canvas before saving to image
+        // Convert canvas + text objects to a data URL
         if (canvasRef.current) {
             // Composite text
             const ctx = canvasRef.current.getContext('2d');
@@ -138,15 +137,8 @@ export function AiQuickAddModal({ isOpen, onClose, onSave }: AiQuickAddModalProp
             }
             const dataUrl = canvasRef.current.toDataURL();
 
-            // Create a note with this image
-            const note: Note = {
-                id: Date.now().toString(),
-                title: 'Quick Drawing',
-                description: `![Drawing](${dataUrl})`, // Markdown image
-                time: format(new Date(), 'HH:mm'),
-                importance: 'misc'
-            };
-            onSave(note, new Date());
+            // Save as drawing
+            onSaveDrawing(dataUrl);
             resetAndClose();
         }
     };
