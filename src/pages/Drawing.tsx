@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Trash2, Undo, Redo, Plus, Type, X, Layers, GripVertical, Check, ArrowDownRight, Palette, Type as TypeIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import clsx from 'clsx';
@@ -9,11 +9,11 @@ interface CanvasObject {
     type: 'text' | 'image';
     x: number;
     y: number;
-    width?: number; // for image or text
-    height?: number; // for image or text
-    content: string; // text content or base64 image
-    color?: string; // for text
-    fontSize?: number; // for text
+    width?: number;
+    height?: number;
+    content: string;
+    color?: string;
+    fontSize?: number;
 }
 
 interface Tab {
@@ -79,6 +79,8 @@ export function DrawingPage() {
     const [hoveredObjectId, setHoveredObjectId] = useState<string | null>(null);
     const [dragStart, setDragStart] = useState<{ x: number, y: number } | null>(null);
     const [resizeStart, setResizeStart] = useState<{ id: string, startX: number, startY: number, startWidth: number, startHeight: number } | null>(null);
+
+    const rafRef = useRef<number | null>(null);
 
     // --- State: History ---
     const [history, setHistory] = useState<string[]>([]);
@@ -288,7 +290,9 @@ export function DrawingPage() {
     };
 
     // --- Global Mouse Move for Drag/Resize ---
-    const handleMouseMoveGlobal = (e: React.MouseEvent) => {
+    const handleMouseMoveGlobal = useCallback((e: React.MouseEvent) => {
+        e.persist();
+
         // Cursor follow
         if (containerRef.current) {
             const r = containerRef.current.getBoundingClientRect();
@@ -298,26 +302,35 @@ export function DrawingPage() {
             if (cursorRef.current) cursorRef.current.style.transform = `translate(${x}px, ${y}px)`;
         }
 
-        if (resizeStart) {
-            const dx = e.clientX - resizeStart.startX;
-            const dy = e.clientY - resizeStart.startY;
+        // Throttle updates with RAF
+        if (rafRef.current) return;
 
-            setObjects(prev => prev.map(o => {
-                if (o.id === resizeStart.id) {
-                    return {
-                        ...o,
-                        width: Math.max(50, resizeStart.startWidth + dx),
-                        height: Math.max(30, resizeStart.startHeight + dy)
-                    };
-                }
-                return o;
-            }));
-        } else if (selectedObjectId && dragStart) {
-            setObjects(prev => prev.map(o => o.id === selectedObjectId ? { ...o, x: e.clientX - dragStart.x, y: e.clientY - dragStart.y } : o));
-        }
+        rafRef.current = requestAnimationFrame(() => {
+            if (resizeStart) {
+                const dx = e.clientX - resizeStart.startX;
+                const dy = e.clientY - resizeStart.startY;
 
-        if (isDrawing) draw(e);
-    };
+                setObjects(prev => prev.map(o => {
+                    if (o.id === resizeStart.id) {
+                        return {
+                            ...o,
+                            width: Math.max(50, resizeStart.startWidth + dx),
+                            height: Math.max(30, resizeStart.startHeight + dy)
+                        };
+                    }
+                    return o;
+                }));
+            } else if (selectedObjectId && dragStart) {
+                setObjects(prev => {
+                    return prev.map(o => o.id === selectedObjectId ? { ...o, x: e.clientX - dragStart.x, y: e.clientY - dragStart.y } : o);
+                });
+            }
+            if (isDrawing && canvasRef.current) {
+                draw(e);
+            }
+            rafRef.current = null;
+        });
+    }, [resizeStart, isDrawing, selectedObjectId, dragStart]); // Dependencies needed to recreate callback
 
     // --- Shortcuts ---
 
@@ -364,20 +377,27 @@ export function DrawingPage() {
             }
         };
 
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [selectedObjectId]);
+
+    // Independent Scroll Listener for Font Size
+    useEffect(() => {
         const handleWheel = (e: WheelEvent) => {
-            if (e.ctrlKey && selectedObjectId) {
+            if (selectedObjectId) {
+                // Check if hovering over the selected object or if just selected is enough? 
+                // User said "scrolling up and down to change text size should still be there". 
+                // Assume if selected, scroll changes size.
+                // We must be careful not to block normal page scroll if not hovering.
+                // But this page is overflow hidden basically.
                 e.preventDefault();
                 const delta = e.deltaY < 0 ? 1 : -1;
-                setObjects(prev => prev.map(o => o.id === selectedObjectId && o.type === 'text' ? { ...o, fontSize: (o.fontSize || 16) + delta * 2 } : o));
+                setObjects(prev => prev.map(o => o.id === selectedObjectId && o.type === 'text' ? { ...o, fontSize: Math.max(8, (o.fontSize || 16) + delta * 2) } : o));
             }
         };
 
-        window.addEventListener('keydown', handleKeyDown);
         window.addEventListener('wheel', handleWheel, { passive: false });
-        return () => {
-            window.removeEventListener('keydown', handleKeyDown);
-            window.removeEventListener('wheel', handleWheel);
-        };
+        return () => window.removeEventListener('wheel', handleWheel);
     }, [selectedObjectId]);
 
     const startDrawing = (e: React.MouseEvent) => {
@@ -388,9 +408,6 @@ export function DrawingPage() {
             return;
         }
 
-        // Check if clicking existing object
-        // Actually, this is handled by object's onMouseDown. 
-        // If we reach here, we clicked canvas background.
         setSelectedObjectId(null);
 
         if (!canvasRef.current) return;
@@ -616,16 +633,13 @@ export function DrawingPage() {
                                                         />
                                                     </div>
                                                     <div className="w-px h-4 bg-gray-200 dark:bg-gray-600" />
-                                                    <div className="flex gap-1">
-                                                        {COLORS.slice(0, 5).map(c => (
-                                                            <button
-                                                                key={c}
-                                                                onClick={() => setObjects(prev => prev.map(o => o.id === obj.id ? { ...o, color: c } : o))}
-                                                                className={clsx("w-5 h-5 rounded-full border border-gray-200", obj.color === c && "ring-2 ring-blue-500 ring-offset-1")}
-                                                                style={{ backgroundColor: c }}
-                                                            />
-                                                        ))}
-                                                        <input type="color" value={obj.color} onChange={e => setObjects(prev => prev.map(o => o.id === obj.id ? { ...o, color: e.target.value } : o))} className="w-5 h-5 rounded-full overflow-hidden cursor-pointer" />
+                                                    <div className="relative w-6 h-6 rounded-full overflow-hidden ring-1 ring-gray-200 cursor-pointer">
+                                                        <input
+                                                            type="color"
+                                                            value={obj.color}
+                                                            onChange={e => setObjects(prev => prev.map(o => o.id === obj.id ? { ...o, color: e.target.value } : o))}
+                                                            className="absolute inset-0 w-full h-full p-0 border-none scale-150 cursor-pointer"
+                                                        />
                                                     </div>
                                                 </motion.div>
                                             )}
@@ -637,22 +651,8 @@ export function DrawingPage() {
                     );
                 })}
 
-                {/* Toolbar */}
-
-                {/* Independent Tabs Toggle Button (Above Toolbar) */}
-                <div className="absolute bottom-24 left-6 z-50">
-                    <button
-                        onClick={() => setShowTabsPanel(!showTabsPanel)}
-                        className={clsx(
-                            "p-3 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 transition-all",
-                            showTabsPanel ? "bg-blue-600 text-white rotate-90" : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-200 hover:scale-110"
-                        )}
-                    >
-                        <Layers className="w-6 h-6" />
-                    </button>
-                </div>
-
-                <div className="absolute bottom-6 left-6 flex items-center gap-2 bg-white dark:bg-gray-800 p-2 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 z-50">
+                {/* Toolbar - Moved to Top Right, integrated Tabs Button */}
+                <div className="absolute top-6 right-6 flex items-center gap-2 bg-white dark:bg-gray-800 p-2 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 z-50">
                     <div className="w-8 h-8 rounded-full border border-gray-200 overflow-hidden relative cursor-pointer" style={{ backgroundColor: color }}>
                         <input type="color" value={color} onChange={e => setColor(e.target.value)} className="absolute inset-0 opacity-0 cursor-pointer" />
                     </div>
@@ -662,9 +662,13 @@ export function DrawingPage() {
                     <button onClick={() => setTextMode(!textMode)} className={clsx("p-2 rounded-xl", textMode ? "bg-blue-100 text-blue-600" : "hover:bg-gray-100 text-gray-500")}><Type className="w-5 h-5" /></button>
                     <button onClick={undo} className="p-2 rounded-xl hover:bg-gray-100 text-gray-500"><Undo className="w-5 h-5" /></button>
                     <button onClick={redo} className="p-2 rounded-xl hover:bg-gray-100 text-gray-500"><Redo className="w-5 h-5" /></button>
-                    {/* Delete clears all if nothing selected */}
                     <button onClick={deleteAction} className={clsx("p-2 rounded-xl hover:bg-red-50 text-red-500")}>
                         <Trash2 className="w-5 h-5" />
+                    </button>
+                    <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
+                    {/* Integrated Tabs Button */}
+                    <button onClick={() => setShowTabsPanel(!showTabsPanel)} className={clsx("p-2 rounded-xl text-gray-500 hover:bg-gray-100", showTabsPanel && "text-blue-600 bg-blue-50")}>
+                        <Layers className="w-5 h-5" />
                     </button>
                 </div>
             </div>
@@ -673,7 +677,7 @@ export function DrawingPage() {
             <AnimatePresence>
                 {showTabsPanel && (
                     <motion.div initial={{ x: 300, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 300, opacity: 0 }}
-                        className="absolute top-4 right-4 bottom-20 w-80 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 z-40 flex flex-col overflow-hidden">
+                        className="absolute top-20 right-6 bottom-20 w-80 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 z-40 flex flex-col overflow-hidden">
                         <div className="p-4 border-b dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900/50">
                             <span className="font-bold text-gray-700 dark:text-gray-200">Drawings</span>
                             <div className="flex gap-1">
