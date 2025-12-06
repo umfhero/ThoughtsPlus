@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Github, Star, GitFork, ExternalLink, Code, Loader } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { ActivityCalendar, Activity } from 'react-activity-calendar';
@@ -46,6 +46,7 @@ export function GithubPage() {
     const [contributions, setContributions] = useState<Activity[]>([]);
     const [githubUsername, setGithubUsername] = useState<string>('');
     const { accentColor, theme } = useTheme();
+    const githubContributionsRef = useRef<HTMLDivElement>(null);
 
     const years = Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - i);
 
@@ -86,6 +87,35 @@ export function GithubPage() {
         const data = await fetchGithubContributions(githubUsername, year);
         setContributions(data);
     };
+
+    useEffect(() => {
+        if (contributions.length > 0 && githubContributionsRef.current && selectedYear === new Date().getFullYear()) {
+            const scrollToEnd = () => {
+                const container = githubContributionsRef.current;
+                if (container) {
+                    const maxScroll = container.scrollWidth - container.clientWidth;
+                    if (maxScroll > 0) {
+                        container.scrollLeft = maxScroll;
+                    }
+                }
+            };
+
+            const observer = new MutationObserver(() => {
+                scrollToEnd();
+            });
+
+            observer.observe(githubContributionsRef.current, {
+                childList: true,
+                subtree: true,
+            });
+
+            setTimeout(scrollToEnd, 100);
+            setTimeout(scrollToEnd, 300);
+            setTimeout(scrollToEnd, 500);
+
+            return () => observer.disconnect();
+        }
+    }, [contributions, selectedYear]);
 
     const fetchGithubData = async () => {
         if (!githubUsername) {
@@ -239,9 +269,9 @@ export function GithubPage() {
                                 ))}
                             </div>
                         </div>
-                        <div className="overflow-x-auto thin-scrollbar pb-2 rounded-xl bg-white dark:bg-gray-800 p-4 border border-gray-100 dark:border-gray-700 min-h-[160px]">
+                        <div ref={githubContributionsRef} className="overflow-x-auto thin-scrollbar pb-2 rounded-xl bg-white dark:bg-gray-800 p-4 border border-gray-100 dark:border-gray-700 min-h-[160px]">
                             {contributions.length > 0 ? (
-                                <div className="inline-block min-w-full">
+                                <div className="inline-block min-w-full p-4">
                                     <ActivityCalendar 
                                     data={contributions}
                                     colorScheme={theme}
@@ -254,9 +284,6 @@ export function GithubPage() {
                                             dark: ['#161b22', `rgba(${r}, ${g}, ${b}, 0.4)`, `rgba(${r}, ${g}, ${b}, 0.6)`, `rgba(${r}, ${g}, ${b}, 0.8)`, `rgba(${r}, ${g}, ${b}, 1)`],
                                         };
                                     })()}
-                                    labels={{
-                                        totalCount: '{{count}} contributions in {{year}}',
-                                    }}
                                     blockSize={12}
                                     blockMargin={4}
                                     fontSize={12}
@@ -270,14 +297,56 @@ export function GithubPage() {
                                 </div>
                             )}
                         </div>
+                        {contributions.length > 0 && (
+                            <div className="flex items-center justify-between mt-2 px-4">
+                                <span className="text-sm text-gray-600 dark:text-gray-400">
+                                    {contributions.reduce((sum, day) => sum + day.count, 0)} contributions in {selectedYear}
+                                </span>
+                                <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                                    <span>Less</span>
+                                    <div className="flex gap-1">
+                                        {theme === 'dark' ? (
+                                            <>
+                                                <div className="w-3 h-3 rounded-sm bg-[#161b22]"></div>
+                                                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: `rgba(${hexToRgb(accentColor)?.r}, ${hexToRgb(accentColor)?.g}, ${hexToRgb(accentColor)?.b}, 0.4)` }}></div>
+                                                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: `rgba(${hexToRgb(accentColor)?.r}, ${hexToRgb(accentColor)?.g}, ${hexToRgb(accentColor)?.b}, 0.6)` }}></div>
+                                                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: `rgba(${hexToRgb(accentColor)?.r}, ${hexToRgb(accentColor)?.g}, ${hexToRgb(accentColor)?.b}, 0.8)` }}></div>
+                                                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: accentColor }}></div>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div className="w-3 h-3 rounded-sm bg-[#ebedf0]"></div>
+                                                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: `rgba(${hexToRgb(accentColor)?.r}, ${hexToRgb(accentColor)?.g}, ${hexToRgb(accentColor)?.b}, 0.4)` }}></div>
+                                                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: `rgba(${hexToRgb(accentColor)?.r}, ${hexToRgb(accentColor)?.g}, ${hexToRgb(accentColor)?.b}, 0.6)` }}></div>
+                                                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: `rgba(${hexToRgb(accentColor)?.r}, ${hexToRgb(accentColor)?.g}, ${hexToRgb(accentColor)?.b}, 0.8)` }}></div>
+                                                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: accentColor }}></div>
+                                            </>
+                                        )}
+                                    </div>
+                                    <span>More</span>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Readme Section */}
                     {readme && (
                         <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
                             <div 
-                                className="github-readme prose dark:prose-invert max-w-none prose-headings:no-underline prose-a:no-underline [&_.anchor]:hidden"
+                                className="github-readme prose dark:prose-invert max-w-none prose-headings:no-underline prose-a:no-underline [&_.anchor]:hidden [&_img]:opacity-0 [&_img]:transition-opacity [&_img.loaded]:opacity-100"
                                 dangerouslySetInnerHTML={{ __html: readme }}
+                                onLoad={(e) => {
+                                    const target = e.target as HTMLElement;
+                                    const images = target.querySelectorAll('img');
+                                    images.forEach(img => {
+                                        img.addEventListener('load', () => img.classList.add('loaded'));
+                                        img.addEventListener('error', () => {
+                                            img.style.display = 'none';
+                                            console.warn('Failed to load image:', img.src);
+                                        });
+                                        if (img.complete) img.classList.add('loaded');
+                                    });
+                                }}
                             />
                         </div>
                     )}

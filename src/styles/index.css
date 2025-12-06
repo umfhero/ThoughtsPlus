@@ -58,6 +58,11 @@ body {
   @apply bg-gray-400 dark:bg-gray-500;
 }
 
+/* Hide ActivityCalendar internal footer (contribution count and legend) */
+.react-activity-calendar__footer {
+  display: none !important;
+}
+
 /* Accent color system - CSS variables set by ThemeContext */
 :root {
   --accent-primary: rgb(59, 130, 246);

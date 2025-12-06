@@ -734,7 +734,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, isLoading = false
                 </div>
                 <div 
                     ref={githubContributionsRef}
-                    className="overflow-x-auto overflow-y-hidden rounded-xl border border-gray-100 dark:border-gray-700 pt-4 px-4 pb-2 bg-white dark:bg-gray-800 min-h-[156px] thin-scrollbar"
+                    className="overflow-x-auto overflow-y-hidden rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 min-h-[156px] thin-scrollbar"
                     style={{ 
                         WebkitOverflowScrolling: 'touch'
                     }}
@@ -746,7 +746,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, isLoading = false
                             <p className="text-xs text-gray-400 dark:text-gray-500">Add your GitHub username in Settings to view contributions</p>
                         </div>
                     ) : contributions.length > 0 ? (
-                        <div className="inline-block min-w-full pb-2">
+                        <div className="inline-block min-w-full px-4 pt-4 pb-2">
                             <ActivityCalendar 
                             data={contributions}
                             colorScheme={theme}
@@ -759,14 +759,12 @@ export function Dashboard({ notes, onNavigateToNote, userName, isLoading = false
                                     dark: ['#161b22', `rgba(${r}, ${g}, ${b}, 0.4)`, `rgba(${r}, ${g}, ${b}, 0.6)`, `rgba(${r}, ${g}, ${b}, 0.8)`, `rgba(${r}, ${g}, ${b}, 1)`],
                                 };
                             })()}
-                            labels={{
-                                totalCount: '{{count}} contributions in {{year}}',
-                            }}
+                            hideTotalCount
+                            hideColorLegend
                             blockSize={12}
                             blockMargin={4}
                             fontSize={12}
                             showWeekdayLabels
-                            hideColorLegend={true}
                         />
                         </div>
                     ) : (
@@ -776,17 +774,34 @@ export function Dashboard({ notes, onNavigateToNote, userName, isLoading = false
                         </div>
                     )}
                 </div>
-                {contributions.length > 0 && (
-                    <div className="flex items-center justify-end gap-2 text-xs text-gray-500 dark:text-gray-400 mt-2 px-4">
-                        <span>Less</span>
-                        <div className="flex gap-1">
-                            <div className="w-3 h-3 rounded-sm bg-gray-200 dark:bg-gray-700"></div>
-                            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: `rgba(${hexToRgb(accentColor)?.r}, ${hexToRgb(accentColor)?.g}, ${hexToRgb(accentColor)?.b}, 0.4)` }}></div>
-                            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: `rgba(${hexToRgb(accentColor)?.r}, ${hexToRgb(accentColor)?.g}, ${hexToRgb(accentColor)?.b}, 0.6)` }}></div>
-                            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: `rgba(${hexToRgb(accentColor)?.r}, ${hexToRgb(accentColor)?.g}, ${hexToRgb(accentColor)?.b}, 0.8)` }}></div>
-                            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: accentColor }}></div>
+                {contributions.length > 0 && githubUsername && (
+                    <div className="flex items-center justify-between mt-2 px-4">
+                        <span className="text-sm text-gray-600 dark:text-gray-400">
+                            {contributions.reduce((sum, day) => sum + day.count, 0)} contributions in {new Date().getFullYear()}
+                        </span>
+                        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                            <span>Less</span>
+                            <div className="flex gap-1">
+                                {theme === 'dark' ? (
+                                    <>
+                                        <div className="w-3 h-3 rounded-sm bg-[#161b22]"></div>
+                                        <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: `rgba(${hexToRgb(accentColor)?.r}, ${hexToRgb(accentColor)?.g}, ${hexToRgb(accentColor)?.b}, 0.4)` }}></div>
+                                        <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: `rgba(${hexToRgb(accentColor)?.r}, ${hexToRgb(accentColor)?.g}, ${hexToRgb(accentColor)?.b}, 0.6)` }}></div>
+                                        <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: `rgba(${hexToRgb(accentColor)?.r}, ${hexToRgb(accentColor)?.g}, ${hexToRgb(accentColor)?.b}, 0.8)` }}></div>
+                                        <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: accentColor }}></div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="w-3 h-3 rounded-sm bg-[#ebedf0]"></div>
+                                        <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: `rgba(${hexToRgb(accentColor)?.r}, ${hexToRgb(accentColor)?.g}, ${hexToRgb(accentColor)?.b}, 0.4)` }}></div>
+                                        <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: `rgba(${hexToRgb(accentColor)?.r}, ${hexToRgb(accentColor)?.g}, ${hexToRgb(accentColor)?.b}, 0.6)` }}></div>
+                                        <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: `rgba(${hexToRgb(accentColor)?.r}, ${hexToRgb(accentColor)?.g}, ${hexToRgb(accentColor)?.b}, 0.8)` }}></div>
+                                        <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: accentColor }}></div>
+                                    </>
+                                )}
+                            </div>
+                            <span>More</span>
                         </div>
-                        <span>More</span>
                     </div>
                 )}
             </motion.div>
