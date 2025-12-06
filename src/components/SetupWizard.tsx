@@ -210,7 +210,7 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
                     <>
                 {/* Progress Bar */}
                 <div className="flex items-center mb-8">
-                    {[1, 2, 3].map((s, index) => (
+                    {[1, 2, 3].map((s) => (
                         <>
                             <div key={s}
                                 className={clsx(
