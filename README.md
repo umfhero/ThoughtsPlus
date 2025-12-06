@@ -61,19 +61,32 @@
 
 ---
 
-## Changelog
+## Planned Features - Coming Soon!
 
-### V0 - Calendar Pro (Predecessor)
+### V4 - Semi-Production
 
-The original calendar application that served as the foundation for CalendarPlus. Basic event management and calendar functionality.
+- **Production-ready release** with stability improvements
+- **Enhanced Drawing Whiteboard** with advanced tools
+- **AI Integration** for quick idea dumping and brainstorming
+- **Improved performance** and optimization
+- **Extended analytics** and reporting features
+- **Cloud sync** capabilities (optional)
+- **Mobile companion app** (under consideration)
 
-### V1 - Initial Release
+---
 
-- Core calendar functionality with event CRUD operations
-- Basic UI with React and TypeScript
-- Electron desktop application setup
-- Local data persistence
-- Initial Tailwind CSS styling
+## Past Versions
+
+### V3 - Pre-Production (Released - Wizard Installer)
+
+- Creator stats and data visualization
+- Epic Games CSV analytics integration
+- Custom chart components and trend analysis
+- Drawing mode for visual note-taking
+- AI Quick Add for rapid task creation
+- Feature toggle system for modular architecture
+- Responsive grid layout improvements
+- Enhanced theming capabilities
 
 ### V2 - Feature Expansion
 
@@ -85,25 +98,39 @@ The original calendar application that served as the foundation for CalendarPlus
 - Settings and appearance customization
 - Keyboard shortcuts for power users
 
-### V3 - Pre-Production
+### V1 - Initial Release
 
-- Creator stats and data visualization
-- Epic Games CSV analytics integration
-- Custom chart components and trend analysis
-- Drawing mode for visual note-taking
-- AI Quick Add for rapid task creation
-- Feature toggle system for modular architecture
-- Responsive grid layout improvements
-- Enhanced theming capabilities
+- Core calendar functionality with event CRUD operations
+- Basic UI with React and TypeScript
+- Electron desktop application setup
+- Local data persistence
+- Initial Tailwind CSS styling
 
-### V4 - Semi-Production (Planned)
+### V0 - Calendar Pro (Predecessor)
 
-- **Production-ready release** with stability improvements
-- **Enhanced Drawing Whiteboard** with advanced tools
-- **AI Integration** for quick idea dumping and brainstorming
-- **Improved performance** and optimization
-- **Extended analytics** and reporting features
-- **Cloud sync** capabilities (optional)
-- **Mobile companion app** (under consideration)
+<div align="center">
+  <img src="git/newpics/old app.png" alt="Calendar Pro - Original Version" width="600" />
+  <p><em>Calendar Pro - Built with Python and CustomTkinter</em></p>
+</div>
+
+The original Calendar Pro was a Python-based desktop app built with CustomTkinter that experimented with alternative calendar navigation patterns. While the execution was rough, it laid the conceptual groundwork for CalendarPlus.
+
+**What Worked:**
+
+- Vertical month navigation concept that challenged traditional grid layouts
+- Local data persistence with JSON storage
+- Note management with countdown indicators
+- Clean month selection UI that prioritized ease of navigation
+
+**What Didn't Work:**
+
+- Limited scalability with Python/CustomTkinter stack
+- Poor performance and responsiveness
+- Lack of advanced features (recurring events, analytics, integrations)
+- Basic UI that couldn't compete with modern design standards
+- No cross-platform optimization or professional polish
+
+**Lessons Learned:**  
+CalendarPlus retains the core philosophy of intuitive navigation and note management but completely rebuilds the foundation with modern web technologies (React, TypeScript, Electron). The result is a production-ready application that combines the original vision with professional performance, extensibility, and design.
 
 ---
