@@ -34,7 +34,6 @@ function App() {
     const [userName] = useState("Majid");
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [isAiModalOpen, setIsAiModalOpen] = useState(false);
-    const [drawingRefreshTrigger, setDrawingRefreshTrigger] = useState(0);
 
     useEffect(() => {
         loadNotes();
@@ -111,47 +110,6 @@ function App() {
         await window.ipcRenderer.invoke('save-data', { ...currentData, notes: newNotes });
     };
 
-    const handleSaveDrawing = async (dataUrl: string) => {
-        try {
-            // @ts-ignore
-            const currentData = await window.ipcRenderer.invoke('get-drawing');
-            let tabs = [];
-            if (currentData) {
-                if (Array.isArray(currentData.tabs)) {
-                    tabs = currentData.tabs;
-                } else if (typeof currentData === 'string') {
-                    tabs = [{
-                        id: Math.random().toString(36).substring(2, 9),
-                        name: 'My Drawing',
-                        emoji: '🎨',
-                        color: '#3B82F6',
-                        canvasData: currentData,
-                        objects: []
-                    }];
-                }
-            }
-
-            const newTab = {
-                id: Math.random().toString(36).substring(2, 9),
-                name: 'Quick Drawing',
-                emoji: '⚡',
-                color: '#F59E0B',
-                canvasData: dataUrl,
-                objects: []
-            };
-
-            const updatedTabs = [...tabs, newTab];
-
-            // @ts-ignore
-            await window.ipcRenderer.invoke('save-drawing', { tabs: updatedTabs, activeTabId: newTab.id });
-            setDrawingRefreshTrigger(prev => prev + 1);
-        } catch (e) {
-            console.error("Failed to save drawing", e);
-        }
-    };
-
-
-
     return (
         <div className="flex h-screen bg-[#F3F4F6] dark:bg-gray-900 text-gray-900 dark:text-gray-100 overflow-hidden selection:bg-blue-500/30 font-sans transition-colors">
             {/* Custom Title Bar Drag Region */}
@@ -196,7 +154,7 @@ function App() {
                                 />
                             )}
                             {currentPage === 'stats' && <StatsPage />}
-                            {currentPage === 'drawing' && <DrawingPage refreshTrigger={drawingRefreshTrigger} />}
+                            {currentPage === 'drawing' && <DrawingPage />}
                             {currentPage === 'github' && <GithubPage />}
                             {currentPage === 'settings' && <SettingsPage />}
                         </div>
@@ -208,7 +166,6 @@ function App() {
                 isOpen={isAiModalOpen}
                 onClose={() => setIsAiModalOpen(false)}
                 onSave={handleAddNote}
-                onSaveDrawing={handleSaveDrawing}
             />
 
             <ShortcutsOverlay currentPage={currentPage} />
