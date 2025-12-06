@@ -195,7 +195,7 @@ _Released beta to testers_
 ### V0 - Calendar Pro (Predecessor)
 
 <div align="center">
-  <img src="git/newpics/old app.png" alt="Calendar Pro - Original Version" width="600" />
+  <img src="git/newpics/oldapp-v2.png" alt="Calendar Pro - Original Version" width="600" />
   <p><em>Calendar Pro - Built with Python and CustomTkinter</em></p>
 </div>
 
