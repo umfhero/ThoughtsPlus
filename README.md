@@ -128,7 +128,7 @@ If you're forking this project, you can preserve your personal baseline data:
 
 ## 🎯 Roadmap
 
-### V4.1 - Enhanced Features (Upcoming)
+### V4.5 - Enhanced Features (Upcoming)
 
 - First-run setup wizard for easier onboarding
 - Enhanced drawing tools with more shortcuts
