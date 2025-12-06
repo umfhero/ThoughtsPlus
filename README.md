@@ -24,7 +24,7 @@
   <p><em>Central command centre featuring widget-based layout and real-time data.</em></p>
 </div>
 
-## ✨ Features
+## Features
 
 - **User-Configurable Integrations** - Add your own API keys and credentials
 - **Multi-Device Sync** - Store data in OneDrive, Dropbox, or any cloud folder for seamless sync
@@ -36,7 +36,7 @@
 - **Modern UI** - Dark/light themes with customizable accent colors
 - **Privacy-Focused** - All data stays local, no tracking or telemetry
 
-## 🚀 Getting Started
+## Getting Started
 
 ### First-Time Setup
 
@@ -55,7 +55,7 @@ To sync between multiple devices (e.g., desktop and laptop):
 2. **Device 2:** Install app and point to the **same** OneDrive/Dropbox folder
 3. **Done!** - All notes, settings, and drawings automatically sync
 
-## 🔧 Configuration
+## Config
 
 All settings are managed through the **Settings** page:
 
@@ -107,7 +107,7 @@ If you're forking this project, you can preserve your personal baseline data:
 - **Data Storage:** Local JSON files with optional cloud sync
 - **Build Tooling:** Vite, PostCSS, Electron Builder
 
-## 🔒 Security & Privacy
+## Security & Privacy
 
 - **No Telemetry** - Zero tracking or data collection
 - **Local Storage** - All data stays on your devices
@@ -126,7 +126,7 @@ If you're forking this project, you can preserve your personal baseline data:
 |  <img src="git/newpics/feature%20toggle.png" width="400" /><br>**Feature Toggles**<br>Modular architecture allowing dynamic feature enabling.   |       <img src="git/newpics/shortcuts.png" width="400" /><br>**Keyboard Shortcuts**<br>Productivity boosters for power users.       |
 | <img src="git/newpics/scrolleddowndashboard.png" width="400" /><br>**Extended Dashboard**<br>Scrollable view showcasing responsive grid layout. |                                                                                                                                     |
 
-## 🎯 Roadmap
+## Roadmap
 
 ### V4.5 - Enhanced Features (Upcoming)
 
@@ -142,39 +142,6 @@ If you're forking this project, you can preserve your personal baseline data:
 - Team collaboration features
 - Plugin/extension system
 - Advanced reporting and analytics
-
----
-
-## 📦 Development
-
-### Prerequisites
-
-- Node.js 18+
-- npm or yarn
-
-### Local Development
-
-```bash
-# Clone the repository
-git clone https://github.com/umfhero/CalendarPlus.git
-cd CalendarPlus
-
-# Install dependencies
-npm install
-
-# Run in development mode
-npm run dev
-
-# Build for production
-npm run build
-```
-
-### Building Installer
-
-```bash
-npm run build
-# Installer will be in release/ directory
-```
 
 ---
 
