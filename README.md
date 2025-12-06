@@ -13,7 +13,7 @@
 
 ---
 
-**CalendarPlus** is a Windows desktop calendar application engineered for personal productivity, event management and calendar data visualization. This project is developed for private use, but the codebase is open for review and local experimentation by others.
+**CalendarPlus** is a Windows desktop calendar application engineered for personal productivity, event management and calendar data visualisation. This project is developed for private use, but the codebase is open for review and local experimentation by others.
 
 > **Note:** This is a personal-use project, not intended for public deployment. Feedback and code exploration are welcome.
 
@@ -21,7 +21,7 @@
 
 <div align="center">
   <img src="git/newpics/dashboard.png" alt="Dashboard" width="100%" />
-  <p><em>Central command center featuring widget-based layout and real-time data.</em></p>
+  <p><em>Central command centre featuring widget-based layout and real-time data.</em></p>
 </div>
 
 ## Features
@@ -40,7 +40,7 @@
 - **Desktop Runtime:** Electron
 - **Data Handling:** Local storage, CSV parsing for analytics
 - **Build Tooling:** Vite, PostCSS
-- **Visualization:** Custom chart components
+- **Visualisation:** Custom chart components
 
 ## Security & Privacy
 
@@ -53,23 +53,21 @@
 
 |                                                                                                                                                 |                                                                                                                                     |
 | :---------------------------------------------------------------------------------------------------------------------------------------------: | :---------------------------------------------------------------------------------------------------------------------------------: |
-|    <img src="git/newpics/calendar.png" width="400" /><br>**Interactive Calendar**<br>Robust event management built with React & TypeScript.     | <img src="git/newpics/creatorstats.png" width="400" /><br>**Creator Stats**<br>Data visualization and analytics from imported CSVs. |
-|       <img src="git/newpics/settings.png" width="400" /><br>**Settings**<br>Comprehensive app configuration and local storage management.       |   <img src="git/newpics/appearnce.png" width="400" /><br>**Appearance**<br>Theming and UI customization powered by Tailwind CSS.    |
+|    <img src="git/newpics/calendar.png" width="400" /><br>**Interactive Calendar**<br>Robust event management built with React & TypeScript.     | <img src="git/newpics/creatorstats.png" width="400" /><br>**Creator Stats**<br>Data visualisation and analytics from imported CSVs. |
+|       <img src="git/newpics/settings.png" width="400" /><br>**Settings**<br>Comprehensive app configuration and local storage management.       |   <img src="git/newpics/appearnce.png" width="400" /><br>**Appearance**<br>Theming and UI customisation powered by Tailwind CSS.    |
 |    <img src="git/newpics/AI%20quick%20add%20note.png" width="400" /><br>**AI Quick Note**<br>Smart input processing for rapid task creation.    |       <img src="git/newpics/drawing.png" width="400" /><br>**Drawing Mode**<br>Canvas-based sketching for visual note-taking.       |
 |  <img src="git/newpics/feature%20toggle.png" width="400" /><br>**Feature Toggles**<br>Modular architecture allowing dynamic feature enabling.   |       <img src="git/newpics/shortcuts.png" width="400" /><br>**Keyboard Shortcuts**<br>Productivity boosters for power users.       |
 | <img src="git/newpics/scrolleddowndashboard.png" width="400" /><br>**Extended Dashboard**<br>Scrollable view showcasing responsive grid layout. |                                                                                                                                     |
-
----
 
 ## Planned Features - Coming Soon!
 
 ### V4 - Semi-Production
 
-**More production-ready & user-configurable:** V4 moves beyond the personal, me-centered integrations of earlier versions (V3 and prior were built around my workflow). This release focuses on stability and openness — users will be able to supply their own API keys and connect their own GitHub and creator/analytics APIs (optional), making the app adaptable to different workflows and data sources.
+**More production-ready & user-configurable:** V4 moves beyond the personal, me centered integrations of earlier versions (V3 and prior were built around my workflow). This release focuses on stability and openness, users will be able to supply their own API keys and connect their own GitHub and creator/analytics APIs (optional), making the app adaptable to different workflows and data sources.
 
 - **Enhanced Drawing Whiteboard** with advanced tools, shortcuts and QoL changes
 - **AI Integration** for quick idea dumping and brainstorming
-- **Improved performance** and optimization
+- **Improved performance** and optimisation
 - **Extended analytics** and reporting features
 - **Cloud sync** capabilities (optional)
 - **Mobile companion app** (under consideration)
@@ -82,7 +80,7 @@
 
 _Released beta to testers_
 
-- Creator stats and data visualization
+- Creator stats and data visualisation
 - Epic Games CSV analytics integration
 - Custom chart components and trend analysis
 - Drawing mode for visual note-taking
@@ -98,7 +96,7 @@ _Released beta to testers_
 - CSV import functionality for analytics
 - Enhanced UI/UX with modern design patterns
 - Dashboard with widget-based layout
-- Settings and appearance customization
+  - Settings and appearance customisation
 - Keyboard shortcuts for power users
 
 ### V1 - Initial Release
@@ -123,7 +121,7 @@ The original Calendar Pro was a Python-based desktop app built with CustomTkinte
 - Vertical month navigation concept that challenged traditional grid layouts
 - Local data persistence with JSON storage
 - Note management with countdown indicators
-- Clean month selection UI that prioritized ease of navigation
+- Clean month selection UI that prioritised ease of navigation
 
 **What Didn't Work:**
 
@@ -131,6 +129,6 @@ The original Calendar Pro was a Python-based desktop app built with CustomTkinte
 - Poor performance and responsiveness
 - Lack of advanced features (recurring events, analytics, integrations)
 - Basic UI that couldn't compete with modern design standards
-- No cross-platform optimization or professional polish
+- No cross-platform optimisation or professional polish
 
 ---
