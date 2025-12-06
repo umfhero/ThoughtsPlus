@@ -1,5 +1,5 @@
 #define MyAppName "Calendar Plus"
-#define MyAppVersion "4.0.0"
+#define MyAppVersion "4.5.0"
 #define MyAppPublisher "umfhero"
 #define MyAppURL "https://github.com/umfhero/CalendarPlus"
 #define MyAppExeName "Calendar Plus.exe"

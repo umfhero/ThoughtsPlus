@@ -1,12 +1,11 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar as CalendarIcon, ArrowUpRight, ListTodo, Loader, Circle, Search, Filter } from 'lucide-react';
+import { Calendar as CalendarIcon, ArrowUpRight, ListTodo, Loader, Circle, Search, Filter, Activity as ActivityIcon } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { format, parseISO } from 'date-fns';
 import { NotesData, Note } from '../App';
 import clsx from 'clsx';
-import { BASELINE_STATS, processStatsData, StatsData as HistoricalStatsData } from '../utils/statsManager';
+import { processStatsData, StatsData as HistoricalStatsData } from '../utils/statsManager';
 import TrendChart from '../components/TrendChart';
-import MaizSticker from '../assets/MaizStudioSticker.png';
 import { ActivityCalendar, Activity } from 'react-activity-calendar';
 import { useTheme } from '../contexts/ThemeContext';
 import { fetchGithubContributions } from '../utils/github';
@@ -757,10 +756,8 @@ export function Dashboard({ notes, onNavigateToNote, userName, isLoading = false
                                 return {
                                     light: ['#ebedf0', `rgba(${r}, ${g}, ${b}, 0.4)`, `rgba(${r}, ${g}, ${b}, 0.6)`, `rgba(${r}, ${g}, ${b}, 0.8)`, `rgba(${r}, ${g}, ${b}, 1)`],
                                     dark: ['#161b22', `rgba(${r}, ${g}, ${b}, 0.4)`, `rgba(${r}, ${g}, ${b}, 0.6)`, `rgba(${r}, ${g}, ${b}, 0.8)`, `rgba(${r}, ${g}, ${b}, 1)`],
-                                };
+                                };  
                             })()}
-                            hideTotalCount
-                            hideColorLegend
                             blockSize={12}
                             blockMargin={4}
                             fontSize={12}
@@ -824,8 +821,8 @@ export function Dashboard({ notes, onNavigateToNote, userName, isLoading = false
 
                 <div className="flex items-center justify-between mb-8 relative z-10">
                     <div className="flex items-center gap-4">
-                        <div className="p-2 rounded-2xl bg-purple-50/80 dark:bg-purple-900/30 backdrop-blur-sm border border-purple-100 dark:border-purple-800">
-                            <img src={MaizSticker} alt="Maiz Studio" className="w-16 h-16 object-contain" />
+                        <div className="p-4 rounded-2xl bg-purple-50/80 dark:bg-purple-900/30 backdrop-blur-sm border border-purple-100 dark:border-purple-800">
+                            <ActivityIcon className="w-12 h-12 text-purple-600 dark:text-purple-400" />
                         </div>
                         <div>
                             <p className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fortnite Creative</p>
@@ -849,8 +846,8 @@ export function Dashboard({ notes, onNavigateToNote, userName, isLoading = false
                             <ArrowUpRight className="w-4 h-4 text-green-500" />
                         </div>
                         <p className="text-3xl font-bold text-gray-800 dark:text-white">
-                            <span className="hidden xl:inline">{(BASELINE_STATS.totalMinutesPlayed + (stats?.fortnite?.raw?.minutesPlayed || 0)).toLocaleString()}</span>
-                            <span className="xl:hidden">{formatCompactNumber(BASELINE_STATS.totalMinutesPlayed + (stats?.fortnite?.raw?.minutesPlayed || 0))}</span>
+                            <span className="hidden xl:inline">{(stats?.fortnite?.raw?.minutesPlayed || 0).toLocaleString()}</span>
+                            <span className="xl:hidden">{formatCompactNumber(stats?.fortnite?.raw?.minutesPlayed || 0)}</span>
                         </p>
                         <div className="mt-2 text-xs text-gray-400 dark:text-gray-400">
                             <span>Across all maps</span>
@@ -862,8 +859,8 @@ export function Dashboard({ notes, onNavigateToNote, userName, isLoading = false
                             <ArrowUpRight className="w-4 h-4 text-green-500" />
                         </div>
                         <p className="text-3xl font-bold text-gray-800 dark:text-white">
-                            <span className="hidden xl:inline">{(BASELINE_STATS.totalUniquePlayers + (stats?.fortnite?.raw?.uniquePlayers || 0)).toLocaleString()}</span>
-                            <span className="xl:hidden">{formatCompactNumber(BASELINE_STATS.totalUniquePlayers + (stats?.fortnite?.raw?.uniquePlayers || 0))}</span>
+                            <span className="hidden xl:inline">{(stats?.fortnite?.raw?.uniquePlayers || 0).toLocaleString()}</span>
+                            <span className="xl:hidden">{formatCompactNumber(stats?.fortnite?.raw?.uniquePlayers || 0)}</span>
                         </p>
                         <div className="mt-2 text-xs text-gray-400 dark:text-gray-400">
                             <span>Total reach</span>
@@ -875,8 +872,8 @@ export function Dashboard({ notes, onNavigateToNote, userName, isLoading = false
                             <ArrowUpRight className="w-4 h-4 text-green-500" />
                         </div>
                         <p className="text-3xl font-bold text-gray-800 dark:text-white">
-                            <span className="hidden xl:inline">{(BASELINE_STATS.totalFavorites + (stats?.fortnite?.raw?.favorites || 0)).toLocaleString()}</span>
-                            <span className="xl:hidden">{formatCompactNumber(BASELINE_STATS.totalFavorites + (stats?.fortnite?.raw?.favorites || 0))}</span>
+                            <span className="hidden xl:inline">{(stats?.fortnite?.raw?.favorites || 0).toLocaleString()}</span>
+                            <span className="xl:hidden">{formatCompactNumber(stats?.fortnite?.raw?.favorites || 0)}</span>
                         </p>
                         <div className="mt-2 text-xs text-gray-400 dark:text-gray-400">
                             <span>Community love</span>
@@ -888,8 +885,8 @@ export function Dashboard({ notes, onNavigateToNote, userName, isLoading = false
                             <ArrowUpRight className="w-4 h-4 text-green-500" />
                         </div>
                         <p className="text-3xl font-bold text-gray-800 dark:text-white">
-                            <span className="hidden xl:inline">{(BASELINE_STATS.totalLifetimePlays + (stats?.fortnite?.raw?.plays || 0)).toLocaleString()}</span>
-                            <span className="xl:hidden">{formatCompactNumber(BASELINE_STATS.totalLifetimePlays + (stats?.fortnite?.raw?.plays || 0))}</span>
+                            <span className="hidden xl:inline">{(stats?.fortnite?.raw?.plays || 0).toLocaleString()}</span>
+                            <span className="xl:hidden">{formatCompactNumber(stats?.fortnite?.raw?.plays || 0)}</span>
                         </p>
                         <div className="mt-2 text-xs text-gray-400 dark:text-gray-400">
                             <span>Game sessions</span>

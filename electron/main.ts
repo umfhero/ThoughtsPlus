@@ -135,7 +135,7 @@ function createWindow() {
     }
     
     win = new BrowserWindow({
-        width: 1200, height: 800, frame: false, titleBarStyle: 'hidden',
+        width: 1200, height: 900, frame: false, titleBarStyle: 'hidden',
         titleBarOverlay: { color: '#00000000', symbolColor: '#4b5563', height: 30 },
         webPreferences: { preload: path.join(__dirname, 'preload.js'), nodeIntegration: false, contextIsolation: true },
         backgroundColor: '#00000000',

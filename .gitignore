@@ -11,3 +11,15 @@ release-packager-v2
 release-packager-v3
 user-defaults.json
 preload-config.json
+
+# Portable builds and installers
+CalendarPlus-v*.zip
+*.exe
+*.msi
+*.dmg
+*.AppImage
+*.deb
+*.rpm
+
+# Electron builder cache
+.electron-builder-cache

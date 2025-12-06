@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Trophy, Users, TrendingUp, Calendar } from 'lucide-react';
-import { BASELINE_STATS, processStatsData, StatsData as HistoricalStatsData } from '../utils/statsManager';
+import { processStatsData, StatsData as HistoricalStatsData } from '../utils/statsManager';
 import TrendChart from '../components/TrendChart';
 
 export function StatsPage() {
@@ -35,8 +35,12 @@ export function StatsPage() {
                         </div>
                         <h3 className="font-bold text-gray-700 dark:text-gray-300">Unique Players</h3>
                     </div>
-                    <p className="text-3xl font-bold text-gray-900 dark:text-white">{BASELINE_STATS.totalUniquePlayers.toLocaleString()}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Total lifetime unique players</p>
+                    <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                        {historicalStats && historicalStats.trendData.length > 0 
+                            ? historicalStats.trendData.reduce((sum, day) => sum + day.totalActive, 0).toLocaleString()
+                            : '—'}
+                    </p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">From CSV data analysis</p>
                 </motion.div>
 
                 <motion.div 
@@ -51,8 +55,12 @@ export function StatsPage() {
                         </div>
                         <h3 className="font-bold text-gray-700 dark:text-gray-300">Monthly Players</h3>
                     </div>
-                    <p className="text-3xl font-bold text-gray-900 dark:text-white">{BASELINE_STATS.monthlyPlayers.toLocaleString()}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Active in last 30 days</p>
+                    <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                        {historicalStats && historicalStats.trendData.length > 0
+                            ? historicalStats.trendData.slice(-30).reduce((sum, day) => sum + day.totalActive, 0).toLocaleString()
+                            : '—'}
+                    </p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Last 30 days from CSV</p>
                 </motion.div>
 
                 <motion.div 
@@ -68,7 +76,7 @@ export function StatsPage() {
                         <h3 className="font-bold text-gray-700 dark:text-gray-300">Weekly Players</h3>
                     </div>
                     <div className="flex items-end gap-2">
-                        <p className="text-3xl font-bold text-gray-900 dark:text-white">{historicalStats?.currentWeeklyActive.toLocaleString() || BASELINE_STATS.weeklyPlayers.toLocaleString()}</p>
+                        <p className="text-3xl font-bold text-gray-900 dark:text-white">{historicalStats?.currentWeeklyActive.toLocaleString() || '0'}</p>
                         {historicalStats && (
                             <span className={`text-sm font-bold mb-1 ${historicalStats.weeklyGrowth >= 0 ? 'text-green-500 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
                                 {historicalStats.weeklyGrowth > 0 ? '+' : ''}{historicalStats.weeklyGrowth.toFixed(1)}%
@@ -88,10 +96,14 @@ export function StatsPage() {
                         <div className="p-2 rounded-lg bg-orange-50 dark:bg-orange-900/30">
                             <Trophy className="w-6 h-6" />
                         </div>
-                        <h3 className="font-bold text-gray-700 dark:text-gray-300">Lifetime Plays</h3>
+                        <h3 className="font-bold text-gray-700 dark:text-gray-300">Total Data Points</h3>
                     </div>
-                    <p className="text-3xl font-bold text-gray-900 dark:text-white">{BASELINE_STATS.totalLifetimePlays.toLocaleString()}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Total game sessions</p>
+                    <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                        {historicalStats && historicalStats.trendData.length > 0
+                            ? historicalStats.trendData.length.toLocaleString()
+                            : '—'}
+                    </p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Days of recorded data</p>
                 </motion.div>
             </div>
 

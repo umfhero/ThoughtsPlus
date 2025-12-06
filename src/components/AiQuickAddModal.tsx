@@ -17,15 +17,34 @@ export function AiQuickAddModal({ isOpen, onClose, onSave }: AiQuickAddModalProp
     const [isAiProcessing, setIsAiProcessing] = useState(false);
     const [aiProposedNote, setAiProposedNote] = useState<{ note: Note, date: Date, options: string[] } | null>(null);
     const [selectedOptionIndex, setSelectedOptionIndex] = useState(0);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
     // --- AI Note Logic ---
     const handleAiSubmit = async () => {
         if (!aiInput.trim()) return;
 
         setIsAiProcessing(true);
+        setErrorMessage(null);
         try {
             // @ts-ignore
-            const result = await window.ipcRenderer.invoke('parse-natural-language-note', aiInput);
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Request timeout')), 30000)
+            );
+            
+            // @ts-ignore
+            const resultPromise = window.ipcRenderer.invoke('parse-natural-language-note', aiInput);
+            
+            const result = await Promise.race([resultPromise, timeoutPromise]);
+
+            if (result?.error === 'API_KEY_MISSING') {
+                setErrorMessage('Please configure your Gemini API key in Settings to use AI features.');
+                return;
+            }
+            
+            if (result?.error) {
+                setErrorMessage(`Error: ${result.message || 'Failed to generate note. Please check your API key and try again.'}`);
+                return;
+            }
 
             if (result) {
                 const { title, description, time, importance, date, descriptionOptions } = result;
@@ -54,10 +73,15 @@ export function AiQuickAddModal({ isOpen, onClose, onSave }: AiQuickAddModalProp
                 setAiProposedNote({ note, date: targetDate, options: validOptions });
                 setSelectedOptionIndex(0);
             } else {
-                console.error("AI failed to parse note");
+                setErrorMessage('AI failed to parse note. Please try rephrasing your request.');
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error processing AI note:", error);
+            if (error.message === 'Request timeout') {
+                setErrorMessage('Request timed out. The AI service may be slow or unavailable. Please try again.');
+            } else {
+                setErrorMessage('An error occurred while generating the note. Please check your API key and internet connection.');
+            }
         } finally {
             setIsAiProcessing(false);
         }
@@ -73,6 +97,7 @@ export function AiQuickAddModal({ isOpen, onClose, onSave }: AiQuickAddModalProp
     const resetAndClose = () => {
         setAiInput('');
         setAiProposedNote(null);
+        setErrorMessage(null);
         onClose();
     };
 
@@ -100,6 +125,11 @@ export function AiQuickAddModal({ isOpen, onClose, onSave }: AiQuickAddModalProp
                         <div className="flex-1 overflow-y-auto p-6">
                             {!aiProposedNote ? (
                                     <div className="space-y-4">
+                                        {errorMessage && (
+                                            <div className="p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-sm">
+                                                {errorMessage}
+                                            </div>
+                                        )}
                                         <textarea
                                             value={aiInput}
                                             onChange={(e) => setAiInput(e.target.value)}

@@ -417,24 +417,24 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
                         initial={{ x: 300, opacity: 0 }}
                         animate={{ x: 0, opacity: 1 }}
                         exit={{ x: 300, opacity: 0 }}
-                        className="w-96 shrink-0 bg-white/80 backdrop-blur-xl rounded-[2rem] border border-white/60 shadow-2xl p-6 flex flex-col h-full"
+                        className="w-96 shrink-0 bg-white/80 dark:bg-gray-900/90 backdrop-blur-xl rounded-[2rem] border border-white/60 dark:border-gray-700/60 shadow-2xl p-6 flex flex-col h-full"
                     >
                         <div className="flex justify-between items-center mb-6">
                             <div>
                                 {isSearchActive ? (
                                     <>
-                                        <h3 className="text-2xl font-bold text-gray-800">Search Results</h3>
-                                        <p className="text-gray-500">{filteredNotes.length} events found</p>
+                                        <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Search Results</h3>
+                                        <p className="text-gray-500 dark:text-gray-400">{filteredNotes.length} events found</p>
                                     </>
                                 ) : (
                                     <>
-                                        <h3 className="text-2xl font-bold text-gray-800">{format(selectedDate!, 'EEEE')}</h3>
-                                        <p className="text-gray-500">{format(selectedDate!, 'MMMM do, yyyy')}</p>
+                                        <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{format(selectedDate!, 'EEEE')}</h3>
+                                        <p className="text-gray-500 dark:text-gray-400">{format(selectedDate!, 'MMMM do, yyyy')}</p>
                                     </>
                                 )}
                             </div>
-                            <button onClick={() => setIsPanelOpen(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                                <X className="w-5 h-5 text-gray-500" />
+                            <button onClick={() => setIsPanelOpen(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors">
+                                <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                             </button>
                         </div>
                         <div className="flex-1 overflow-y-auto custom-scrollbar space-y-4 mb-6">
@@ -466,7 +466,7 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
                                                     e.stopPropagation();
                                                     setSelectedDate(date);
                                                     loadNoteForEditing(note);
-                                                }} className="p-1.5 hover:bg-white/50 rounded-lg transition-colors">
+                                                }} className="p-1.5 hover:bg-white/50 dark:hover:bg-gray-700/50 rounded-lg transition-colors">
                                                     <Edit2 className="w-3.5 h-3.5" />
                                                 </button>
                                                 <button onClick={(e) => {
@@ -479,7 +479,7 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
                                         </motion.div>
                                     ))
                                 ) : (
-                                    <div className="text-center py-10 text-gray-400">
+                                    <div className="text-center py-10 text-gray-400 dark:text-gray-500">
                                         <p>No matching events found</p>
                                     </div>
                                 )
@@ -492,11 +492,11 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
                                 >
                                     <div className="flex justify-between items-start mb-2">
                                         <h4 className="font-bold">{note.title}</h4>
-                                        <span className="text-xs font-bold opacity-70 bg-white/50 px-2 py-1 rounded-md">{convertTo12Hour(note.time)}</span>
+                                        <span className="text-xs font-bold opacity-70 bg-white/50 dark:bg-gray-700/50 px-2 py-1 rounded-md">{convertTo12Hour(note.time)}</span>
                                     </div>
                                     <p className="text-sm opacity-80 mb-3">{note.description}</p>
                                     <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button onClick={() => loadNoteForEditing(note)} className="p-1.5 hover:bg-white/50 rounded-lg transition-colors">
+                                        <button onClick={() => loadNoteForEditing(note)} className="p-1.5 hover:bg-white/50 dark:hover:bg-gray-700/50 rounded-lg transition-colors">
                                             <Edit2 className="w-3.5 h-3.5" />
                                         </button>
                                         <button onClick={() => handleDeleteNote(note.id)} className="p-1.5 hover:bg-red-100 text-red-600 rounded-lg transition-colors">
@@ -507,37 +507,37 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
                             ))
                             )}
                             {!isSearchActive && (!notes[format(selectedDate!, 'yyyy-MM-dd')] || notes[format(selectedDate!, 'yyyy-MM-dd')].length === 0) && (
-                                <div className="text-center py-10 text-gray-400">
+                                <div className="text-center py-10 text-gray-400 dark:text-gray-500">
                                     <p>No events for this day</p>
                                 </div>
                             )}
                         </div>
 
-                        <div className="space-y-4 bg-white/50 p-4 rounded-2xl border border-white/50">
+                        <div className="space-y-4 bg-white/50 dark:bg-gray-800/50 p-4 rounded-2xl border border-white/50 dark:border-gray-700/50">
                             <input
                                 type="text"
                                 placeholder="Event Title"
                                 value={title}
                                 onChange={(e) => setTitle(e.target.value)}
-                                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                className="w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                             />
                             <textarea
                                 placeholder="Description (AI summary available for long texts)"
                                 value={description}
                                 onChange={(e) => setDescription(e.target.value)}
-                                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2 text-sm h-24 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                className="w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 h-24 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                             />
                             <div className="flex gap-2">
                                 <input
                                     type="time"
                                     value={time}
                                     onChange={(e) => setTime(e.target.value)}
-                                    className="bg-white border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                    className="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                                 />
                                 <select
                                     value={importance}
                                     onChange={(e) => setImportance(e.target.value as any)}
-                                    className="flex-1 bg-white border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                    className="flex-1 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                                 >
                                     <option value="low">Low Priority</option>
                                     <option value="medium">Medium Priority</option>

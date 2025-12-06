@@ -273,7 +273,7 @@ export function SettingsPage() {
                     <div className="flex items-center justify-between">
                         <div>
                             <h2 className="text-2xl font-bold bg-gradient-to-r from-red-600 to-pink-600 dark:from-red-400 dark:to-pink-400 bg-clip-text text-transparent mb-1">
-                                Calendar Plus v4
+                                Calendar Plus v4.5.0
                             </h2>
                             <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
                                 Created by{' '}
