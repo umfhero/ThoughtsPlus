@@ -20,8 +20,6 @@ While other calendar apps are slow, bloated, and require multiple clicks just to
 
 Built for frictionless event management, quick notes, and constant reminders that actually keep you on track, because life's too short to wrestle with your calendar.
 
-
-
 ### Dashboard
 
 <div align="center">
@@ -139,6 +137,7 @@ If you're forking this project, you can preserve your personal baseline data:
 - **Task Completion Analytics** - Track completed vs incomplete tasks with weekly/monthly/yearly performance graphs
 - **Better Habit Tracking** - See how well you're managing your time and staying on top of your goals
 - **Enhanced Data Visualization** - More charts, trends, and insights into your productivity patterns
+- **Self-hosted website** - Official website for CalendarPlus with intuitive onboarding, easy downloads and the latest news and updates.
 
 ### Future Considerations
 
