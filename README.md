@@ -1,14 +1,10 @@
 <div align="center">
-  <h1>
-    <img src="public/calendar_icon_181520.png" alt="Calendar Icon" width="36" style="vertical-align:middle; margin-right:8px;" />
-    CalendarPlus
-  </h1>
+  <img src="Banner.png" alt="CalendarPlus Banner" width="100%" />
 
   <h3>Latest Release 4.5.0</h3>
 
 ![GitHub Release](https://img.shields.io/github/v/release/umfhero/CalendarPlus)
 ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/umfhero/CalendarPlus/total)
-![GitHub Downloads (all assets, latest release)](https://img.shields.io/github/downloads/umfhero/CalendarPlus/latest/total)
 ![GitHub last commit](https://img.shields.io/github/last-commit/umfhero/CalendarPlus)
 ![GitHub stars](https://img.shields.io/github/stars/umfhero/CalendarPlus?style=social)
 
