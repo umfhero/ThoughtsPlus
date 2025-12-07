@@ -12,7 +12,6 @@ import clsx from 'clsx';
 import { TrendingUp, TrendingDown, Sparkles } from 'lucide-react';
 import { NotesData } from '../App';
 import { format, parseISO } from 'date-fns';
-import confetti from 'canvas-confetti';
 
 interface TaskTrendChartProps {
   notes: NotesData;
@@ -40,7 +39,6 @@ const TaskTrendChart: React.FC<TaskTrendChartProps> = ({ notes }) => {
   const [range, setRange] = useState<TimeRange>('1W');
   const [containerWidth, setContainerWidth] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [hasTriggeredConfetti, setHasTriggeredConfetti] = useState(false);
   const [animationKey, setAnimationKey] = useState(0);
 
   useEffect(() => {
@@ -56,7 +54,6 @@ const TaskTrendChart: React.FC<TaskTrendChartProps> = ({ notes }) => {
 
   const handleRangeChange = (newRange: TimeRange) => {
     setRange(newRange);
-    setHasTriggeredConfetti(false);
   };
 
   // Build chart data - task by task points
@@ -268,44 +265,9 @@ const TaskTrendChart: React.FC<TaskTrendChartProps> = ({ notes }) => {
 
   // Trigger confetti when 100% completion
   useEffect(() => {
-    const isPerfectScore = summaryStats.totalTasks > 0 && 
-                           summaryStats.completedTasks === summaryStats.totalTasks;
-    
-    // Reset confetti flag when not at 100%
-    if (!isPerfectScore && hasTriggeredConfetti) {
-      setHasTriggeredConfetti(false);
-    }
-    
-    // Trigger confetti when at 100% and haven't triggered yet
-    if (isPerfectScore && !hasTriggeredConfetti) {
-      setHasTriggeredConfetti(true);
-      
-      const duration = 3000;
-      const end = Date.now() + duration;
-
-      const frame = () => {
-        confetti({
-          particleCount: 3,
-          angle: 60,
-          spread: 55,
-          origin: { x: 0, y: 0.8 },
-          colors: ['#10b981', '#34d399', '#6ee7b7', '#a7f3d0']
-        });
-        confetti({
-          particleCount: 3,
-          angle: 120,
-          spread: 55,
-          origin: { x: 1, y: 0.8 },
-          colors: ['#10b981', '#34d399', '#6ee7b7', '#a7f3d0']
-        });
-
-        if (Date.now() < end) {
-          requestAnimationFrame(frame);
-        }
-      };
-      frame();
-    }
-  }, [summaryStats.completedTasks, summaryStats.totalTasks, hasTriggeredConfetti]);
+    // Trigger re-animation when data changes
+    setAnimationKey(prev => prev + 1);
+  }, [summaryStats.completedTasks, summaryStats.totalTasks, summaryStats.missedTasks]);
 
   const getRateColor = (rate: number) => {
     if (rate >= 70) return { text: 'text-emerald-500', bg: 'bg-emerald-500', hex: '#10b981' };
@@ -525,7 +487,10 @@ const TaskTrendChart: React.FC<TaskTrendChartProps> = ({ notes }) => {
                 label={{ value: 'Tasks', position: 'insideBottom', offset: -5, fill: '#9ca3af', fontSize: 10 }}
               />
               <YAxis 
-                domain={[(dataMin: number) => Math.min(dataMin - 1, -1), (dataMax: number) => Math.max(dataMax + 1, chartData.length + 1)]}
+                domain={[
+                  (dataMin: number) => Math.min(dataMin - 1, -1),
+                  () => summaryStats.totalTasks
+                ]}
                 stroke="transparent"
                 tick={{ fill: '#9ca3af', fontSize: 10 }}
                 tickLine={false}
@@ -534,32 +499,91 @@ const TaskTrendChart: React.FC<TaskTrendChartProps> = ({ notes }) => {
                 label={{ value: 'Score', angle: -90, position: 'insideLeft', fill: '#9ca3af', fontSize: 10 }}
               />
               <Tooltip
+                wrapperStyle={{ outline: 'none' }}
                 contentStyle={{
-                  backgroundColor: 'rgba(17, 24, 39, 0.95)',
+                  backgroundColor: 'transparent',
                   border: 'none',
-                  borderRadius: '10px',
-                  color: '#fff',
-                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-                  padding: '10px 14px',
-                  fontSize: '12px',
+                  padding: 0,
                 }}
-                formatter={(_value: any, name: string, props: any) => {
-                  const data = props.payload as TaskPoint;
-                  if (name === 'score') {
-                    const status = data.wasCompleted 
-                      ? '✅ Completed' 
-                      : data.wasMissed 
-                      ? '❌ Missed' 
-                      : '⏳ Upcoming';
-                    
-                    return [
-                      `Score: ${data.score} • ${status}`,
-                      data.taskTitle
-                    ];
+                content={(props: any) => {
+                  const { payload } = props;
+                  if (!payload || !payload[0]) return null;
+                  
+                  const data = payload[0].payload as TaskPoint;
+                  
+                  if (data.isProjection) {
+                    return (
+                      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl border-2 border-gray-200 dark:border-gray-700 p-4 backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95 min-w-[220px]">
+                        <div className="font-semibold text-gray-800 dark:text-gray-100 border-b-2 border-gray-200 dark:border-gray-700 pb-2 mb-2 flex items-center gap-2">
+                          <span className="text-lg">📅</span>
+                          <span className="truncate">{data.taskTitle}</span>
+                        </div>
+                        <div className="text-xs space-y-2">
+                          <div className="flex justify-between gap-4 items-center">
+                            <span className="text-gray-500 dark:text-gray-400">Status:</span>
+                            <span className="text-blue-500 dark:text-blue-400 font-semibold flex items-center gap-1">
+                              <span>⏳</span> Upcoming
+                            </span>
+                          </div>
+                          <div className="flex justify-between gap-4 items-center">
+                            <span className="text-gray-500 dark:text-gray-400">Projected Score:</span>
+                            <span className="text-gray-700 dark:text-gray-200 font-bold text-sm">{data.projectedScore}</span>
+                          </div>
+                          <div className="mt-3 pt-3 border-t-2 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 italic text-xs bg-gray-50 dark:bg-gray-900/50 rounded-lg p-2">
+                            💡 Complete this task to add <span className="font-bold" style={{ color: 'var(--accent-primary)' }}>+1</span> to your score
+                          </div>
+                        </div>
+                      </div>
+                    );
                   }
-                  return null;
+                  
+                  const statusIcon = data.wasCompleted ? '✅' : data.wasMissed ? '❌' : '⏳';
+                  const statusText = data.wasCompleted ? 'Completed' : data.wasMissed ? 'Missed' : 'Pending';
+                  const statusColor = data.wasCompleted 
+                    ? 'text-emerald-500 dark:text-emerald-400' 
+                    : data.wasMissed 
+                    ? 'text-rose-500 dark:text-rose-400' 
+                    : 'text-gray-500 dark:text-gray-400';
+                  
+                  return (
+                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl border-2 border-gray-200 dark:border-gray-700 p-4 backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95 min-w-[240px]">
+                      <div className="font-semibold text-gray-800 dark:text-gray-100 border-b-2 border-gray-200 dark:border-gray-700 pb-2 mb-3 flex items-center gap-2">
+                        <span className="text-lg">{statusIcon}</span>
+                        <span className="truncate">{data.taskTitle}</span>
+                      </div>
+                      <div className="text-xs space-y-2">
+                        <div className="flex justify-between gap-4 items-center">
+                          <span className="text-gray-500 dark:text-gray-400">Status:</span>
+                          <span className={`${statusColor} font-semibold`}>{statusText}</span>
+                        </div>
+                        <div className="flex justify-between gap-4 items-center">
+                          <span className="text-gray-500 dark:text-gray-400">Current Score:</span>
+                          <span className="text-gray-700 dark:text-gray-200 font-bold text-sm">{data.score}</span>
+                        </div>
+                        <div className="flex justify-between gap-4 items-center">
+                          <span className="text-gray-500 dark:text-gray-400">Date:</span>
+                          <span className="text-gray-700 dark:text-gray-200 font-medium">{data.displayDate}</span>
+                        </div>
+                        {data.wasMissed && (
+                          <div className="mt-3 pt-3 border-t-2 border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-900/20 rounded-lg p-2.5">
+                            <div className="text-rose-600 dark:text-rose-400 text-xs font-medium flex items-start gap-2">
+                              <span className="text-sm">⚠️</span>
+                              <span>This missed task reduced your score by <span className="font-bold">-1</span></span>
+                            </div>
+                          </div>
+                        )}
+                        {data.wasCompleted && (
+                          <div className="mt-3 pt-3 border-t-2 dark:border-gray-700 bg-gradient-to-r from-emerald-50 to-cyan-50 dark:from-emerald-900/20 dark:to-cyan-900/20 rounded-lg p-2.5" style={{ borderTopColor: 'var(--accent-primary)', borderTopWidth: '2px' }}>
+                            <div className="text-emerald-600 dark:text-emerald-400 text-xs font-medium flex items-start gap-2">
+                              <span className="text-sm">🎯</span>
+                              <span>Great job! You earned <span className="font-bold" style={{ color: 'var(--accent-primary)' }}>+1</span> point</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
                 }}
-                labelFormatter={() => ''}
               />
             </ComposedChart>
           </ResponsiveContainer>

@@ -8,6 +8,7 @@ import TaskTrendChart from '../components/TaskTrendChart';
 import { ActivityCalendar, Activity } from 'react-activity-calendar';
 import { useTheme } from '../contexts/ThemeContext';
 import { fetchGithubContributions } from '../utils/github';
+import confetti from 'canvas-confetti';
 
 interface DashboardProps {
     notes: NotesData;
@@ -397,6 +398,36 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, isL
         if (noteToUpdate) {
             const updatedNote = { ...noteToUpdate, completed: !currentCompleted };
             onUpdateNote(updatedNote, parseISO(dateKey));
+            
+            // Trigger confetti when completing a task (not when uncompleting)
+            if (!currentCompleted) {
+                const duration = 3000;
+                const animationEnd = Date.now() + duration;
+                const colors = ['#10b981', '#34d399', '#6ee7b7', '#a7f3d0'];
+
+                const frame = () => {
+                    confetti({
+                        particleCount: 3,
+                        angle: 60,
+                        spread: 55,
+                        origin: { x: 0, y: 0.8 },
+                        colors: colors
+                    });
+                    confetti({
+                        particleCount: 3,
+                        angle: 120,
+                        spread: 55,
+                        origin: { x: 1, y: 0.8 },
+                        colors: colors
+                    });
+
+                    if (Date.now() < animationEnd) {
+                        requestAnimationFrame(frame);
+                    }
+                };
+
+                frame();
+            }
         }
     };
 
