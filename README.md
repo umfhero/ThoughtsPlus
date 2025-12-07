@@ -12,7 +12,11 @@
 
 ---
 
-**CalendarPlus** is a production-ready Windows desktop calendar application engineered for personal productivity, event management, and calendar data visualization. V4 is designed to be user-configurable and adaptable to different workflows.
+**CalendarPlus** is a Windows desktop calendar application built for people who are tired of clunky, overcomplicated calendar apps that make adding a simple event feel like filing taxes.
+
+While other calendar apps are slow, bloated, and require multiple clicks just to add a reminder, CalendarPlus keeps it dead simple: hit a keyboard shortcut, type "Meeting with team next Monday at 10am", and you're done. No friction, no fuss, no endless dropdown menus. Just fast, intelligent event creation that actually works.
+
+Built for frictionless event management, quick notes, and constant reminders that actually keep you on track—because life's too short to wrestle with your calendar.
 
 > **New in V4.5:** Fully user-configurable with your own API keys, GitHub profile and analytics integrations (Only creator stats for now). No more hardcoded personal data!
 
@@ -127,12 +131,19 @@ If you're forking this project, you can preserve your personal baseline data:
 
 ## Roadmap
 
+### Planned Features
+
+- **Mobile Sync & Widgets** - Lockscreen widgets with your daily brief and upcoming tasks
+- **Task Completion Analytics** - Track completed vs incomplete tasks with weekly/monthly/yearly performance graphs
+- **Better Habit Tracking** - See how well you're managing your time and staying on top of your goals
+- **Enhanced Data Visualization** - More charts, trends, and insights into your productivity patterns
+
 ### Future Considerations
 
-- Mobile companion app
 - Team collaboration features
 - Plugin/extension system
-- Advanced reporting and analytics
+- Calendar sharing and permissions
+- Advanced AI suggestions and insights
 
 ---
 
