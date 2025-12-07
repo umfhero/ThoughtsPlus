@@ -5,10 +5,12 @@
 
 ![GitHub stars](https://img.shields.io/github/stars/umfhero/CalendarPlus?style=social)
 ![GitHub forks](https://img.shields.io/github/forks/umfhero/CalendarPlus?style=social)
+![GitHub Release](https://img.shields.io/github/v/release/umfhero/CalendarPlus)
+![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/umfhero/CalendarPlus/total)
+![GitHub Downloads (all assets, latest release)](https://img.shields.io/github/downloads/umfhero/CalendarPlus/latest/total)
 ![GitHub last commit](https://img.shields.io/github/last-commit/umfhero/CalendarPlus)
 ![GitHub repo size](https://img.shields.io/github/repo-size/umfhero/CalendarPlus)
 ![GitHub issues](https://img.shields.io/github/issues/umfhero/CalendarPlus)
-![GitHub pull requests](https://img.shields.io/github/issues-pr/umfhero/CalendarPlus)
 ![Top Language](https://img.shields.io/github/languages/top/umfhero/CalendarPlus)
 
 ---
