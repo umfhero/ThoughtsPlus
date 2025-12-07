@@ -19,6 +19,7 @@ export interface Note {
     summary?: string;
     time: string;
     importance: 'low' | 'medium' | 'high' | 'misc';
+    completed?: boolean;
 }
 
 export interface NotesData {
@@ -148,6 +149,15 @@ function App() {
         saveNotesToBackend(newNotes);
     };
 
+    const handleUpdateNote = (note: Note, date: Date) => {
+        const dateKey = date.toISOString().split('T')[0];
+        const existingNotes = notes[dateKey] || [];
+        const updatedNotes = existingNotes.map(n => n.id === note.id ? note : n);
+        const newNotes = { ...notes, [dateKey]: updatedNotes };
+        setNotes(newNotes);
+        saveNotesToBackend(newNotes);
+    };
+
     const saveNotesToBackend = async (newNotes: NotesData) => {
         // @ts-ignore
         const currentData = await window.ipcRenderer.invoke('get-data');
@@ -198,6 +208,7 @@ function App() {
                                     onNavigateToNote={handleNavigateToNote}
                                     userName={userName}
                                     onAddNote={handleAddNote}
+                                    onUpdateNote={handleUpdateNote}
                                     isLoading={isLoading}
                                 />
                             )}

@@ -1,11 +1,10 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar as CalendarIcon, ArrowUpRight, ListTodo, Loader, Circle, Search, Filter, Activity as ActivityIcon } from 'lucide-react';
+import { Calendar as CalendarIcon, ArrowUpRight, ListTodo, Loader, Circle, Search, Filter, Activity as ActivityIcon, CheckCircle2 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { format, parseISO } from 'date-fns';
 import { NotesData, Note } from '../App';
 import clsx from 'clsx';
-import { processStatsData, StatsData as HistoricalStatsData } from '../utils/statsManager';
-import TrendChart from '../components/TrendChart';
+import TaskTrendChart from '../components/TaskTrendChart';
 import { ActivityCalendar, Activity } from 'react-activity-calendar';
 import { useTheme } from '../contexts/ThemeContext';
 import { fetchGithubContributions } from '../utils/github';
@@ -15,6 +14,7 @@ interface DashboardProps {
     onNavigateToNote: (date: Date, noteId: string) => void;
     userName: string;
     onAddNote: (note: Note, date: Date) => void;
+    onUpdateNote: (note: Note, date: Date) => void;
     isLoading?: boolean;
 }
 
@@ -27,15 +27,14 @@ function hexToRgb(hex: string) {
     } : null;
 }
 
-export function Dashboard({ notes, onNavigateToNote, userName, isLoading = false }: DashboardProps) {
+export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, isLoading = false }: DashboardProps) {
     const [time, setTime] = useState(new Date());
     // @ts-ignore
     const [stats, setStats] = useState<any>(null);
-    const [historicalStats, setHistoricalStats] = useState<HistoricalStatsData | null>(null);
     const [aiSummary, setAiSummary] = useState<string | null>(() => localStorage.getItem('dashboard_ai_summary'));
     const [isBriefingLoading, setIsBriefingLoading] = useState(false);
     const [loadingMessage, setLoadingMessage] = useState("Analyzing your schedule...");
-    const [eventTab, setEventTab] = useState<'upcoming' | 'notCompleted'>('upcoming');
+    const [eventTab, setEventTab] = useState<'upcoming' | 'completed' | 'notCompleted'>('upcoming');
     const [searchQuery, setSearchQuery] = useState('');
     const [filterImportance, setFilterImportance] = useState<string>('all');
     const [contributions, setContributions] = useState<Activity[]>([]);
@@ -248,22 +247,29 @@ export function Dashboard({ notes, onNavigateToNote, userName, isLoading = false
     
     // Resizable layout state
     const [leftWidth, setLeftWidth] = useState(66); // Percentage
+    const [panelHeight, setPanelHeight] = useState(384); // Pixels (default h-96 = 24rem = 384px)
     const [isDragging, setIsDragging] = useState(false);
+    const [isHeightDragging, setIsHeightDragging] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        const loadSavedWidth = async () => {
+        const loadSavedSettings = async () => {
             try {
                 // @ts-ignore
                 const savedWidth = await window.ipcRenderer.invoke('get-device-setting', 'dashboardLeftWidth');
                 if (savedWidth) {
                     setLeftWidth(parseFloat(savedWidth));
                 }
+                // @ts-ignore
+                const savedHeight = await window.ipcRenderer.invoke('get-device-setting', 'dashboardPanelHeight');
+                if (savedHeight) {
+                    setPanelHeight(parseFloat(savedHeight));
+                }
             } catch (e) {
-                console.error('Failed to load divider position', e);
+                console.error('Failed to load dashboard settings', e);
             }
         };
-        loadSavedWidth();
+        loadSavedSettings();
     }, []);
 
     const handleMouseDown = (e: React.MouseEvent) => {
@@ -271,16 +277,31 @@ export function Dashboard({ notes, onNavigateToNote, userName, isLoading = false
         e.preventDefault();
     };
 
+    const handleHeightMouseDown = (e: React.MouseEvent) => {
+        setIsHeightDragging(true);
+        e.preventDefault();
+    };
+
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {
-            if (!isDragging || !containerRef.current) return;
+            if (isDragging && containerRef.current) {
+                const containerRect = containerRef.current.getBoundingClientRect();
+                const newLeftWidth = ((e.clientX - containerRect.left) / containerRect.width) * 100;
+                
+                // Limit width between 30% and 70%
+                if (newLeftWidth >= 30 && newLeftWidth <= 70) {
+                    setLeftWidth(newLeftWidth);
+                }
+            }
             
-            const containerRect = containerRef.current.getBoundingClientRect();
-            const newLeftWidth = ((e.clientX - containerRect.left) / containerRect.width) * 100;
-            
-            // Limit width between 30% and 70%
-            if (newLeftWidth >= 30 && newLeftWidth <= 70) {
-                setLeftWidth(newLeftWidth);
+            if (isHeightDragging && containerRef.current) {
+                const containerRect = containerRef.current.getBoundingClientRect();
+                const newHeight = e.clientY - containerRect.top;
+                
+                // Limit height between 250px and 600px
+                if (newHeight >= 250 && newHeight <= 600) {
+                    setPanelHeight(newHeight);
+                }
             }
         };
 
@@ -291,9 +312,14 @@ export function Dashboard({ notes, onNavigateToNote, userName, isLoading = false
                 // @ts-ignore
                 window.ipcRenderer.invoke('save-device-setting', 'dashboardLeftWidth', leftWidth.toString());
             }
+            if (isHeightDragging) {
+                setIsHeightDragging(false);
+                // @ts-ignore
+                window.ipcRenderer.invoke('save-device-setting', 'dashboardPanelHeight', panelHeight.toString());
+            }
         };
 
-        if (isDragging) {
+        if (isDragging || isHeightDragging) {
             document.addEventListener('mousemove', handleMouseMove);
             document.addEventListener('mouseup', handleMouseUp);
         }
@@ -302,13 +328,11 @@ export function Dashboard({ notes, onNavigateToNote, userName, isLoading = false
             document.removeEventListener('mousemove', handleMouseMove);
             document.removeEventListener('mouseup', handleMouseUp);
         };
-    }, [isDragging, leftWidth]);
+    }, [isDragging, isHeightDragging, leftWidth, panelHeight]);
 
     useEffect(() => {
         const timer = setInterval(() => setTime(new Date()), 1000);
         loadStats();
-        const hData = processStatsData();
-        setHistoricalStats(hData);
         return () => clearInterval(timer);
     }, []);
 
@@ -327,7 +351,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, isLoading = false
 
     // Get upcoming events
     const getAllUpcomingEvents = () => {
-        const allEvents: { date: Date; note: Note; isOverdue: boolean }[] = [];
+        const allEvents: { date: Date; note: Note; isOverdue: boolean; dateKey: string }[] = [];
         const now = new Date();
         const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
@@ -352,7 +376,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, isLoading = false
                 }
                 
                 // Include all future events and overdue events
-                allEvents.push({ date: eventDateTime, note: effectiveNote, isOverdue });
+                allEvents.push({ date: eventDateTime, note: effectiveNote, isOverdue, dateKey: dateStr });
             });
         });
         
@@ -366,12 +390,43 @@ export function Dashboard({ notes, onNavigateToNote, userName, isLoading = false
 
     const allUpcomingEvents = getAllUpcomingEvents();
 
+    // Toggle task completion
+    const handleToggleComplete = async (noteId: string, dateKey: string, currentCompleted: boolean) => {
+        const dayNotes = notes[dateKey] || [];
+        const noteToUpdate = dayNotes.find(n => n.id === noteId);
+        if (noteToUpdate) {
+            const updatedNote = { ...noteToUpdate, completed: !currentCompleted };
+            onUpdateNote(updatedNote, parseISO(dateKey));
+        }
+    };
+
+    // Filter events based on tab
+    const getFilteredEvents = () => {
+        let filtered = allUpcomingEvents.filter(event => {
+            const matchesSearch = event.note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                  event.note.description.toLowerCase().includes(searchQuery.toLowerCase());
+            const matchesFilter = filterImportance === 'all' || event.note.importance === filterImportance;
+            return matchesSearch && matchesFilter;
+        });
+
+        if (eventTab === 'upcoming') {
+            return filtered.filter(e => !e.isOverdue && !e.note.completed);
+        } else if (eventTab === 'completed') {
+            return filtered.filter(e => e.note.completed === true);
+        } else {
+            // notCompleted - overdue and not marked completed
+            return filtered.filter(e => e.isOverdue && !e.note.completed);
+        }
+    };
+
     const upcomingEvents = allUpcomingEvents.filter(event => {
         const matchesSearch = event.note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                               event.note.description.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesFilter = filterImportance === 'all' || event.note.importance === filterImportance;
         return matchesSearch && matchesFilter;
     });
+
+    const filteredEventsForTab = getFilteredEvents();
 
     // Effect to generate AI summary
     useEffect(() => {
@@ -548,7 +603,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, isLoading = false
             </div>
 
             {/* Quick Stats Grid - Resizable */}
-            <div ref={containerRef} className="flex flex-col md:flex-row h-96 select-none">
+            <div ref={containerRef} style={{ height: `${panelHeight}px` }} className="flex flex-col md:flex-row select-none">
                 {/* Upcoming Events - Resizable Left Column */}
                 <motion.div
                     style={{ width: `${leftWidth}%` }}
@@ -576,26 +631,38 @@ export function Dashboard({ notes, onNavigateToNote, userName, isLoading = false
                         <button
                             onClick={() => setEventTab('upcoming')}
                             className={clsx(
-                                "flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all",
+                                "flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-all",
                                 eventTab === 'upcoming'
                                     ? "bg-white dark:bg-gray-700 shadow-md"
                                     : "bg-gray-50 dark:bg-gray-800 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
                             )}
                             style={eventTab === 'upcoming' ? { color: 'var(--accent-primary)' } : undefined}
                         >
-                            Upcoming ({upcomingEvents.filter(e => !e.isOverdue).length})
+                            Upcoming ({upcomingEvents.filter(e => !e.isOverdue && !e.note.completed).length})
+                        </button>
+                        <button
+                            onClick={() => setEventTab('completed')}
+                            className={clsx(
+                                "flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-all",
+                                eventTab === 'completed'
+                                    ? "bg-white dark:bg-gray-700 shadow-md"
+                                    : "bg-gray-50 dark:bg-gray-800 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+                            )}
+                            style={eventTab === 'completed' ? { color: 'var(--accent-primary)' } : undefined}
+                        >
+                            Completed ({upcomingEvents.filter(e => e.note.completed === true).length})
                         </button>
                         <button
                             onClick={() => setEventTab('notCompleted')}
                             className={clsx(
-                                "flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all",
+                                "flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-all",
                                 eventTab === 'notCompleted'
                                     ? "bg-white dark:bg-gray-700 shadow-md"
                                     : "bg-gray-50 dark:bg-gray-800 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
                             )}
                             style={eventTab === 'notCompleted' ? { color: 'var(--accent-primary)' } : undefined}
                         >
-                            Not Completed ({upcomingEvents.filter(e => e.isOverdue).length})
+                            Missed ({upcomingEvents.filter(e => e.isOverdue && !e.note.completed).length})
                         </button>
                     </div>
 
@@ -627,34 +694,91 @@ export function Dashboard({ notes, onNavigateToNote, userName, isLoading = false
                     </div>
 
                     <div className="space-y-4 flex-1 overflow-y-auto pr-2 custom-scrollbar">
-                        {upcomingEvents.filter(e => eventTab === 'upcoming' ? !e.isOverdue : e.isOverdue).length === 0 ? (
-                            <p className="text-gray-400 dark:text-gray-500 text-sm">{eventTab === 'upcoming' ? 'No upcoming events.' : 'No overdue events.'}</p>
+                        {filteredEventsForTab.length === 0 ? (
+                            <p className="text-gray-400 dark:text-gray-500 text-sm">
+                                {eventTab === 'upcoming' ? 'No upcoming events.' : eventTab === 'completed' ? 'No completed events.' : 'No missed events.'}
+                            </p>
                         ) : (
-                            upcomingEvents.filter(e => eventTab === 'upcoming' ? !e.isOverdue : e.isOverdue).slice(0, 10).map(({ date, note }) => (
+                            <AnimatePresence mode="popLayout">
+                            {filteredEventsForTab.slice(0, 10).map(({ date, note, dateKey }) => (
                                 <motion.div
                                     key={note.id}
+                                    layout
+                                    initial={{ opacity: 0, scale: 0.8, y: -10 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.8, x: 50 }}
+                                    transition={{ 
+                                        duration: 0.3,
+                                        layout: { duration: 0.3 }
+                                    }}
                                     whileHover={{ scale: 1.02 }}
-                                    onClick={() => onNavigateToNote(date, note.id)}
                                     className={clsx(
-                                        "p-3 rounded-xl border cursor-pointer transition-colors",
-                                        importanceColors[note.importance]
+                                        "p-3 rounded-xl border transition-colors",
+                                        note.completed ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-900/50" : importanceColors[note.importance]
                                     )}
                                 >
-                                    <div className="flex justify-between items-start mb-1">
-                                        <span className="font-bold text-sm">{note.title}</span>
-                                        <div className="text-right">
-                                            <div className="text-xs opacity-70">{format(date, 'MMM d')} {convertTo12Hour(note.time)}</div>
-                                            <div className="text-[10px] opacity-60 font-semibold">{getCountdown(date, note.time)}</div>
+                                    <div className="flex items-start gap-3">
+                                        {/* Completion Checkbox */}
+                                        <motion.button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleToggleComplete(note.id, dateKey, note.completed || false);
+                                            }}
+                                            whileTap={{ scale: 0.8 }}
+                                            className={clsx(
+                                                "mt-0.5 flex-shrink-0 transition-all",
+                                                note.completed 
+                                                    ? "text-green-500 hover:text-green-600" 
+                                                    : "text-gray-300 hover:text-gray-400 dark:text-gray-600 dark:hover:text-gray-500"
+                                            )}
+                                        >
+                                            <motion.div
+                                                initial={false}
+                                                animate={note.completed ? { scale: [1, 1.3, 1], rotate: [0, 10, 0] } : { scale: 1 }}
+                                                transition={{ duration: 0.3 }}
+                                            >
+                                                {note.completed ? (
+                                                    <CheckCircle2 className="w-5 h-5" />
+                                                ) : (
+                                                    <Circle className="w-5 h-5" />
+                                                )}
+                                            </motion.div>
+                                        </motion.button>
+                                        
+                                        <div 
+                                            className="flex-1 cursor-pointer"
+                                            onClick={() => onNavigateToNote(date, note.id)}
+                                        >
+                                            <div className="flex justify-between items-start mb-1">
+                                                <span className={clsx(
+                                                    "font-bold text-sm",
+                                                    note.completed && "line-through text-gray-500 dark:text-gray-400"
+                                                )}>
+                                                    {note.title}
+                                                </span>
+                                                <div className="text-right">
+                                                    <div className="text-xs opacity-70">{format(date, 'MMM d')} {convertTo12Hour(note.time)}</div>
+                                                    <div className="text-[10px] opacity-60 font-semibold">
+                                                        {note.completed ? 'Completed' : getCountdown(date, note.time)}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-start gap-2 text-xs opacity-80">
+                                                {!note.completed && (
+                                                    <Circle className={clsx("w-2 h-2 mt-[3px] flex-shrink-0 fill-current", importanceIconColors[note.importance])} />
+                                                )}
+                                                <span className={clsx(
+                                                    "break-words",
+                                                    note.completed && "text-gray-500 dark:text-gray-400"
+                                                )}>
+                                                    {note.description || 'No description'}
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className="flex items-start gap-2 text-xs opacity-80">
-                                        <Circle className={clsx("w-2 h-2 mt-[3px] flex-shrink-0 fill-current", importanceIconColors[note.importance])} />
-                                        <span className="break-words">
-                                            {note.description || 'No description'}
-                                        </span>
-                                    </div>
                                 </motion.div>
-                            ))
+                            ))}
+                            </AnimatePresence>
                         )}
                     </div>
                 </motion.div>
@@ -685,33 +809,40 @@ export function Dashboard({ notes, onNavigateToNote, userName, isLoading = false
                             <ArrowUpRight className="w-7 h-7" />
                         </div>
                         <div>
-                            <p className="text-sm font-medium text-gray-400 dark:text-gray-300 uppercase tracking-wider">Weekly Trends</p>
-                            <h3 className="text-2xl font-bold text-gray-800 dark:text-white">Performance</h3>
+                            <p className="text-sm font-medium text-gray-400 dark:text-gray-300 uppercase tracking-wider">Task Trends</p>
+                            <h3 className="text-2xl font-bold text-gray-800 dark:text-white">Completion Rate</h3>
                         </div>
                     </div>
 
-                    {/* Trend Graph */}
+                    {/* Task Completion Trend Graph */}
                     <div className="flex-1 w-full min-h-0">
-                        {!creatorCodes || creatorCodes.length === 0 ? (
+                        {Object.keys(notes).length === 0 ? (
                             <div className="h-full flex items-center justify-center bg-white/50 dark:bg-gray-700/50 rounded-xl border-2 border-dashed border-purple-200 dark:border-purple-700">
                                 <div className="text-center py-6 px-4">
                                     <ArrowUpRight className="w-12 h-12 text-gray-300 dark:text-gray-600 mb-3 mx-auto" />
-                                    <p className="text-sm font-medium text-gray-500 dark:text-gray-300 mb-2">Creator Stats Not Configured</p>
-                                    <p className="text-xs text-gray-400 dark:text-gray-400">Add your Fortnite creator codes in Settings to view performance trends</p>
+                                    <p className="text-sm font-medium text-gray-500 dark:text-gray-300 mb-2">No Tasks Yet</p>
+                                    <p className="text-xs text-gray-400 dark:text-gray-400">Add some events to see your completion trends</p>
                                 </div>
                             </div>
-                        ) : historicalStats && historicalStats.trendData.length > 0 ? (
-                            <TrendChart data={historicalStats.trendData} />
                         ) : (
-                            <div className="h-full flex items-center justify-center bg-white/50 dark:bg-gray-700/50 rounded-xl border-2 border-dashed border-purple-200 dark:border-purple-700">
-                                <div className="text-center">
-                                    <p className="text-sm font-medium text-gray-500 dark:text-gray-300">Trend Graph</p>
-                                    <p className="text-xs text-gray-400 dark:text-gray-400 mt-1">No historical data available</p>
-                                </div>
-                            </div>
+                            <TaskTrendChart notes={notes} />
                         )}
                     </div>
                 </motion.div>
+            </div>
+
+            {/* Height Resize Handle */}
+            <div
+                className="flex items-center justify-center h-3 cursor-row-resize hover:bg-gray-50/50 dark:hover:bg-gray-700/50 rounded-full transition-colors group"
+                onMouseDown={handleHeightMouseDown}
+                style={{ marginTop: '0.25rem', marginBottom: '0.25rem' }}
+            >
+                <div 
+                    className="w-12 h-1 bg-gray-200 dark:bg-gray-600 rounded-full transition-colors shadow-sm" 
+                    style={{ 
+                        backgroundColor: isHeightDragging ? 'var(--accent-primary)' : undefined 
+                    }}
+                />
             </div>
 
             {/* Github Contributions Graph */}
