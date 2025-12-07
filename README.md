@@ -8,6 +8,8 @@
 ![GitHub last commit](https://img.shields.io/github/last-commit/umfhero/CalendarPlus)
 ![GitHub stars](https://img.shields.io/github/stars/umfhero/CalendarPlus?style=social)
 
+> **New in V4.5:** Fully user-configurable with your own API keys, GitHub profile and analytics integrations (Only creator stats for now). No more hardcoded personal data!
+
 </div>
 
 ---
@@ -16,9 +18,9 @@
 
 While other calendar apps are slow, bloated, and require multiple clicks just to add a reminder, CalendarPlus keeps it dead simple: hit a keyboard shortcut, type "Meeting with team next Monday at 10am", and you're done. No friction, no fuss, no endless dropdown menus. Just fast, intelligent event creation that actually works.
 
-Built for frictionless event management, quick notes, and constant reminders that actually keep you on track—because life's too short to wrestle with your calendar.
+Built for frictionless event management, quick notes, and constant reminders that actually keep you on track, because life's too short to wrestle with your calendar.
 
-> **New in V4.5:** Fully user-configurable with your own API keys, GitHub profile and analytics integrations (Only creator stats for now). No more hardcoded personal data!
+
 
 ### Dashboard
 
