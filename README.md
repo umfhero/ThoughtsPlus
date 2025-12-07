@@ -19,7 +19,7 @@
 ### Dashboard
 
 <div align="center">
-  <img src="git/newpics/dashboard-v2.png" alt="Dashboard" width="90%" style="border-radius: 15px; />
+  <img src="git/newpics/dashboard-v2.png" alt="Dashboard" width="100%" />
   <p><em>Central command centre featuring widget-based layout and real-time data.</em></p>
 </div>
 
