@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="Banner.png" alt="CalendarPlus Banner" width="100%" />
+  <img src="git/newpics/Banner.png" alt="CalendarPlus Banner" width="100%" />
 
   <h3>Latest Release 4.5.0</h3>
 
