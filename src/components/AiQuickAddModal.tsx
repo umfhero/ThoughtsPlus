@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, X, Check } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import clsx from 'clsx';
-import { Note } from '../App';
+import { Note } from '../types';
 
 interface AiQuickAddModalProps {
     isOpen: boolean;

@@ -265,7 +265,19 @@ app.whenReady().then(async () => {
             const genAI = new GoogleGenerativeAI(apiKey);
             
             // Try multiple models in order of preference/performance
-            const models = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-1.5-flash", "gemini-1.5-pro"];
+            const models = [
+                "gemini-2.5-flash-native-audio-dialog",
+                "gemini-2.0-flash-live",
+                "gemini-2.0-flash-exp",
+                "gemini-1.5-flash",
+                "gemini-1.5-flash-001",
+                "gemini-1.5-flash-002",
+                "gemini-1.5-pro",
+                "gemini-1.5-pro-001",
+                "gemini-1.5-pro-002",
+                "gemini-pro",
+                "gemini-1.0-pro"
+            ];
             
             for (const modelName of models) {
                 try {
@@ -283,15 +295,27 @@ app.whenReady().then(async () => {
         }
     });
 
-    ipcMain.handle('generate-ai-overview', async (_, notes) => {
+    ipcMain.handle('generate-ai-overview', async (_, notes, userName) => {
         try {
             const apiKey = deviceSettings.apiKey || process.env.GEMINI_API_KEY;
             console.log('generate-ai-overview called. Has apiKey:', !!apiKey);
             if (!apiKey) return "Please add your AI API key in settings! Make sure not to share it with anyone.";
             
             const genAI = new GoogleGenerativeAI(apiKey);
-            // Try multiple models in order of preference/performance
-            const models = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-1.5-flash", "gemini-1.5-pro"];
+            // Try multiple models including specific versions to avoid 404s
+            const models = [
+                "gemini-2.5-flash-native-audio-dialog",
+                "gemini-2.0-flash-live",
+                "gemini-2.0-flash-exp",
+                "gemini-1.5-flash",
+                "gemini-1.5-flash-001",
+                "gemini-1.5-flash-002",
+                "gemini-1.5-pro",
+                "gemini-1.5-pro-001",
+                "gemini-1.5-pro-002",
+                "gemini-pro",
+                "gemini-1.0-pro"
+            ];
             
             let notesStr = "";
             try {
@@ -300,16 +324,19 @@ app.whenReady().then(async () => {
                 return "Error: Could not process notes data.";
             }
 
+            const nameToUse = userName ? userName.split(' ')[0] : 'User';
+
             const prompt = `
-            You are a helpful personal assistant. 
+            You are a helpful personal assistant for ${nameToUse}. 
             Analyze the following notes and provide a comforting briefing for the user. 
             The notes include upcoming tasks, completed tasks, and missed tasks.
             
             Guidelines:
-            1. **Upcoming Tasks:** Focus on priorities and timelines. Tell the user what to focus on first based on dates and importance.
-            2. **Completed Tasks:** Briefly acknowledge recently completed tasks with a positive note (e.g., "Great job on finishing X"). Do NOT suggest focusing on them.
-            3. **Missed/Overdue Tasks:** Gently mention missed tasks (e.g., "You missed X, try to catch up").
-            4. **Tone:** Keep the tone comforting and encouraging.
+            1. **Personalization:** Address the user as "${nameToUse}" at least once (e.g., "Good progress, ${nameToUse}!" or "Here is your briefing, ${nameToUse}").
+            2. **Upcoming Tasks:** Focus on priorities and timelines. Tell the user what to focus on first based on dates and importance.
+            3. **Completed Tasks:** Briefly acknowledge recently completed tasks with a positive note (e.g., "Great job on finishing X"). Do NOT suggest focusing on them.
+            4. **Missed/Overdue Tasks:** Gently mention missed tasks (e.g., "You missed X, try to catch up").
+            5. **Tone:** Keep the tone comforting and encouraging.
             
             IMPORTANT: 
             1. Keep the response strictly under 80 words.
@@ -320,7 +347,7 @@ app.whenReady().then(async () => {
             ${notesStr}
             `;
             
-            let lastError = null;
+            const errors: string[] = [];
 
             for (const modelName of models) {
                 try {
@@ -331,11 +358,11 @@ app.whenReady().then(async () => {
                     return response.text();
                 } catch (error: any) {
                     console.warn(`Failed with model ${modelName}:`, error.message);
-                    lastError = error;
+                    errors.push(`${modelName}: ${error.message}`);
                 }
             }
             
-            return `Sorry, I couldn't generate your briefing. Last error: ${lastError?.message || 'All models failed'}`;
+            return `Sorry, I couldn't generate your briefing. Errors: ${errors.join(' | ')}`;
         } catch (error: any) {
             console.error("Gemini API Error:", error);
             return `I'm having trouble generating your briefing right now. Error: ${error.message}`;
@@ -353,7 +380,19 @@ app.whenReady().then(async () => {
             }
             
             const genAI = new GoogleGenerativeAI(apiKey);
-            const models = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-1.5-flash", "gemini-1.5-pro"];
+            const models = [
+                "gemini-2.5-flash-native-audio-dialog",
+                "gemini-2.0-flash-live",
+                "gemini-2.0-flash-exp",
+                "gemini-1.5-flash",
+                "gemini-1.5-flash-001",
+                "gemini-1.5-flash-002",
+                "gemini-1.5-pro",
+                "gemini-1.5-pro-001",
+                "gemini-1.5-pro-002",
+                "gemini-pro",
+                "gemini-1.0-pro"
+            ];
             
             const now = new Date();
             const prompt = `

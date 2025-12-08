@@ -2,7 +2,7 @@ import { Home, Calendar as CalendarIcon, BarChart2, Settings, ChevronDown, Chevr
 import { motion, AnimatePresence } from 'framer-motion';
 import clsx from 'clsx';
 import { useState, useEffect } from 'react';
-import { Page, NotesData } from '../App';
+import { Page, NotesData } from '../types';
 import logoPng from '../assets/calendar_icon_181520.png';
 
 interface SidebarProps {

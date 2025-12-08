@@ -16,7 +16,7 @@ import {
     parseISO
 } from 'date-fns';
 import clsx from 'clsx';
-import { NotesData, Note } from '../App';
+import { NotesData, Note } from '../types';
 
 interface CalendarPageProps {
     notes: NotesData;

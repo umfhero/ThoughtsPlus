@@ -12,22 +12,7 @@ import { SetupWizard } from './components/SetupWizard';
 import { useNotification } from './contexts/NotificationContext';
 import { NotificationContainer } from './components/NotificationContainer';
 import { DevPage } from './pages/Dev';
-
-export type Page = 'dashboard' | 'calendar' | 'stats' | 'settings' | 'drawing' | 'github' | 'dev';
-
-export interface Note {
-    id: string;
-    title: string;
-    description: string;
-    summary?: string;
-    time: string;
-    importance: 'low' | 'medium' | 'high' | 'misc';
-    completed?: boolean;
-}
-
-export interface NotesData {
-    [date: string]: Note[];
-}
+import { Page, Note, NotesData } from './types';
 
 function App() {
     const [currentPage, setCurrentPage] = useState<Page>('dashboard');

@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar as CalendarIcon, ArrowUpRight, ListTodo, Loader, Circle, Search, Filter, Activity as ActivityIcon, CheckCircle2, Sparkles } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { format, parseISO } from 'date-fns';
-import { NotesData, Note } from '../App';
+import { NotesData, Note } from '../types';
 import clsx from 'clsx';
 import TaskTrendChart from '../components/TaskTrendChart';
 import { ActivityCalendar, Activity } from 'react-activity-calendar';
@@ -51,6 +51,14 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
     });
     const [blockSize, setBlockSize] = useState(12);
     const githubContributionsRef = useRef<HTMLDivElement>(null);
+    
+    // Completion Modal State
+    const [completionModal, setCompletionModal] = useState<{
+        isOpen: boolean;
+        noteId: string;
+        dateKey: string;
+        noteTitle: string;
+    }>({ isOpen: false, noteId: '', dateKey: '', noteTitle: '' });
 
     useEffect(() => {
         const updateSize = () => {
@@ -417,40 +425,62 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
     const handleToggleComplete = async (noteId: string, dateKey: string, currentCompleted: boolean) => {
         const dayNotes = notes[dateKey] || [];
         const noteToUpdate = dayNotes.find(n => n.id === noteId);
-        if (noteToUpdate) {
-            const updatedNote = { ...noteToUpdate, completed: !currentCompleted };
-            onUpdateNote(updatedNote, parseISO(dateKey));
-            
-            // Trigger confetti when completing a task (not when uncompleting)
-            if (!currentCompleted) {
-                const duration = 3000;
-                const animationEnd = Date.now() + duration;
-                const colors = ['#10b981', '#34d399', '#6ee7b7', '#a7f3d0'];
+        
+        if (!noteToUpdate) return;
 
-                const frame = () => {
-                    confetti({
-                        particleCount: 3,
-                        angle: 60,
-                        spread: 55,
-                        origin: { x: 0, y: 0.8 },
-                        colors: colors
-                    });
-                    confetti({
-                        particleCount: 3,
-                        angle: 120,
-                        spread: 55,
-                        origin: { x: 1, y: 0.8 },
-                        colors: colors
-                    });
+        // Just toggle completion status
+        // Default to "On Time" (completedLate: false) when marking as complete
+        const updatedNote = { 
+            ...noteToUpdate, 
+            completed: !currentCompleted,
+            completedLate: !currentCompleted ? false : undefined 
+        };
+        
+        onUpdateNote(updatedNote, parseISO(dateKey));
+        
+        // Trigger confetti if completing
+        if (!currentCompleted) {
+            const duration = 3000;
+            const animationEnd = Date.now() + duration;
+            const colors = ['#10b981', '#34d399', '#6ee7b7', '#a7f3d0'];
 
-                    if (Date.now() < animationEnd) {
-                        requestAnimationFrame(frame);
-                    }
-                };
+            const frame = () => {
+                confetti({
+                    particleCount: 3,
+                    angle: 60,
+                    spread: 55,
+                    origin: { x: 0, y: 0.8 },
+                    colors: colors
+                });
+                confetti({
+                    particleCount: 3,
+                    angle: 120,
+                    spread: 55,
+                    origin: { x: 1, y: 0.8 },
+                    colors: colors
+                });
 
-                frame();
-            }
+                if (Date.now() < animationEnd) {
+                    requestAnimationFrame(frame);
+                }
+            };
+            frame();
         }
+    };
+
+    // Toggle Late Status
+    const handleToggleLate = (noteId: string, dateKey: string, currentLate: boolean) => {
+        const dayNotes = notes[dateKey] || [];
+        const noteToUpdate = dayNotes.find(n => n.id === noteId);
+        
+        if (!noteToUpdate) return;
+
+        const updatedNote = { 
+            ...noteToUpdate, 
+            completedLate: !currentLate
+        };
+        
+        onUpdateNote(updatedNote, parseISO(dateKey));
     };
 
     // Filter events based on tab
@@ -500,7 +530,8 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                 time: e.note.time,
                 date: format(e.date, 'yyyy-MM-dd'),
                 importance: e.note.importance,
-                completed: e.note.completed
+                completed: e.note.completed,
+                completedLate: e.note.completedLate
             })));
             
             const cachedHash = localStorage.getItem('dashboard_events_hash');
@@ -511,7 +542,8 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                 // Continue to fetch new briefing
             }
             // If data hasn't changed and we have a summary, use it and don't fetch
-            else if (eventsHash === cachedHash && cachedSummary) {
+            // BUT if the cached summary is an error message, ignore it and retry
+            else if (eventsHash === cachedHash && cachedSummary && !cachedSummary.startsWith("Sorry, I couldn't generate") && !cachedSummary.includes("Error")) {
                 setAiSummary(cachedSummary);
                 return;
             }
@@ -537,7 +569,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                 });
 
                 // @ts-ignore
-                const summary = await window.ipcRenderer.invoke('generate-ai-overview', relevantEvents);
+                const summary = await window.ipcRenderer.invoke('generate-ai-overview', relevantEvents, userName);
                 setAiSummary(summary);
                 localStorage.setItem('dashboard_ai_summary', summary);
                 localStorage.setItem('dashboard_events_hash', eventsHash);
@@ -836,11 +868,29 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                                                 )}>
                                                     {note.title}
                                                 </span>
-                                                <div className="text-right">
+                                                <div className="text-right flex flex-col items-end gap-1">
                                                     <div className="text-xs opacity-70">{format(date, 'MMM d')} {convertTo12Hour(note.time)}</div>
-                                                    <div className="text-[10px] opacity-60 font-semibold">
-                                                        {note.completed ? 'Completed' : getCountdown(date, note.time)}
-                                                    </div>
+                                                    
+                                                    {note.completed ? (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleToggleLate(note.id, dateKey, note.completedLate || false);
+                                                            }}
+                                                            className={clsx(
+                                                                "text-[10px] font-semibold px-2 py-0.5 rounded-full transition-colors",
+                                                                note.completedLate 
+                                                                    ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50" 
+                                                                    : "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50"
+                                                            )}
+                                                        >
+                                                            {note.completedLate ? 'Late' : 'On Time'}
+                                                        </button>
+                                                    ) : (
+                                                        <div className="text-[10px] opacity-60 font-semibold">
+                                                            {getCountdown(date, note.time)}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                             <div className="flex items-start gap-2 text-xs opacity-80">
@@ -1106,6 +1156,49 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                 </div>
             </motion.div>
             )}
+
+            {/* Completion Confirmation Modal */}
+            <AnimatePresence>
+                {completionModal.isOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 max-w-sm w-full border border-gray-100 dark:border-gray-700"
+                        >
+                            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+                                Task Completed?
+                            </h3>
+                            <p className="text-gray-600 dark:text-gray-300 mb-6">
+                                Did you complete <span className="font-semibold text-gray-900 dark:text-white">"{completionModal.noteTitle}"</span> on time?
+                            </p>
+                            
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => confirmCompletion(false)}
+                                    className="flex-1 px-4 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
+                                >
+                                    <CheckCircle2 className="w-4 h-4" />
+                                    Yes, On Time
+                                </button>
+                                <button
+                                    onClick={() => confirmCompletion(true)}
+                                    className="flex-1 px-4 py-2.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-xl font-medium transition-colors"
+                                >
+                                    No, Late
+                                </button>
+                            </div>
+                            <button 
+                                onClick={() => setCompletionModal(prev => ({ ...prev, isOpen: false }))}
+                                className="w-full mt-3 text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

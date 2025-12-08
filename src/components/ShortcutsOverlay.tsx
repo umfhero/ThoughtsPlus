@@ -12,7 +12,7 @@ import {
     ArrowUp
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Page } from '../App';
+import { Page } from '../types';
 
 interface ShortcutsOverlayProps {
     currentPage: Page;

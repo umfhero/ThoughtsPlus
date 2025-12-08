@@ -10,7 +10,7 @@ import {
 } from 'recharts';
 import clsx from 'clsx';
 import { TrendingUp, TrendingDown, Sparkles } from 'lucide-react';
-import { NotesData } from '../App';
+import { NotesData } from '../types';
 import { format, parseISO } from 'date-fns';
 
 interface TaskTrendChartProps {
@@ -108,6 +108,7 @@ const TaskTrendChart: React.FC<TaskTrendChartProps> = ({ notes }) => {
       title: string;
       time: string;
       completed: boolean;
+      completedLate?: boolean;
       isPast: boolean;
     }
 
@@ -126,6 +127,7 @@ const TaskTrendChart: React.FC<TaskTrendChartProps> = ({ notes }) => {
           title: note.title,
           time: note.time,
           completed: note.completed || false,
+          completedLate: note.completedLate,
           isPast,
         });
       });
@@ -186,7 +188,7 @@ const TaskTrendChart: React.FC<TaskTrendChartProps> = ({ notes }) => {
         const daysDiff = Math.floor((taskDateTime.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
         
         if (daysDiff > 1) earlyCount++;
-        else if (task.isPast) lateCount++;
+        else if (task.completedLate) lateCount++;
       } else if (isMissed) {
         score -= 1;
         missedTasks++;
