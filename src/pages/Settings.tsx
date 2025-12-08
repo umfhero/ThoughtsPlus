@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Folder, Palette, Sparkles, Check, ExternalLink, Clipboard, AlertCircle, LayoutDashboard, Calendar, PieChart, Github, PenTool, Calendar as CalendarIcon, Code } from 'lucide-react';
+import { Folder, Palette, Sparkles, Check, ExternalLink, Clipboard, AlertCircle, LayoutDashboard, Calendar, PieChart, Github, PenTool, Calendar as CalendarIcon, Code, Download, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import clsx from 'clsx';
 import { useTheme } from '../contexts/ThemeContext';
@@ -34,6 +34,13 @@ export function SettingsPage() {
         github: true
     });
 
+    // Update State
+    const [currentVersion, setCurrentVersion] = useState('Loading...');
+    const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'downloading' | 'downloaded' | 'not-available' | 'error'>('idle');
+    const [updateInfo, setUpdateInfo] = useState<any>(null);
+    const [downloadProgress, setDownloadProgress] = useState(0);
+    const [updateError, setUpdateError] = useState('');
+
     const { theme, accentColor, setTheme, setAccentColor } = useTheme();
 
     useEffect(() => {
@@ -44,6 +51,24 @@ export function SettingsPage() {
         loadGithubConfig();
         loadCreatorCodes();
         loadUserName();
+        loadCurrentVersion();
+        setupUpdateListeners();
+
+        return () => {
+            // Cleanup update listeners
+            // @ts-ignore
+            window.ipcRenderer.off('update-checking', handleUpdateChecking);
+            // @ts-ignore
+            window.ipcRenderer.off('update-available', handleUpdateAvailable);
+            // @ts-ignore
+            window.ipcRenderer.off('update-not-available', handleUpdateNotAvailable);
+            // @ts-ignore
+            window.ipcRenderer.off('update-error', handleUpdateError);
+            // @ts-ignore
+            window.ipcRenderer.off('update-download-progress', handleDownloadProgress);
+            // @ts-ignore
+            window.ipcRenderer.off('update-downloaded', handleUpdateDownloaded);
+        };
     }, []);
 
     const loadDataPath = async () => {
@@ -222,6 +247,102 @@ export function SettingsPage() {
         }
     };
 
+    // Update Functions
+    const loadCurrentVersion = async () => {
+        try {
+            // @ts-ignore
+            const version = await window.ipcRenderer.invoke('get-current-version');
+            setCurrentVersion(version);
+        } catch (err) {
+            console.error('Failed to get version:', err);
+            setCurrentVersion('Unknown');
+        }
+    };
+
+    const setupUpdateListeners = () => {
+        // @ts-ignore
+        window.ipcRenderer.on('update-checking', handleUpdateChecking);
+        // @ts-ignore
+        window.ipcRenderer.on('update-available', handleUpdateAvailable);
+        // @ts-ignore
+        window.ipcRenderer.on('update-not-available', handleUpdateNotAvailable);
+        // @ts-ignore
+        window.ipcRenderer.on('update-error', handleUpdateError);
+        // @ts-ignore
+        window.ipcRenderer.on('update-download-progress', handleDownloadProgress);
+        // @ts-ignore
+        window.ipcRenderer.on('update-downloaded', handleUpdateDownloaded);
+    };
+
+    const handleUpdateChecking = () => {
+        setUpdateStatus('checking');
+    };
+
+    const handleUpdateAvailable = (_event: any, info: any) => {
+        setUpdateStatus('available');
+        setUpdateInfo(info);
+    };
+
+    const handleUpdateNotAvailable = () => {
+        setUpdateStatus('not-available');
+    };
+
+    const handleUpdateError = (_event: any, errorMsg: string) => {
+        setUpdateStatus('error');
+        setUpdateError(errorMsg);
+    };
+
+    const handleDownloadProgress = (_event: any, progressObj: any) => {
+        setUpdateStatus('downloading');
+        setDownloadProgress(progressObj.percent || 0);
+    };
+
+    const handleUpdateDownloaded = () => {
+        setUpdateStatus('downloaded');
+        setDownloadProgress(100);
+    };
+
+    const checkForUpdates = async () => {
+        setUpdateStatus('checking');
+        setUpdateError('');
+        try {
+            // @ts-ignore
+            const result = await window.ipcRenderer.invoke('check-for-updates');
+            if (!result.success) {
+                setUpdateStatus('error');
+                setUpdateError(result.error || 'Failed to check for updates');
+            }
+        } catch (err: any) {
+            setUpdateStatus('error');
+            setUpdateError(err.message || 'Failed to check for updates');
+        }
+    };
+
+    const downloadUpdate = async () => {
+        setUpdateStatus('downloading');
+        setDownloadProgress(0);
+        try {
+            // @ts-ignore
+            const result = await window.ipcRenderer.invoke('download-update');
+            if (!result.success) {
+                setUpdateStatus('error');
+                setUpdateError(result.error || 'Failed to download update');
+            }
+        } catch (err: any) {
+            setUpdateStatus('error');
+            setUpdateError(err.message || 'Failed to download update');
+        }
+    };
+
+    const installUpdate = async () => {
+        try {
+            // @ts-ignore
+            await window.ipcRenderer.invoke('quit-and-install');
+        } catch (err) {
+            console.error('Failed to install update:', err);
+        }
+    };
+
     // Mini App Preview Component
     const AppPreview = ({ mode, accent }: { mode: 'light' | 'dark', accent: string }) => {
         const isDark = mode === 'dark';
@@ -273,7 +394,7 @@ export function SettingsPage() {
                     <div className="flex items-center justify-between">
                         <div>
                             <h2 className="text-2xl font-bold bg-gradient-to-r from-red-600 to-pink-600 dark:from-red-400 dark:to-pink-400 bg-clip-text text-transparent mb-1">
-                                Calendar Plus v5.0.0
+                                Calendar Plus v{currentVersion}
                             </h2>
                             <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
                                 Created by{' '}
@@ -285,17 +406,21 @@ export function SettingsPage() {
                                     <ExternalLink className="w-3 h-3" />
                                 </button>
                             </p>
-                            <button
-                                onClick={() => openExternalLink('https://github.com/umfhero/CalendarPlus')}
-                                className="inline-flex items-center gap-1 text-xs font-medium text-purple-600 dark:text-purple-400 hover:underline transition-colors cursor-pointer"
-                            >
-                                Check for new releases
-                                <ExternalLink className="w-3 h-3" />
-                            </button>
                         </div>
-                        <div className="p-3 rounded-2xl bg-white dark:bg-gray-700 shadow-md">
-                            <Github className="w-6 h-6 text-gray-700 dark:text-gray-300" />
-                        </div>
+                        <button
+                            onClick={checkForUpdates}
+                            disabled={updateStatus === 'checking' || updateStatus === 'downloading'}
+                            className={clsx(
+                                'px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200',
+                                'flex items-center gap-2',
+                                updateStatus === 'checking' || updateStatus === 'downloading'
+                                    ? 'bg-gray-200 dark:bg-gray-600 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                                    : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50'
+                            )}
+                        >
+                            <RefreshCw className={clsx('w-4 h-4', updateStatus === 'checking' && 'animate-spin')} />
+                            Check for Updates
+                        </button>
                     </div>
                 </motion.div>
 

@@ -221,7 +221,10 @@ const TaskTrendChart: React.FC<TaskTrendChartProps> = ({ notes }) => {
         dotColor = null; // No dot for projections
       }
       
-      const projectedScore = !isActual ? (lastActualScore + (taskNum - lastActualIndex)) : null;
+      // Set projectedScore: for projected tasks, calculate from last actual; for last actual task, set to its score to enable connection
+      const projectedScore = !isActual 
+        ? (lastActualScore + (taskNum - lastActualIndex)) 
+        : (isActual && index < tasks.length - 1 && !tasks[index + 1]?.isPast && !tasks[index + 1]?.completed ? score : null);
       
       const point: TaskPoint = {
         taskIndex: taskNum,
@@ -380,22 +383,26 @@ const TaskTrendChart: React.FC<TaskTrendChartProps> = ({ notes }) => {
                 </linearGradient>
               </defs>
               
-              {/* Projection area (gray) */}
+              {/* Projected area first (gray) - fills the entire projection */}
               <Area
                 type="monotone"
                 dataKey="projectedScore"
                 stroke="none"
                 fill={`url(#${projectedGradientId})`}
                 isAnimationActive={false}
+                connectNulls={true}
+                baseValue="dataMin"
               />
               
-              {/* Main score area - only actual scores */}
+              {/* Main area on top (colored) - only actual scores */}
               <Area
                 type="monotone"
                 dataKey="score"
                 stroke="none"
                 fill={`url(#${gradientId})`}
                 isAnimationActive={false}
+                connectNulls={true}
+                baseValue="dataMin"
               />
               
               {/* Main line with custom segment rendering */}
@@ -488,8 +495,15 @@ const TaskTrendChart: React.FC<TaskTrendChartProps> = ({ notes }) => {
               />
               <YAxis 
                 domain={[
-                  (dataMin: number) => Math.min(dataMin - 1, -1),
-                  () => summaryStats.totalTasks
+                  (dataMin: number) => {
+                    // Ensure we always include 0 in the domain for proper gradient rendering
+                    const min = Math.floor(dataMin);
+                    return min >= 0 ? 0 : min - 1;
+                  },
+                  (dataMax: number) => {
+                    // Pad the top slightly for better visuals
+                    return Math.ceil(dataMax) + 1;
+                  }
                 ]}
                 stroke="transparent"
                 tick={{ fill: '#9ca3af', fontSize: 10 }}

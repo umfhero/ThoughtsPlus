@@ -1,9 +1,9 @@
-; Calendar Plus V4.5 Installer Script
+; Calendar Plus V5.0 Installer Script
 !include "MUI2.nsh"
 
 ; General Settings
 Name "Calendar Plus"
-OutFile "release\Calendar Plus Setup 4.5.0.exe"
+OutFile "release\Calendar Plus Setup 5.0.0.exe"
 InstallDir "$LOCALAPPDATA\Calendar Plus"
 InstallDirRegKey HKCU "Software\CalendarPlus" "Install_Dir"
 RequestExecutionLevel user
@@ -45,7 +45,7 @@ Section "Install"
   WriteRegStr HKCU "Software\CalendarPlus" "Install_Dir" "$INSTDIR"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\CalendarPlus" "DisplayName" "Calendar Plus"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\CalendarPlus" "UninstallString" '"$INSTDIR\Uninstall.exe"'
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\CalendarPlus" "DisplayVersion" "4.5.0"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\CalendarPlus" "DisplayVersion" "5.0.0"
   WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\CalendarPlus" "NoModify" 1
   WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\CalendarPlus" "NoRepair" 1
   

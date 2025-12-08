@@ -1,6 +1,6 @@
 {
   "name": "calendar-plus",
-  "version": "4.5.0",
+  "version": "5.0.0",
   "main": "dist-electron/main.js",
   "description": "Calendar Plus App",
   "scripts": {
@@ -19,6 +19,7 @@
     "clsx": "^2.1.0",
     "date-fns": "^3.3.1",
     "dotenv": "^17.2.3",
+    "electron-updater": "^6.6.2",
     "framer-motion": "^11.0.8",
     "lucide-react": "^0.344.0",
     "papaparse": "^5.5.3",
@@ -47,6 +48,12 @@
   "build": {
     "appId": "com.calendarplus.app",
     "productName": "Calendar Plus",
+    "publish": {
+      "provider": "github",
+      "owner": "umfhero",
+      "repo": "CalendarPlus"
+    },
+    "removePackageScripts": true,
     "extraResources": [
       {
         "from": "public/calendar_icon_181520.ico",
