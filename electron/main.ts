@@ -263,9 +263,21 @@ app.whenReady().then(async () => {
             const apiKey = deviceSettings.apiKey || process.env.GEMINI_API_KEY;
             if (!apiKey) return text.slice(0, 50) + '...';
             const genAI = new GoogleGenerativeAI(apiKey);
-            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-            const result = await model.generateContent(text);
-            return (await result.response).text();
+            
+            // Try multiple models in order of preference/performance
+            const models = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-1.5-flash", "gemini-1.5-pro"];
+            
+            for (const modelName of models) {
+                try {
+                    const model = genAI.getGenerativeModel({ model: modelName });
+                    const result = await model.generateContent(text);
+                    return (await result.response).text();
+                } catch (e) {
+                    console.warn(`summarize-text: ${modelName} failed, trying next.`);
+                }
+            }
+            
+            return text.slice(0, 50) + '...';
         } catch (error) {
             return text.slice(0, 50) + '...';
         }
@@ -278,11 +290,16 @@ app.whenReady().then(async () => {
             if (!apiKey) return "Please add your AI API key in settings! Make sure not to share it with anyone.";
             
             const genAI = new GoogleGenerativeAI(apiKey);
-            // Use gemini-1.5-flash which is the standard free tier model
-            const model = genAI.getGenerativeModel({ 
-                model: "gemini-1.5-flash"
-            });
+            // Try multiple models in order of preference/performance
+            const models = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-1.5-flash", "gemini-1.5-pro"];
             
+            let notesStr = "";
+            try {
+                notesStr = JSON.stringify(notes);
+            } catch (e) {
+                return "Error: Could not process notes data.";
+            }
+
             const prompt = `
             You are a helpful personal assistant. 
             Analyze the following notes and provide a comforting briefing for the user. 
@@ -298,15 +315,28 @@ app.whenReady().then(async () => {
             3. Use British English spelling and terminology (e.g. 'colour', 'centre', 'programme', 'organise').
             
             Here are the notes:
-            ${JSON.stringify(notes)}
+            ${notesStr}
             `;
             
-            const result = await model.generateContent(prompt);
-            const response = await result.response;
-            return response.text();
-        } catch (error) {
+            let lastError = null;
+
+            for (const modelName of models) {
+                try {
+                    console.log(`Attempting to generate overview with model: ${modelName}`);
+                    const model = genAI.getGenerativeModel({ model: modelName });
+                    const result = await model.generateContent(prompt);
+                    const response = await result.response;
+                    return response.text();
+                } catch (error: any) {
+                    console.warn(`Failed with model ${modelName}:`, error.message);
+                    lastError = error;
+                }
+            }
+            
+            return `Sorry, I couldn't generate your briefing. Last error: ${lastError?.message || 'All models failed'}`;
+        } catch (error: any) {
             console.error("Gemini API Error:", error);
-            return "I'm having trouble generating your briefing right now. Please try again later.";
+            return `I'm having trouble generating your briefing right now. Error: ${error.message}`;
         }
     });
 
@@ -321,7 +351,7 @@ app.whenReady().then(async () => {
             }
             
             const genAI = new GoogleGenerativeAI(apiKey);
-            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+            const models = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-1.5-flash", "gemini-1.5-pro"];
             
             const now = new Date();
             const prompt = `
@@ -340,21 +370,30 @@ app.whenReady().then(async () => {
             Return ONLY the JSON object. No markdown formatting.
             `;
             
-            const result = await model.generateContent(prompt);
-            const text = (await result.response).text();
-            // Clean up potential markdown code blocks
-            const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
-            const parsed = JSON.parse(jsonStr);
-            
-            // Validate the parsed response
-            if (!parsed.title || !parsed.date) {
-                return {
-                    error: 'INVALID_RESPONSE',
-                    message: 'AI could not parse your request. Please try rephrasing it.'
-                };
+            for (const modelName of models) {
+                try {
+                    const model = genAI.getGenerativeModel({ model: modelName });
+                    const result = await model.generateContent(prompt);
+                    const text = (await result.response).text();
+                    // Clean up potential markdown code blocks
+                    const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
+                    const parsed = JSON.parse(jsonStr);
+                    
+                    // Validate the parsed response
+                    if (!parsed.title || !parsed.date) {
+                        throw new Error('Invalid response structure');
+                    }
+                    
+                    return parsed;
+                } catch (error: any) {
+                    console.warn(`parse-natural-language-note: ${modelName} failed:`, error.message);
+                }
             }
-            
-            return parsed;
+
+            return {
+                error: 'PARSE_ERROR',
+                message: 'Failed to process your request with all available AI models. Please try again later.'
+            };
         } catch (error: any) {
             console.error("Gemini Parse Error:", error);
             return {

@@ -133,18 +133,20 @@ If you're forking this project, you can preserve your personal baseline data:
 
 ### Planned Features
 
-- **Mobile Sync & Widgets** - Lockscreen widgets with your daily brief and upcoming tasks
 - **Task Completion Analytics** - Track completed vs incomplete tasks with weekly/monthly/yearly performance graphs
-- **Better Habit Tracking** - See how well you're managing your time and staying on top of your goals
 - **Enhanced Data Visualization** - More charts, trends, and insights into your productivity patterns
-- **Self-hosted website** - Official website for CalendarPlus with intuitive onboarding, easy downloads and the latest news and updates.
-- **Auto Update** - Automatic updates with self-deletion of old versions and seamless data migration, removing the need to manually uninstall and transfer files.
+- **Self-hosted Website** - Official website for CalendarPlus with intuitive onboarding, easy downloads and the latest news and updates
+- **Auto Update** - Automatic updates with self-deletion of old versions and seamless data migration, removing the need to manually uninstall and transfer files
+- **Smart AI Model Fallback** - Automatically switches between Gemini models (2.5 Flash → 1.5 Flash → 1.5 Pro) if rate limits are hit to ensure reliability
+- **Global Keyboard Shortcuts** - Native support for standard shortcuts (Ctrl+C, Ctrl+V, Ctrl+A) across the entire application
 
 ### Future Considerations
 
+- Mobile Sync & Widgets - Lockscreen widgets with your daily brief and upcoming tasks
 - Plugin/extension system
 - Calendar sharing and permissions
 - Advanced AI suggestions and insights
+- Certificate to remove secuirty questioning on downloading/updating (costly so will decide as i go along)
 
 ---
 

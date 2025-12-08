@@ -451,12 +451,17 @@ export function SettingsPage() {
                                 </AnimatePresence>
 
                                 <div className="flex items-center justify-between pt-4">
-                                    <button
-                                        onClick={() => openExternalLink('https://aistudio.google.com/app/apikey')}
-                                        className="flex items-center gap-1.5 text-xs font-medium text-purple-600 dark:text-purple-400 hover:underline cursor-pointer"
-                                    >
-                                        Get a free Google Studio API key <ExternalLink className="w-3 h-3" />
-                                    </button>
+                                    <div className="flex flex-col gap-1">
+                                        <button
+                                            onClick={() => openExternalLink('https://aistudio.google.com/app/apikey')}
+                                            className="flex items-center gap-1.5 text-xs font-medium text-purple-600 dark:text-purple-400 hover:underline cursor-pointer"
+                                        >
+                                            Get a free Google Studio API key <ExternalLink className="w-3 h-3" />
+                                        </button>
+                                        <p className="text-[10px] text-gray-400 dark:text-gray-500">
+                                            Note: Ensure "All models" are enabled in your <button onClick={() => openExternalLink('https://aistudio.google.com/usage')} className="underline hover:text-purple-500">Google AI Studio settings</button> if you encounter issues.
+                                        </p>
+                                    </div>
 
                                     <button
                                         onClick={validateAndSaveKey}
