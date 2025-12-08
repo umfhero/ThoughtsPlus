@@ -79,18 +79,19 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                 const currentIndex = pages.indexOf(currentPage);
 
                 // Disable global navigation shortcuts when on drawing page to allow local shortcuts
-                if (currentPage === 'drawing') return;
+                // BUT allow page navigation (ArrowUp/ArrowDown)
+                if (currentPage === 'drawing' && !['arrowup', 'arrowdown'].includes(e.key.toLowerCase())) return;
 
                 switch (e.key.toLowerCase()) {
                     case 's':
                         e.preventDefault();
                         toggleSidebar();
                         break;
-                    case 'a':
+                    case 'd':
                         e.preventDefault();
                         setPage('dashboard');
                         break;
-                    case 'c':
+                    case 'e':
                         if (currentPage !== 'settings' && enabledFeatures.calendar) {
                             e.preventDefault();
                             setPage('calendar');
@@ -102,7 +103,7 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                             setPage('stats');
                         }
                         break;
-                    case 'd':
+                    case 'w':
                         if (enabledFeatures.drawing) {
                             e.preventDefault();
                             setPage('drawing');
@@ -247,7 +248,7 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                                             exit={{ opacity: 0, x: -10 }}
                                             className="relative z-20 text-[10px] font-bold bg-gray-900 text-white px-1.5 py-0.5 rounded border border-gray-300 dark:border-gray-500"
                                         >
-                                            Ctrl+A
+                                            Ctrl+D
                                         </motion.span>
                                     )}
                                 </AnimatePresence>
@@ -293,7 +294,7 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                                                         exit={{ opacity: 0, x: -10 }}
                                                         className="text-[10px] font-bold bg-gray-900 text-white px-1.5 py-0.5 rounded border border-gray-300 dark:border-gray-500"
                                                     >
-                                                        Ctrl+C
+                                                        Ctrl+E
                                                     </motion.span>
                                                 )}
                                             </AnimatePresence>
@@ -381,7 +382,7 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                                                 exit={{ opacity: 0, x: -10 }}
                                                 className="relative z-20 text-[10px] font-bold bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded border border-gray-300 dark:border-gray-500"
                                             >
-                                                Ctrl+D
+                                                Ctrl+W
                                             </motion.span>
                                         )}
                                     </AnimatePresence>

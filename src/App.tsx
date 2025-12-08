@@ -50,24 +50,34 @@ function App() {
 
     // Mock Data
     const [mockNotesState, setMockNotesState] = useState<NotesData>({
-        [new Date().toISOString().split('T')[0]]: [
-            { id: '1', title: 'Team Meeting', description: 'Discuss project roadmap and Q4 goals.', time: '10:00', importance: 'high' },
-            { id: '2', title: 'Code Review', description: 'Review PR #123 for the new authentication module.', time: '14:00', importance: 'medium' },
-            { id: '3', title: 'Gym Session', description: 'Leg day - Squats, Lunges, and Calf Raises.', time: '18:00', importance: 'low' },
-            { id: '4', title: 'Grocery Shopping', description: 'Milk, Eggs, Bread, and Vegetables.', time: '19:30', importance: 'misc', completed: true }
+        // T-3: Completed (Green segment start)
+        [new Date(Date.now() - 3 * 86400000).toISOString().split('T')[0]]: [
+            { id: '1', title: 'Project Kickoff', description: 'Initial planning phase.', time: '09:00', importance: 'high', completed: true }
         ],
-        [new Date(Date.now() + 86400000).toISOString().split('T')[0]]: [
-            { id: '5', title: 'Client Call', description: 'Monthly update with the marketing team.', time: '11:00', importance: 'high' },
-            { id: '6', title: 'Project Planning', description: 'Draft initial requirements for the mobile app.', time: '15:00', importance: 'medium' }
+        // T-2: Missed (Red segment)
+        [new Date(Date.now() - 2 * 86400000).toISOString().split('T')[0]]: [
+            { id: '2', title: 'Submit Report', description: 'Weekly progress report.', time: '17:00', importance: 'medium', completed: false }
         ],
-        [new Date(Date.now() - 86400000).toISOString().split('T')[0]]: [
-            { id: '7', title: 'Dentist Appointment', description: 'Routine checkup.', time: '09:00', importance: 'medium', completed: true },
-            { id: '8', title: 'Read Book', description: 'Read 20 pages of "Clean Code".', time: '21:00', importance: 'low', completed: true }
+        // T-1: Missed (Red segment)
+        [new Date(Date.now() - 1 * 86400000).toISOString().split('T')[0]]: [
+            { id: '3', title: 'Client Call', description: 'Discuss requirements.', time: '14:00', importance: 'high', completed: false }
+        ],
+        // Upcoming (Predictive) - 5 tasks distributed
+        [new Date().toISOString().split('T')[0]]: [ // Today
+            { id: '4', title: 'Team Meeting', description: 'Sync up.', time: '10:00', importance: 'medium' },
+            { id: '5', title: 'Code Review', description: 'Review PRs.', time: '14:00', importance: 'low' }
+        ],
+        [new Date(Date.now() + 1 * 86400000).toISOString().split('T')[0]]: [ // Tomorrow
+            { id: '6', title: 'Design Review', description: 'Check new mockups.', time: '11:00', importance: 'high' }
+        ],
+        [new Date(Date.now() + 2 * 86400000).toISOString().split('T')[0]]: [ // Day after tomorrow
+            { id: '7', title: 'Update Documentation', description: 'API docs.', time: '15:00', importance: 'low' },
+            { id: '8', title: 'Release Planning', description: 'Prepare for v2.0.', time: '16:00', importance: 'medium' }
         ]
     });
 
     const activeNotes = isMockMode ? mockNotesState : notes;
-    const activeUserName = isMockMode ? "Alex Chen" : userName;
+    const activeUserName = isMockMode ? "David Smith" : userName;
 
     useEffect(() => {
         checkFirstRun();

@@ -263,7 +263,7 @@ app.whenReady().then(async () => {
             const apiKey = deviceSettings.apiKey || process.env.GEMINI_API_KEY;
             if (!apiKey) return text.slice(0, 50) + '...';
             const genAI = new GoogleGenerativeAI(apiKey);
-            const model = genAI.getGenerativeModel({ model: process.env.GEMINI_MODEL || "gemini-2.5-flash" });
+            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
             const result = await model.generateContent(text);
             return (await result.response).text();
         } catch (error) {
@@ -278,9 +278,9 @@ app.whenReady().then(async () => {
             if (!apiKey) return "Please add your AI API key in settings! Make sure not to share it with anyone.";
             
             const genAI = new GoogleGenerativeAI(apiKey);
-            // Use gemini-2.5-flash which is available in v1beta
+            // Use gemini-1.5-flash which is the standard free tier model
             const model = genAI.getGenerativeModel({ 
-                model: "gemini-2.5-flash"
+                model: "gemini-1.5-flash"
             });
             
             const prompt = `
@@ -321,7 +321,7 @@ app.whenReady().then(async () => {
             }
             
             const genAI = new GoogleGenerativeAI(apiKey);
-            const model = genAI.getGenerativeModel({ model: process.env.GEMINI_MODEL || "gemini-1.5-flash" });
+            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
             
             const now = new Date();
             const prompt = `

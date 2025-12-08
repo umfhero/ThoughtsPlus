@@ -159,3 +159,7 @@ CalendarPlus/
 
 - **Environment Variables:** `.env` file is used for development secrets.
 - **User Defaults:** `user-defaults.json` can be used to pre-seed configuration (GitHub username, Creator codes) for personal builds.
+
+## 8. Known Issues / To Do
+
+- **AI API Quota/Key Issue:** The AI features (Daily Briefing, Quick Note) are currently throwing "404 Not Found" or "Quota Exceeded" errors even with valid keys. This needs to be tested on a desktop environment to rule out local dev environment issues.

@@ -201,8 +201,8 @@ export function DevPage({ isMockMode, toggleMockMode, onForceSetup }: DevPagePro
                         >
                             <Rocket size={20} />
                             <div className="text-left">
-                                <div className="font-medium">Force Onboarding</div>
-                                <div className="text-xs opacity-80">Launch the setup wizard immediately (Warning: Completing it may overwrite settings)</div>
+                                <div className="font-medium">Force Onboarding (Demo Mode)</div>
+                                <div className="text-xs opacity-80">Launch the setup wizard safely without overwriting your settings</div>
                             </div>
                         </button>
 
