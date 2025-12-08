@@ -365,6 +365,7 @@ function App() {
                                     userName={activeUserName}
                                     onAddNote={handleAddNote}
                                     onUpdateNote={handleUpdateNote}
+                                    onOpenAiModal={() => setIsAiModalOpen(true)}
                                     isLoading={isLoading}
                                 />
                             )}

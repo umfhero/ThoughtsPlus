@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar as CalendarIcon, ArrowUpRight, ListTodo, Loader, Circle, Search, Filter, Activity as ActivityIcon, CheckCircle2 } from 'lucide-react';
+import { Calendar as CalendarIcon, ArrowUpRight, ListTodo, Loader, Circle, Search, Filter, Activity as ActivityIcon, CheckCircle2, Sparkles } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { format, parseISO } from 'date-fns';
 import { NotesData, Note } from '../App';
@@ -16,6 +16,7 @@ interface DashboardProps {
     userName: string;
     onAddNote: (note: Note, date: Date) => void;
     onUpdateNote: (note: Note, date: Date) => void;
+    onOpenAiModal: () => void;
     isLoading?: boolean;
 }
 
@@ -28,7 +29,7 @@ function hexToRgb(hex: string) {
     } : null;
 }
 
-export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, isLoading = false }: DashboardProps) {
+export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onOpenAiModal, isLoading = false }: DashboardProps) {
     const [time, setTime] = useState(new Date());
     // @ts-ignore
     const [stats, setStats] = useState<any>(null);
@@ -669,14 +670,23 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, isL
                     }}
                     className="p-8 rounded-[2rem] bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50 flex flex-col h-full relative group transition-colors"
                 >
-                    <div className="flex items-center gap-4 mb-4">
-                        <div className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-900/30" style={{ color: 'var(--accent-primary)' }}>
-                            <CalendarIcon className="w-7 h-7" />
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-4">
+                            <div className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-900/30" style={{ color: 'var(--accent-primary)' }}>
+                                <CalendarIcon className="w-7 h-7" />
+                            </div>
+                            <div>
+                                <p className="text-sm font-medium text-gray-400 dark:text-gray-300 uppercase tracking-wider">Events</p>
+                                <h3 className="text-3xl font-bold text-gray-800 dark:text-gray-100">{upcomingEvents.length} Total</h3>
+                            </div>
                         </div>
-                        <div>
-                            <p className="text-sm font-medium text-gray-400 dark:text-gray-300 uppercase tracking-wider">Events</p>
-                            <h3 className="text-3xl font-bold text-gray-800 dark:text-gray-100">{upcomingEvents.length} Total</h3>
-                        </div>
+                        <button
+                            onClick={onOpenAiModal}
+                            className="p-3 rounded-xl bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 transition-colors group/btn"
+                            title="AI Quick Note"
+                        >
+                            <Sparkles className="w-5 h-5 group-hover/btn:scale-110 transition-transform" />
+                        </button>
                     </div>
 
                     <div className="flex gap-2 mb-4">

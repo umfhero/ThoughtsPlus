@@ -70,7 +70,7 @@ export function ShortcutsOverlay({ currentPage }: ShortcutsOverlayProps) {
                     animate={{ x: 0, opacity: 1, skewX: 0, scale: 1 }}
                     exit={{ x: '100%', opacity: 0, skewX: 15, scale: 0.9 }}
                     transition={{ type: "spring", stiffness: 400, damping: 20, mass: 0.8 }}
-                    className="fixed right-0 top-0 h-full w-64 bg-gray-900/40 backdrop-blur-xl border-l border-white/10 z-[100] p-5 shadow-2xl flex flex-col justify-center"
+                    className="fixed right-0 top-0 h-full w-64 bg-gray-900/90 backdrop-blur-xl border-l border-white/10 z-[100] p-5 shadow-2xl flex flex-col justify-center"
                 >
                     <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
                         <span className="bg-white/20 p-1 rounded">Ctrl</span> Shortcuts
