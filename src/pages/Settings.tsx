@@ -77,6 +77,22 @@ export function SettingsPage() {
     }, []);
 
     const fetchRoadmap = async () => {
+        // In development, prefer local file to see changes immediately
+        if (import.meta.env.DEV) {
+            try {
+                const localResponse = await fetch('/ROADMAP.json');
+                if (localResponse.ok) {
+                    const localData = await localResponse.json();
+                    setRoadmap(localData.roadmap);
+                    setRoadmapError('');
+                    setRoadmapLoading(false);
+                    return;
+                }
+            } catch (e) {
+                console.warn('Local fetch failed in dev, falling back to remote...');
+            }
+        }
+
         try {
             // Try fetching from GitHub first (Source of Truth)
             const response = await fetch('https://raw.githubusercontent.com/umfhero/CalendarPlus/main/public/ROADMAP.json');
