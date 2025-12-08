@@ -78,13 +78,27 @@ export function SettingsPage() {
 
     const fetchRoadmap = async () => {
         try {
+            // Try fetching from GitHub first (Source of Truth)
             const response = await fetch('https://raw.githubusercontent.com/umfhero/CalendarPlus/main/public/ROADMAP.json');
-            if (!response.ok) throw new Error('Failed to fetch roadmap');
+            if (!response.ok) throw new Error('Failed to fetch remote roadmap');
             const data = await response.json();
             setRoadmap(data.roadmap);
+            setRoadmapError('');
         } catch (err) {
-            console.error('Failed to load roadmap:', err);
-            setRoadmapError('Could not load roadmap from GitHub.');
+            console.warn('Failed to load remote roadmap, trying local fallback:', err);
+            try {
+                // Fallback to local file (for development or if remote is down)
+                // In production Electron, this might need adjustment depending on how files are served,
+                // but for Vite dev it works perfectly.
+                const localResponse = await fetch('/ROADMAP.json');
+                if (!localResponse.ok) throw new Error('Failed to fetch local roadmap');
+                const localData = await localResponse.json();
+                setRoadmap(localData.roadmap);
+                setRoadmapError(''); 
+            } catch (localErr) {
+                console.error('Failed to load local roadmap:', localErr);
+                setRoadmapError('Could not load roadmap from GitHub (and local fallback failed). Please ensure you are connected to the internet.');
+            }
         } finally {
             setRoadmapLoading(false);
         }
@@ -1001,35 +1015,73 @@ export function SettingsPage() {
                             {roadmapError}
                         </div>
                     ) : (
-                        <div className="space-y-3">
-                            {roadmap.map((item, index) => (
-                                <div 
-                                    key={index}
-                                    className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-700/30 border border-gray-100 dark:border-gray-700"
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <div className={clsx(
-                                            "w-2 h-2 rounded-full",
-                                            item.status === 'completed' ? "bg-green-500" :
-                                            item.status === 'in-progress' ? "bg-blue-500" : "bg-gray-300 dark:bg-gray-600"
-                                        )} />
-                                        <span className={clsx(
-                                            "font-medium text-sm",
-                                            item.status === 'completed' ? "text-gray-500 dark:text-gray-400 line-through" : "text-gray-800 dark:text-gray-200"
-                                        )}>
-                                            {item.task}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <span className="text-xs font-mono text-gray-400 dark:text-gray-500 bg-white dark:bg-gray-800 px-2 py-1 rounded-md border border-gray-100 dark:border-gray-700">
-                                            {item.plannedRelease}
-                                        </span>
-                                        {item.status === 'completed' && (
-                                            <Check className="w-4 h-4 text-green-500" />
-                                        )}
-                                    </div>
+                        <div className="space-y-6">
+                            {/* V5 Release Section */}
+                            <div>
+                                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
+                                    V5 Release (Dec 11)
+                                </h3>
+                                <div className="space-y-3">
+                                    {roadmap.filter(item => item.plannedRelease.includes('v5.0.0') || item.plannedRelease.includes('11 Dec')).map((item, index) => (
+                                        <div 
+                                            key={index}
+                                            className={clsx(
+                                                "flex items-center justify-between p-3 rounded-xl border transition-colors",
+                                                item.status === 'completed' 
+                                                    ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800" 
+                                                    : "bg-gray-50 dark:bg-gray-700/30 border-gray-100 dark:border-gray-700"
+                                            )}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className={clsx(
+                                                    "w-2 h-2 rounded-full",
+                                                    item.status === 'completed' ? "bg-green-500" : "bg-blue-500"
+                                                )} />
+                                                <span className={clsx(
+                                                    "font-medium text-sm",
+                                                    item.status === 'completed' ? "text-green-800 dark:text-green-200" : "text-gray-800 dark:text-gray-200"
+                                                )}>
+                                                    {item.task}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                {item.status === 'completed' && (
+                                                    <span className="text-xs font-bold text-green-600 dark:text-green-400 bg-white dark:bg-green-900/40 px-2 py-1 rounded-md border border-green-100 dark:border-green-800">
+                                                        COMPLETED
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
-                            ))}
+                            </div>
+
+                            {/* Pending Section */}
+                            <div>
+                                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
+                                    Future / Pending
+                                </h3>
+                                <div className="space-y-3">
+                                    {roadmap.filter(item => !item.plannedRelease.includes('v5.0.0') && !item.plannedRelease.includes('11 Dec')).map((item, index) => (
+                                        <div 
+                                            key={index}
+                                            className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-700/30 border border-gray-100 dark:border-gray-700 opacity-75"
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600" />
+                                                <span className="font-medium text-sm text-gray-600 dark:text-gray-400">
+                                                    {item.task}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-xs font-mono text-gray-400 dark:text-gray-500 bg-white dark:bg-gray-800 px-2 py-1 rounded-md border border-gray-100 dark:border-gray-700">
+                                                    Pending
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
                     )}
                 </motion.div>

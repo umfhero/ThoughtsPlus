@@ -12,21 +12,21 @@
     },
     {
       "task": "Task Completion Analytics",
-      "status": "planned",
+      "status": "completed",
       "plannedRelease": "11 Dec 2025 (v5.0.0)"
     },
     {
       "task": "Enhanced Data Visualization",
-      "status": "planned",
-      "plannedRelease": "11 Dec 2025 (v5.0.0)"
-    },
-    {
-      "task": "Self-hosted Website",
-      "status": "planned",
+      "status": "completed",
       "plannedRelease": "11 Dec 2025 (v5.0.0)"
     },
     {
       "task": "Global Keyboard Shortcuts",
+      "status": "completed",
+      "plannedRelease": "11 Dec 2025 (v5.0.0)"
+    },
+    {
+      "task": "Self-hosted Website",
       "status": "planned",
       "plannedRelease": "11 Dec 2025 (v5.0.0)"
     },
