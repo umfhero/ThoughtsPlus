@@ -3,6 +3,7 @@ import { Folder, Palette, Sparkles, Check, ExternalLink, Clipboard, AlertCircle,
 import { motion, AnimatePresence } from 'framer-motion';
 import clsx from 'clsx';
 import { useTheme } from '../contexts/ThemeContext';
+import { useNotification } from '../contexts/NotificationContext';
 
 export function SettingsPage() {
     const [dataPath, setDataPath] = useState<string>('Loading...');
@@ -42,6 +43,7 @@ export function SettingsPage() {
     const [updateError, setUpdateError] = useState('');
 
     const { theme, accentColor, setTheme, setAccentColor } = useTheme();
+    const { addNotification } = useNotification();
 
     useEffect(() => {
         checkAutoLaunch();
@@ -135,6 +137,7 @@ export function SettingsPage() {
         setTimeout(() => setUserNameSaved(false), 2000);
         // Dispatch event to notify other components
         window.dispatchEvent(new CustomEvent('user-name-changed'));
+        addNotification({ title: 'Settings Saved', message: 'User name updated successfully.', type: 'success' });
     };
 
     const saveGithubConfig = async () => {
@@ -144,6 +147,7 @@ export function SettingsPage() {
         await window.ipcRenderer.invoke('set-github-token', githubToken);
         setGithubSaved(true);
         setTimeout(() => setGithubSaved(false), 2000);
+        addNotification({ title: 'Settings Saved', message: 'GitHub configuration updated.', type: 'success' });
     };
 
     const saveCreatorCodes = async () => {
@@ -152,6 +156,7 @@ export function SettingsPage() {
         await window.ipcRenderer.invoke('set-creator-codes', codes);
         setCreatorCodesSaved(true);
         setTimeout(() => setCreatorCodesSaved(false), 2000);
+        addNotification({ title: 'Settings Saved', message: 'Creator codes updated.', type: 'success' });
     };
 
     const checkAutoLaunch = async () => {
@@ -164,6 +169,11 @@ export function SettingsPage() {
         // @ts-ignore
         const newState = await window.ipcRenderer.invoke('set-auto-launch', !autoLaunch);
         setAutoLaunch(newState);
+        addNotification({ 
+            title: newState ? 'Auto Launch Enabled' : 'Auto Launch Disabled', 
+            message: newState ? 'App will start automatically on login.' : 'App will not start automatically.', 
+            type: 'info' 
+        });
     };
 
     const openExternalLink = (url: string) => {
@@ -191,6 +201,7 @@ export function SettingsPage() {
         const newPath = await window.ipcRenderer.invoke('select-data-folder');
         if (newPath) {
             setDataPath(newPath);
+            addNotification({ title: 'Data Path Updated', message: `Data folder set to: ${newPath}`, type: 'success' });
         }
     };
 

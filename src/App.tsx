@@ -9,8 +9,11 @@ import { GithubPage } from './pages/Github';
 import { AiQuickAddModal } from './components/AiQuickAddModal';
 import { ShortcutsOverlay } from './components/ShortcutsOverlay';
 import { SetupWizard } from './components/SetupWizard';
+import { useNotification } from './contexts/NotificationContext';
+import { NotificationContainer } from './components/NotificationContainer';
+import { DevPage } from './pages/Dev';
 
-export type Page = 'dashboard' | 'calendar' | 'stats' | 'settings' | 'drawing' | 'github';
+export type Page = 'dashboard' | 'calendar' | 'stats' | 'settings' | 'drawing' | 'github' | 'dev';
 
 export interface Note {
     id: string;
@@ -38,12 +41,110 @@ function App() {
     const [userName, setUserName] = useState("User");
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+    const { addNotification } = useNotification();
+    
+    // Dev Mode State
+    const [showDev, setShowDev] = useState(false);
+    const [isMockMode, setIsMockMode] = useState(false);
+
+    // Mock Data
+    const mockNotes: NotesData = {
+        [new Date().toISOString().split('T')[0]]: [
+            { id: '1', title: 'Team Meeting', description: 'Discuss project roadmap', time: '10:00', importance: 'high' },
+            { id: '2', title: 'Code Review', description: 'Review PR #123', time: '14:00', importance: 'medium' },
+            { id: '3', title: 'Gym', description: 'Leg day', time: '18:00', importance: 'low' }
+        ],
+        [new Date(Date.now() + 86400000).toISOString().split('T')[0]]: [
+            { id: '4', title: 'Client Call', description: 'Monthly update', time: '11:00', importance: 'high' }
+        ]
+    };
+
+    const activeNotes = isMockMode ? mockNotes : notes;
 
     useEffect(() => {
         checkFirstRun();
         loadNotes();
         loadUserName();
     }, []);
+
+    useEffect(() => {
+        const checkSettings = async () => {
+            // Wait a bit for app to load
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            try {
+                // Check API Key
+                // @ts-ignore
+                const apiKey = await window.ipcRenderer.invoke('get-api-key');
+                if (!apiKey) {
+                    addNotification({
+                        title: 'Setup Required',
+                        message: 'Please configure your API Key in settings to enable AI features.',
+                        type: 'warning',
+                        duration: 10000,
+                        action: {
+                            label: 'Go to Settings',
+                            onClick: () => setCurrentPage('settings')
+                        }
+                    });
+                }
+
+                // Check GitHub
+                // @ts-ignore
+                const ghUser = await window.ipcRenderer.invoke('get-github-username');
+                if (!ghUser) {
+                    setTimeout(() => {
+                        addNotification({
+                            title: 'GitHub Integration',
+                            message: 'Connect your GitHub account to track your contributions.',
+                            type: 'info',
+                            duration: 10000,
+                            action: {
+                                label: 'Connect',
+                                onClick: () => setCurrentPage('settings')
+                            }
+                        });
+                    }, 2000);
+                }
+
+                // Check Auto Launch
+                // @ts-ignore
+                const autoLaunch = await window.ipcRenderer.invoke('get-auto-launch');
+                if (!autoLaunch) {
+                    setTimeout(() => {
+                        addNotification({
+                            title: 'Run on Startup',
+                            message: 'Enable auto-launch to never miss your schedule.',
+                            type: 'info',
+                            duration: 10000,
+                            action: {
+                                label: 'Enable',
+                                onClick: () => setCurrentPage('settings')
+                            }
+                        });
+                    }, 4000);
+                }
+            } catch (error) {
+                console.error("Error checking settings for notifications:", error);
+            }
+        };
+
+        if (!showSetup && !checkingSetup) {
+            checkSettings();
+        }
+
+        // Quick Note Reminder (2 minutes after startup)
+        const timer = setTimeout(() => {
+            addNotification({
+                title: 'Quick Tip',
+                message: 'Press Ctrl+M anywhere to create a quick note instantly.',
+                type: 'info',
+                duration: 8000
+            });
+        }, 120000); // 2 minutes
+
+        return () => clearTimeout(timer);
+    }, [showSetup, checkingSetup]);
 
     const checkFirstRun = async () => {
         try {
@@ -87,6 +188,14 @@ function App() {
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.ctrlKey && e.key === '/') {
+                e.preventDefault();
+                setShowDev(prev => !prev);
+                if (!showDev) {
+                    addNotification({ title: 'Dev Mode', message: 'Developer tools enabled.', type: 'info' });
+                }
+            }
+
             if (e.ctrlKey && e.key.toLowerCase() === 'm') {
                 e.preventDefault();
                 setIsAiModalOpen(true);
@@ -101,7 +210,7 @@ function App() {
             }
 
             if (e.key === 'Control') {
-                if (currentPage !== 'drawing' && currentPage !== 'settings') {
+                if (currentPage !== 'drawing' && currentPage !== 'settings' && currentPage !== 'dev') {
                     setIsSidebarCollapsed(false);
                 }
             }
@@ -109,7 +218,7 @@ function App() {
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isAiModalOpen, currentPage]);
+    }, [isAiModalOpen, currentPage, showDev]);
 
     const loadNotes = async () => {
         try {
@@ -147,6 +256,13 @@ function App() {
         // Let's expose a save function or just update state and let the effect handle it if we had one, but we don't.
         // I'll just update the state here and assume the components handle persistence or I'll add a helper.
         saveNotesToBackend(newNotes);
+
+        addNotification({
+            title: 'Note Added',
+            message: `"${note.title}" has been added to your calendar.`,
+            type: 'success',
+            duration: 3000
+        });
     };
 
     const handleUpdateNote = (note: Note, date: Date) => {
@@ -156,6 +272,13 @@ function App() {
         const newNotes = { ...notes, [dateKey]: updatedNotes };
         setNotes(newNotes);
         saveNotesToBackend(newNotes);
+
+        addNotification({
+            title: 'Note Updated',
+            message: 'Your changes have been saved.',
+            type: 'success',
+            duration: 3000
+        });
     };
 
     const saveNotesToBackend = async (newNotes: NotesData) => {
@@ -192,11 +315,12 @@ function App() {
                 <Sidebar
                     currentPage={currentPage}
                     setPage={setCurrentPage}
-                    notes={notes}
+                    notes={activeNotes}
                     onMonthSelect={handleMonthSelect}
                     currentMonth={currentMonth}
                     isCollapsed={isSidebarCollapsed}
                     toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                    showDev={showDev}
                 />
 
                 <main className="flex-1 h-full relative overflow-hidden">
@@ -204,7 +328,7 @@ function App() {
                         <div className="h-full rounded-3xl bg-white/40 dark:bg-gray-800/40 backdrop-blur-xl border border-white/50 dark:border-gray-700/50 shadow-2xl overflow-hidden relative">
                             {currentPage === 'dashboard' && (
                                 <Dashboard
-                                    notes={notes}
+                                    notes={activeNotes}
                                     onNavigateToNote={handleNavigateToNote}
                                     userName={userName}
                                     onAddNote={handleAddNote}
@@ -214,7 +338,7 @@ function App() {
                             )}
                             {currentPage === 'calendar' && (
                                 <CalendarPage
-                                    notes={notes}
+                                    notes={activeNotes}
                                     setNotes={setNotes}
                                     initialSelectedDate={selectedDate}
                                     currentMonth={currentMonth}
@@ -225,6 +349,12 @@ function App() {
                             {currentPage === 'drawing' && <DrawingPage />}
                             {currentPage === 'github' && <GithubPage />}
                             {currentPage === 'settings' && <SettingsPage />}
+                            {currentPage === 'dev' && (
+                                <DevPage 
+                                    isMockMode={isMockMode} 
+                                    toggleMockMode={() => setIsMockMode(!isMockMode)} 
+                                />
+                            )}
                         </div>
                     </div>
                 </main>
@@ -237,6 +367,8 @@ function App() {
             />
 
             <ShortcutsOverlay currentPage={currentPage} />
+            
+            <NotificationContainer />
         </div>
     );
 }

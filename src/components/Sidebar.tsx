@@ -1,4 +1,4 @@
-import { Home, Calendar as CalendarIcon, BarChart2, Settings, ChevronDown, ChevronRight, PanelLeftClose, PanelLeftOpen, PenTool, Github } from 'lucide-react';
+import { Home, Calendar as CalendarIcon, BarChart2, Settings, ChevronDown, ChevronRight, PanelLeftClose, PanelLeftOpen, PenTool, Github, Code } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import clsx from 'clsx';
 import { useState, useEffect } from 'react';
@@ -13,6 +13,7 @@ interface SidebarProps {
     currentMonth?: Date;
     isCollapsed: boolean;
     toggleSidebar: () => void;
+    showDev?: boolean;
 }
 
 const months = [
@@ -20,7 +21,7 @@ const months = [
     'July', 'August', 'September', 'October', 'November', 'December'
 ];
 
-export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMonth, isCollapsed, toggleSidebar }: SidebarProps) {
+export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMonth, isCollapsed, toggleSidebar, showDev }: SidebarProps) {
     const [isCalendarOpen, setIsCalendarOpen] = useState(true);
     const [showShortcuts, setShowShortcuts] = useState(false);
     const [enabledFeatures, setEnabledFeatures] = useState({
@@ -477,6 +478,38 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
 
                             {/* Spacer to push Settings to bottom */}
                             <div className="flex-1" />
+
+                            {/* Dev Mode Button */}
+                            {showDev && (
+                                <button
+                                    onClick={() => setPage('dev')}
+                                    className={clsx(
+                                        "w-full flex items-center justify-between p-3 rounded-xl transition-all duration-300 group relative mb-2",
+                                        currentPage === 'dev'
+                                            ? "bg-gray-900 dark:bg-gray-700 text-white shadow-lg shadow-gray-900/20 dark:shadow-gray-950/30"
+                                            : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100"
+                                    )}
+                                >
+                                    {currentPage === 'dev' && (
+                                        <motion.div
+                                            layoutId="activeBg"
+                                            className="absolute inset-0 bg-gray-900 dark:bg-gray-700 rounded-xl"
+                                            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                                        />
+                                    )}
+                                    <div className="flex items-center gap-3 relative z-10">
+                                        <motion.div
+                                            whileHover={{ scale: 1.2, rotate: [0, -10, 10, -10, 0] }}
+                                            transition={{ duration: 0.5 }}
+                                        >
+                                            <Code className={clsx("w-5 h-5 shrink-0")} style={currentPage === 'dev' ? { color: 'var(--accent-primary)' } : undefined} />
+                                        </motion.div>
+                                        <span className="font-medium text-sm">
+                                            Dev Tools
+                                        </span>
+                                    </div>
+                                </button>
+                            )}
 
                             {/* Settings at bottom */}
                             <div className="pt-4 pb-2">
