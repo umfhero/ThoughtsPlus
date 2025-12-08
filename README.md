@@ -8,7 +8,7 @@
 ![GitHub last commit](https://img.shields.io/github/last-commit/umfhero/CalendarPlus)
 ![GitHub stars](https://img.shields.io/github/stars/umfhero/CalendarPlus?style=social)
 
-> **New in V4.5:** Fully user-configurable with your own API keys, GitHub profile and analytics integrations (Only creator stats for now). No more hardcoded personal data!
+> **New in v4.5.0:** Fully user-configurable with your own API keys, GitHub profile and analytics integrations (Only creator stats for now). No more hardcoded personal data!
 
 </div>
 
@@ -150,9 +150,9 @@ If you're forking this project, you can preserve your personal baseline data:
 
 ## Past Versions
 
-### V4.5 - Production Ready (Current)
+### v4.5.0 - Production Ready (Current)
 
-![GitHub Downloads (specific release)](https://img.shields.io/github/downloads/umfhero/CalendarPlus/V4.5/total?label=v4.5.0%20downloads)
+![GitHub Downloads (specific release)](https://img.shields.io/github/downloads/umfhero/CalendarPlus/v4.5.0/total?label=v4.5.0%20downloads)
 
 **User-configurable & production-ready:** Complete rewrite of integrations to be user-driven rather than developer-specific. No hardcoded credentials, multi-device sync support, and privacy-focused architecture.
 
