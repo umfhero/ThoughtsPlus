@@ -133,23 +133,21 @@ If you're forking this project, you can preserve your personal baseline data:
 
 ### Planned Features
 
-- **Data Persistence & Sync (Migration to v2)** - Transitioning to a cloud-hybrid model using Supabase (PostgreSQL) for real-time multi-device syncing, while retaining offline capabilities via local caching.
-- **Mobile Support (PWA)** - A Progressive Web App implementation for mobile access, featuring "Add to Home Screen" capability and push notifications for task reminders without app store fees.
-- **Microsoft Store Distribution** - Publishing to the Microsoft Store to resolve "Unknown Publisher" warnings and enable seamless background updates, utilizing the one-time developer fee for a cost-effective signing solution.
-- **Task Completion Analytics** - Track completed vs incomplete tasks with weekly/monthly/yearly performance graphs
-- **Enhanced Data Visualization** - More charts, trends, and insights into your productivity patterns
-- **Self-hosted Website** - Official website for CalendarPlus with intuitive onboarding, easy downloads and the latest news and updates
-- **Auto Update** - Automatic updates with self-deletion of old versions and seamless data migration, removing the need to manually uninstall and transfer files
-- **Smart AI Model Fallback** - Automatically switches between Gemini models (2.5 Flash → 1.5 Flash → 1.5 Pro) if rate limits are hit to ensure reliability
-- **Global Keyboard Shortcuts** - Native support for standard shortcuts (Ctrl+C, Ctrl+V, Ctrl+A) across the entire application
+- [ ] **Data Persistence & Sync (Migration to v2)** - Transitioning to a cloud-hybrid model using Supabase (PostgreSQL) for real-time multi-device syncing, while retaining offline capabilities via local caching.
+- [ ] **Mobile Support (PWA)** - A Progressive Web App implementation for mobile access, featuring "Add to Home Screen" capability and push notifications for task reminders without app store fees.
+- [ ] **Microsoft Store Distribution** - Publishing to the Microsoft Store to resolve "Unknown Publisher" warnings and enable seamless background updates, utilizing the one-time developer fee for a cost-effective signing solution.
+- [x] **Task Completion Analytics** - Track completed vs incomplete tasks with weekly/monthly/yearly performance graphs
+- [x] **Enhanced Data Visualization** - More charts, trends, and insights into your productivity patterns
+- [ ] **Self-hosted Website** - Official website for CalendarPlus with intuitive onboarding, easy downloads and the latest news and updates
+- [x] **Auto Update** - Automatic updates with self-deletion of old versions and seamless data migration, removing the need to manually uninstall and transfer files
+- [x] **Smart AI Model Fallback** - Automatically switches between Gemini models (2.5 Flash → 1.5 Flash → 1.5 Pro) if rate limits are hit to ensure reliability
+- [x] **Global Keyboard Shortcuts** - Native support for standard shortcuts (Ctrl+C, Ctrl+V, Ctrl+A) across the entire application
 
 ### Future Considerations
 
-- Mobile Sync & Widgets - Lockscreen widgets with your daily brief and upcoming tasks
 - Plugin/extension system
 - Calendar sharing and permissions
 - Advanced AI suggestions and insights
-- Certificate to remove secuirty questioning on downloading/updating (costly so will decide as i go along)
 
 ---
 
