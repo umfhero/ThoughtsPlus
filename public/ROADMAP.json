@@ -49,6 +49,36 @@
       "task": "Microsoft Store Distribution",
       "status": "planned",
       "plannedRelease": "Pending (No Deadline)"
+    },
+    {
+      "task": "Advanced Appearance Settings (Custom Fonts, Extended Accent Colors)",
+      "status": "planned",
+      "plannedRelease": "Pending (No Deadline)"
+    },
+    {
+      "task": "Dashboard Edit Mode (Rearrange & Add Widgets)",
+      "status": "planned",
+      "plannedRelease": "Pending (No Deadline)"
+    },
+    {
+      "task": "Refactor API Logic (Fix Fallback Issues)",
+      "status": "planned",
+      "plannedRelease": "Pending (No Deadline)"
+    },
+    {
+      "task": "Third-Party Calendar Imports (Selective Import)",
+      "status": "planned",
+      "plannedRelease": "Pending (No Deadline)"
+    },
+    {
+      "task": "AI Quick Note with Recurring Options",
+      "status": "planned",
+      "plannedRelease": "Pending (No Deadline)"
+    },
+    {
+      "task": "Settings Management (Notification Toggle, Export/Import, Factory Reset)",
+      "status": "planned",
+      "plannedRelease": "Pending (No Deadline)"
     }
   ]
 }

@@ -231,3 +231,28 @@ The application is transitioning from a local-only JSON architecture to a cloud-
 - **Update Mechanism:**
   - **Store Build:** Updates are handled entirely by the Microsoft Store infrastructure. When a new version is published to the Store, Windows automatically downloads and installs it for the user in the background.
   - **Direct Download (Fallback):** The app retains `electron-updater` logic for users who prefer downloading the portable `.exe` directly from GitHub Releases, though these users may encounter SmartScreen warnings.
+
+### Advanced Appearance & Customization
+
+- **Custom Fonts:** Allow users to upload and preload custom fonts.
+- **Extended Accent Colors:** Apply accent colors to more UI elements, including setting icons and dashboard widget backgrounds.
+
+### Dashboard Enhancements
+
+- **Edit Mode:** Enable users to rearrange dashboard widgets.
+- **New Widgets:** Add more widget options to the dashboard.
+
+### Core Logic Improvements
+
+- **API Logic Refactor:** Redo the API logic to fix breaking fallback mechanisms.
+- **Third-Party Imports:** Support importing external calendars with selective add/remove capabilities.
+
+### AI & Productivity
+
+- **AI Quick Note:** Add a repeating toggle (e.g., "repeat every X times" or "every X days").
+
+### Settings & Management
+
+- **Notification Toggle:** Simple toggle to enable/disable notifications.
+- **Settings Export/Import:** "One-click" export of all settings and data into a single package for easy transfer to another machine.
+- **Factory Reset:** "Start Clean" button to wipe all data and restart the onboarding process.
