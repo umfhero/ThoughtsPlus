@@ -147,7 +147,6 @@ If you're forking this project, you can preserve your personal baseline data:
 - [x] **Enhanced Data Visualization** - More charts, trends, and insights into your productivity patterns
 - [ ] **Self-hosted Website** - Official website for CalendarPlus with intuitive onboarding, easy downloads and the latest news and updates
 - [x] **Auto Update** - Automatic updates with self-deletion of old versions and seamless data migration, removing the need to manually uninstall and transfer files
-- [x] **Smart AI Model Fallback** - Automatically switches between Gemini models (2.5 Flash → 1.5 Flash → 1.5 Pro) if rate limits are hit to ensure reliability
 - [x] **Global Keyboard Shortcuts** - Native support for standard shortcuts (Ctrl+C, Ctrl+V, Ctrl+A) across the entire application
 
 ### Future Considerations
