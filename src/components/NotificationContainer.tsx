@@ -1,3 +1,4 @@
+import React, { forwardRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Info, CheckCircle, AlertTriangle, AlertCircle } from 'lucide-react';
 import { useNotification, Notification } from '../contexts/NotificationContext';
@@ -10,7 +11,7 @@ const icons = {
     error: AlertCircle,
 };
 
-function NotificationItem({ notification }: { notification: Notification }) {
+const NotificationItem = forwardRef<HTMLDivElement, { notification: Notification }>(({ notification }, ref) => {
     const { removeNotification } = useNotification();
     const { accentColor, theme } = useTheme();
     const Icon = icons[notification.type || 'info'];
@@ -40,6 +41,7 @@ function NotificationItem({ notification }: { notification: Notification }) {
 
     return (
         <motion.div
+            ref={ref}
             layout
             initial={{ opacity: 0, x: 50, scale: 0.95 }}
             animate={{ opacity: 1, x: 0, scale: 1 }}
@@ -104,7 +106,7 @@ function NotificationItem({ notification }: { notification: Notification }) {
             </div>
         </motion.div>
     );
-}
+});
 
 export function NotificationContainer() {
     const { notifications } = useNotification();

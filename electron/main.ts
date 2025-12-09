@@ -164,6 +164,41 @@ app.whenReady().then(async () => {
     await loadSettings();
     createWindow();
 
+    // Helper function to try multiple Gemini models
+    async function generateWithFallback(genAI: GoogleGenerativeAI, prompt: string): Promise<string> {
+        // Comprehensive list of models to try, prioritizing user-reported available models
+        const models = [
+            "gemini-2.5-flash",
+            "gemini-2.5-flash-lite",
+            "gemini-2.0-flash-exp",
+            "gemini-1.5-flash",
+            "gemini-1.5-flash-8b",
+            "gemini-1.5-pro"
+        ];
+
+        let lastError;
+        for (const modelName of models) {
+            try {
+                // Log to renderer console for visibility (safely escaped)
+                const logMsg = JSON.stringify(`🤖 Attempting AI generation with model: ${modelName}`);
+                win?.webContents.executeJavaScript(`console.log(${logMsg})`).catch(() => {});
+                
+                const model = genAI.getGenerativeModel({ model: modelName });
+                const result = await model.generateContent(prompt);
+                const response = await result.response;
+                return response.text();
+            } catch (e: any) {
+                // Log error to renderer console (safely escaped)
+                const errorMsg = JSON.stringify(`❌ Model ${modelName} failed: ${e.message}`);
+                win?.webContents.executeJavaScript(`console.error(${errorMsg})`).catch(() => {});
+                
+                console.error(`Model ${modelName} failed:`, e.message);
+                lastError = e;
+            }
+        }
+        throw lastError || new Error("All models failed");
+    }
+
     // Configure auto-updater
     autoUpdater.autoDownload = false; // Don't auto-download, let user control
     autoUpdater.autoInstallOnAppQuit = false; // Manual install only
@@ -239,18 +274,34 @@ app.whenReady().then(async () => {
             if (!key) return { valid: false, error: 'API Key is empty' };
             const cleanKey = key.trim();
             
-            // Test by making a direct fetch request to list models endpoint
-            const response = await fetch(
-                `https://generativelanguage.googleapis.com/v1beta/models?key=${cleanKey}`
-            );
+            const genAI = new GoogleGenerativeAI(cleanKey);
             
-            if (response.ok) {
-                const data = await response.json();
-                console.log('Available models:', data.models?.map((m: any) => m.name).join(', '));
+            try {
+                await generateWithFallback(genAI, "Test");
                 return { valid: true };
-            } else {
-                const errorData = await response.json();
-                return { valid: false, error: errorData.error?.message || 'Invalid API Key' };
+            } catch (e: any) {
+                console.error("Validation failed:", e);
+                
+                // Try to list models to see what's wrong and log it to the user console
+                try {
+                     const response = await fetch(
+                        `https://generativelanguage.googleapis.com/v1beta/models?key=${cleanKey}`
+                    );
+                    if (response.ok) {
+                        const data = await response.json();
+                        const available = data.models?.map((m: any) => m.name).join(', ');
+                        console.log('Available models for this key:', available);
+                        win?.webContents.executeJavaScript(`console.log("ℹ️ Available models for this key: ${available}")`);
+                    } else {
+                        const err = await response.text();
+                        console.error('Failed to list models:', err);
+                        win?.webContents.executeJavaScript(`console.error("❌ Failed to list models: ${err}")`);
+                    }
+                } catch (listErr) {
+                    console.error('Failed to list models fetch:', listErr);
+                }
+
+                return { valid: false, error: e.message || 'Invalid API Key' };
             }
         } catch (error: any) {
             console.error("API Key Validation Error:", error);
@@ -262,34 +313,15 @@ app.whenReady().then(async () => {
         try {
             const apiKey = deviceSettings.apiKey || process.env.GEMINI_API_KEY;
             if (!apiKey) return text.slice(0, 50) + '...';
+            
             const genAI = new GoogleGenerativeAI(apiKey);
             
-            // Try multiple models in order of preference/performance
-            const models = [
-                "gemini-2.5-flash-native-audio-dialog",
-                "gemini-2.0-flash-live",
-                "gemini-2.0-flash-exp",
-                "gemini-1.5-flash",
-                "gemini-1.5-flash-001",
-                "gemini-1.5-flash-002",
-                "gemini-1.5-pro",
-                "gemini-1.5-pro-001",
-                "gemini-1.5-pro-002",
-                "gemini-pro",
-                "gemini-1.0-pro"
-            ];
-            
-            for (const modelName of models) {
-                try {
-                    const model = genAI.getGenerativeModel({ model: modelName });
-                    const result = await model.generateContent(text);
-                    return (await result.response).text();
-                } catch (e) {
-                    console.warn(`summarize-text: ${modelName} failed, trying next.`);
-                }
+            try {
+                return await generateWithFallback(genAI, text);
+            } catch (e) {
+                console.warn(`summarize-text failed:`, e);
+                return text.slice(0, 50) + '...';
             }
-            
-            return text.slice(0, 50) + '...';
         } catch (error) {
             return text.slice(0, 50) + '...';
         }
@@ -302,20 +334,6 @@ app.whenReady().then(async () => {
             if (!apiKey) return "Please add your AI API key in settings! Make sure not to share it with anyone.";
             
             const genAI = new GoogleGenerativeAI(apiKey);
-            // Try multiple models including specific versions to avoid 404s
-            const models = [
-                "gemini-2.5-flash-native-audio-dialog",
-                "gemini-2.0-flash-live",
-                "gemini-2.0-flash-exp",
-                "gemini-1.5-flash",
-                "gemini-1.5-flash-001",
-                "gemini-1.5-flash-002",
-                "gemini-1.5-pro",
-                "gemini-1.5-pro-001",
-                "gemini-1.5-pro-002",
-                "gemini-pro",
-                "gemini-1.0-pro"
-            ];
             
             let notesStr = "";
             try {
@@ -347,25 +365,15 @@ app.whenReady().then(async () => {
             ${notesStr}
             `;
             
-            const errors: string[] = [];
-
-            for (const modelName of models) {
-                try {
-                    console.log(`Attempting to generate overview with model: ${modelName}`);
-                    const model = genAI.getGenerativeModel({ model: modelName });
-                    const result = await model.generateContent(prompt);
-                    const response = await result.response;
-                    return response.text();
-                } catch (error: any) {
-                    console.warn(`Failed with model ${modelName}:`, error.message);
-                    errors.push(`${modelName}: ${error.message}`);
-                }
+            try {
+                return await generateWithFallback(genAI, prompt);
+            } catch (error: any) {
+                console.warn(`All models failed:`, error.message);
+                return "AI cap limit reached, sorry!";
             }
-            
-            return `Sorry, I couldn't generate your briefing. Errors: ${errors.join(' | ')}`;
         } catch (error: any) {
             console.error("Gemini API Error:", error);
-            return `I'm having trouble generating your briefing right now. Error: ${error.message}`;
+            return "AI cap limit reached, sorry!";
         }
     });
 
@@ -380,19 +388,6 @@ app.whenReady().then(async () => {
             }
             
             const genAI = new GoogleGenerativeAI(apiKey);
-            const models = [
-                "gemini-2.5-flash-native-audio-dialog",
-                "gemini-2.0-flash-live",
-                "gemini-2.0-flash-exp",
-                "gemini-1.5-flash",
-                "gemini-1.5-flash-001",
-                "gemini-1.5-flash-002",
-                "gemini-1.5-pro",
-                "gemini-1.5-pro-001",
-                "gemini-1.5-pro-002",
-                "gemini-pro",
-                "gemini-1.0-pro"
-            ];
             
             const now = new Date();
             const prompt = `
@@ -411,35 +406,30 @@ app.whenReady().then(async () => {
             Return ONLY the JSON object. No markdown formatting.
             `;
             
-            for (const modelName of models) {
-                try {
-                    const model = genAI.getGenerativeModel({ model: modelName });
-                    const result = await model.generateContent(prompt);
-                    const text = (await result.response).text();
-                    // Clean up potential markdown code blocks
-                    const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
-                    const parsed = JSON.parse(jsonStr);
-                    
-                    // Validate the parsed response
-                    if (!parsed.title || !parsed.date) {
-                        throw new Error('Invalid response structure');
-                    }
-                    
-                    return parsed;
-                } catch (error: any) {
-                    console.warn(`parse-natural-language-note: ${modelName} failed:`, error.message);
+            try {
+                const text = await generateWithFallback(genAI, prompt);
+                // Clean up potential markdown code blocks
+                const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
+                const parsed = JSON.parse(jsonStr);
+                
+                // Validate the parsed response
+                if (!parsed.title || !parsed.date) {
+                    throw new Error('Invalid response structure');
                 }
+                
+                return parsed;
+            } catch (error: any) {
+                console.warn(`All models failed:`, error.message);
+                return {
+                    error: 'PARSE_ERROR',
+                    message: 'AI cap limit reached, sorry!'
+                };
             }
-
-            return {
-                error: 'PARSE_ERROR',
-                message: 'Failed to process your request with all available AI models. Please try again later.'
-            };
         } catch (error: any) {
             console.error("Gemini Parse Error:", error);
             return {
                 error: 'PARSE_ERROR',
-                message: error.message || 'Failed to parse note. Please check your API key and try again.'
+                message: 'AI cap limit reached, sorry!'
             };
         }
     });
