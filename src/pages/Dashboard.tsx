@@ -558,7 +558,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                     const diffHours = (eventDate.getTime() - now.getTime()) / (1000 * 60 * 60);
                     
                     const isFuture = diffHours > 0;
-                    const isRecentPast = diffHours > -48 && diffHours <= 0;
+                    const isRecentPast = diffHours > -168 && diffHours <= 0; // Last 7 days
                     const isOverdue = diffHours <= 0 && !event.note.completed;
                     
                     if (isFuture && diffHours < 24 * 14) return true; // Next 14 days

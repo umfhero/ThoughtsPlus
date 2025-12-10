@@ -62,9 +62,13 @@ The application follows an "Offline-First" approach with local JSON storage.
   4. API returns structured JSON (Title, Date, Time, Description).
   5. Frontend receives structured data and creates the event.
 - **Briefing Flow:**
-  1. Dashboard aggregates upcoming (14 days), recent past (48h), and overdue tasks.
+  1. Dashboard aggregates upcoming (14 days), recent past (7 days), and overdue tasks.
   2. Sends filtered list to AI model.
-  3. AI generates a comforting summary, acknowledging completed tasks and gently reminding of missed ones.
+  3. AI generates a comforting summary using a specific persona:
+     - **Tone:** Warm, comforting, casual (supportive friend).
+     - **Structure:** Congratulates on recent completions -> Encourages immediate tasks -> Reminds of future deadlines.
+     - **Prioritization:** Focuses on high urgency tasks if overwhelmed; emphasizes relaxation.
+     - **Specifics:** Provides task-specific advice (e.g., "revise" for exams).
   4. Updates dynamically when tasks are marked complete.
 
 ## 4. Key Features & Implementation
