@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { ActivityCalendar, Activity } from 'react-activity-calendar';
 import { useTheme } from '../contexts/ThemeContext';
 import { fetchGithubContributions } from '../utils/github';
+import clsx from 'clsx';
 
 function hexToRgb(hex: string) {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -36,7 +37,7 @@ interface UserProfile {
     name: string;
 }
 
-export function GithubPage({ isMockMode }: { isMockMode?: boolean }) {
+export function GithubPage({ isMockMode, isSidebarCollapsed = false }: { isMockMode?: boolean, isSidebarCollapsed?: boolean }) {
     const [repos, setRepos] = useState<Repo[]>([]);
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [readme, setReadme] = useState<string | null>(null);
@@ -48,6 +49,19 @@ export function GithubPage({ isMockMode }: { isMockMode?: boolean }) {
     const { accentColor, theme } = useTheme();
     const [blockSize, setBlockSize] = useState(12);
     const githubContributionsRef = useRef<HTMLDivElement>(null);
+
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const checkMobile = () => {
+            const sidebarWidth = isSidebarCollapsed ? 0 : 240;
+            const availableWidth = window.innerWidth - sidebarWidth;
+            setIsMobile(availableWidth < 900);
+        };
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, [isSidebarCollapsed]);
 
     const years = Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - i);
 
@@ -261,7 +275,7 @@ export function GithubPage({ isMockMode }: { isMockMode?: boolean }) {
     }
 
     return (
-        <div className="p-10 h-full overflow-y-auto space-y-8">
+        <div className="p-4 md:p-10 h-full overflow-y-auto space-y-6 md:space-y-8">
             <style>{`
                 .github-readme p:first-of-type img {
                     display: inline-block !important;
@@ -281,23 +295,23 @@ export function GithubPage({ isMockMode }: { isMockMode?: boolean }) {
                 <motion.div 
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-white dark:bg-gray-800 rounded-[2rem] p-8 shadow-xl border border-gray-100 dark:border-gray-700"
+                    className="bg-white dark:bg-gray-800 rounded-[2rem] p-6 md:p-8 shadow-xl border border-gray-100 dark:border-gray-700"
                 >
-                    <div className="flex items-center gap-6 mb-8">
+                    <div className="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-6 mb-6 md:mb-8">
                         <img 
                             src={profile.avatar_url} 
                             alt={profile.login} 
-                            className="w-24 h-24 rounded-full border-4 border-blue-100 dark:border-blue-900"
+                            className="w-20 h-20 md:w-24 md:h-24 rounded-full border-4 border-blue-100 dark:border-blue-900"
                         />
                         <div>
-                            <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+                            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
                                 {profile.name || profile.login}
                                 <a href={profile.html_url} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                                     <ExternalLink className="w-5 h-5" />
                                 </a>
                             </h1>
                             <p className="text-gray-500 dark:text-gray-400 mt-1">{profile.bio}</p>
-                            <div className="flex gap-6 mt-4 text-sm">
+                            <div className="flex flex-wrap gap-4 md:gap-6 mt-4 text-sm">
                                 <div className="flex items-center gap-2">
                                     <span className="font-bold text-gray-900 dark:text-white">{profile.public_repos}</span>
                                     <span className="text-gray-500">Repositories</span>
@@ -316,9 +330,9 @@ export function GithubPage({ isMockMode }: { isMockMode?: boolean }) {
 
                     {/* Contributions Graph */}
                     <div className="mb-2">
-                        <div className="flex items-center justify-between mb-4">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-4">
                             <h2 className="text-xl font-bold text-gray-900 dark:text-white">Contributions</h2>
-                            <div className="flex gap-2">
+                            <div className="flex flex-wrap gap-2">
                                 {years.map(year => (
                                     <button
                                         key={year}
@@ -420,7 +434,7 @@ export function GithubPage({ isMockMode }: { isMockMode?: boolean }) {
             )}
 
             {/* Repos Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className={clsx("grid gap-6", isMobile ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3")}>
                 {repos.map((repo, index) => (
                     <motion.a
                         key={repo.id}

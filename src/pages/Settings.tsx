@@ -5,15 +5,26 @@ import clsx from 'clsx';
 import { useTheme } from '../contexts/ThemeContext';
 import { useNotification } from '../contexts/NotificationContext';
 
-interface RoadmapItem {
-    task: string;
-    status: 'planned' | 'in-progress' | 'completed';
-    plannedRelease: string;
+interface SettingsPageProps {
+    isSidebarCollapsed?: boolean;
 }
 
-export function SettingsPage() {
+export function SettingsPage({ isSidebarCollapsed = false }: SettingsPageProps) {
     const [dataPath, setDataPath] = useState<string>('Loading...');
     const [autoLaunch, setAutoLaunch] = useState(false);
+
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const checkMobile = () => {
+            const sidebarWidth = isSidebarCollapsed ? 0 : 240;
+            const availableWidth = window.innerWidth - sidebarWidth;
+            setIsMobile(availableWidth < 900);
+        };
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, [isSidebarCollapsed]);
 
     // User Name
     const [userName, setUserName] = useState('');
@@ -387,7 +398,7 @@ export function SettingsPage() {
     };
 
     return (
-        <div className="p-8 h-full overflow-y-auto">
+        <div className="p-4 md:p-8 h-full overflow-y-auto">
             <div className="max-w-5xl mx-auto">
                 <div className="mb-8">
                     <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-2">Settings</h1>
@@ -400,7 +411,7 @@ export function SettingsPage() {
                     animate={{ opacity: 1, y: 0 }}
                     className="mb-6 p-6 rounded-3xl bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-800 border border-blue-100 dark:border-gray-700 shadow-xl shadow-blue-200/50 dark:shadow-gray-900/50"
                 >
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 md:gap-0">
                         <div>
                             <h2 className="text-2xl font-bold bg-gradient-to-r from-red-600 to-pink-600 dark:from-red-400 dark:to-pink-400 bg-clip-text text-transparent mb-1">
                                 Calendar Plus v{currentVersion}
@@ -434,7 +445,7 @@ export function SettingsPage() {
                 </motion.div>
 
                 {/* Top Row: AI + GitHub */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div className={clsx("grid gap-6 mb-6", isMobile ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2")}>
                     {/* AI Configuration */}
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
@@ -617,7 +628,7 @@ export function SettingsPage() {
                     </div>
 
                 {/* Second Row: Data Storage + Creator Codes */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div className={clsx("grid gap-6 mb-6", isMobile ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2")}>
                         {/* Data Storage */}
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}

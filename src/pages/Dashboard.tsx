@@ -18,6 +18,7 @@ interface DashboardProps {
     onUpdateNote: (note: Note, date: Date) => void;
     onOpenAiModal: () => void;
     isLoading?: boolean;
+    isSidebarCollapsed?: boolean;
 }
 
 function hexToRgb(hex: string) {
@@ -29,7 +30,7 @@ function hexToRgb(hex: string) {
     } : null;
 }
 
-export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onOpenAiModal, isLoading = false }: DashboardProps) {
+export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onOpenAiModal, isLoading = false, isSidebarCollapsed = false }: DashboardProps) {
     const [time, setTime] = useState(new Date());
     // @ts-ignore
     const [stats, setStats] = useState<any>(null);
@@ -279,9 +280,41 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
     // Resizable layout state
     const [leftWidth, setLeftWidth] = useState(66); // Percentage
     const [panelHeight, setPanelHeight] = useState(384); // Pixels (default h-96 = 24rem = 384px)
+    const [eventsHeight, setEventsHeight] = useState(384);
+    const [trendsHeight, setTrendsHeight] = useState(384);
+    
     const [isDragging, setIsDragging] = useState(false);
-    const [isHeightDragging, setIsHeightDragging] = useState(false);
+    const [isHeightDragging, setIsHeightDragging] = useState(false); // For desktop shared height
+    const [isEventsHeightDragging, setIsEventsHeightDragging] = useState(false); // For mobile events height
+    const [isTrendsHeightDragging, setIsTrendsHeightDragging] = useState(false); // For mobile trends height
+    
+    const [briefingHeight, setBriefingHeight] = useState<number | undefined>(undefined);
+    const [githubHeight, setGithubHeight] = useState<number | undefined>(undefined);
+    const [statsHeight, setStatsHeight] = useState<number | undefined>(undefined);
+
+    const [isBriefingHeightDragging, setIsBriefingHeightDragging] = useState(false);
+    const [isGithubHeightDragging, setIsGithubHeightDragging] = useState(false);
+    const [isStatsHeightDragging, setIsStatsHeightDragging] = useState(false);
+
+    const briefingRef = useRef<HTMLDivElement>(null);
+    const githubCardRef = useRef<HTMLDivElement>(null);
+    const statsRef = useRef<HTMLDivElement>(null);
+    
     const containerRef = useRef<HTMLDivElement>(null);
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const handleResize = () => {
+            const sidebarWidth = isSidebarCollapsed ? 0 : 240;
+            const availableWidth = window.innerWidth - sidebarWidth;
+            // If available width is tight, switch to mobile layout
+            setIsMobile(availableWidth < 900); 
+        };
+        
+        handleResize();
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, [isSidebarCollapsed]);
 
     useEffect(() => {
         const loadSavedSettings = async () => {
@@ -313,6 +346,40 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
         e.preventDefault();
     };
 
+    const handleEventsHeightMouseDown = (e: React.MouseEvent) => {
+        setIsEventsHeightDragging(true);
+        e.preventDefault();
+    };
+
+    const handleTrendsHeightMouseDown = (e: React.MouseEvent) => {
+        setIsTrendsHeightDragging(true);
+        e.preventDefault();
+    };
+
+    const handleBriefingHeightMouseDown = (e: React.MouseEvent) => {
+        if (briefingRef.current && briefingHeight === undefined) {
+            setBriefingHeight(briefingRef.current.offsetHeight);
+        }
+        setIsBriefingHeightDragging(true);
+        e.preventDefault();
+    };
+
+    const handleGithubHeightMouseDown = (e: React.MouseEvent) => {
+        if (githubCardRef.current && githubHeight === undefined) {
+            setGithubHeight(githubCardRef.current.offsetHeight);
+        }
+        setIsGithubHeightDragging(true);
+        e.preventDefault();
+    };
+
+    const handleStatsHeightMouseDown = (e: React.MouseEvent) => {
+        if (statsRef.current && statsHeight === undefined) {
+            setStatsHeight(statsRef.current.offsetHeight);
+        }
+        setIsStatsHeightDragging(true);
+        e.preventDefault();
+    };
+
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {
             if (isDragging && containerRef.current) {
@@ -332,7 +399,47 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                 // Limit height between 250px and 600px
                 if (newHeight >= 250 && newHeight <= 600) {
                     setPanelHeight(newHeight);
+                    setEventsHeight(newHeight);
+                    setTrendsHeight(newHeight);
                 }
+            }
+
+            if (isEventsHeightDragging) {
+                setEventsHeight(prev => {
+                    const newH = prev + e.movementY;
+                    return Math.max(200, Math.min(newH, 1200));
+                });
+            }
+
+            if (isTrendsHeightDragging) {
+                setTrendsHeight(prev => {
+                    const newH = prev + e.movementY;
+                    return Math.max(200, Math.min(newH, 1200));
+                });
+            }
+
+            if (isBriefingHeightDragging) {
+                setBriefingHeight(prev => {
+                    const current = prev || (briefingRef.current?.offsetHeight || 200);
+                    const newH = current + e.movementY;
+                    return Math.max(150, Math.min(newH, 1200));
+                });
+            }
+
+            if (isGithubHeightDragging) {
+                setGithubHeight(prev => {
+                    const current = prev || (githubCardRef.current?.offsetHeight || 200);
+                    const newH = current + e.movementY;
+                    return Math.max(200, Math.min(newH, 1200));
+                });
+            }
+
+            if (isStatsHeightDragging) {
+                setStatsHeight(prev => {
+                    const current = prev || (statsRef.current?.offsetHeight || 200);
+                    const newH = current + e.movementY;
+                    return Math.max(200, Math.min(newH, 1200));
+                });
             }
         };
 
@@ -348,9 +455,14 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                 // @ts-ignore
                 window.ipcRenderer.invoke('save-device-setting', 'dashboardPanelHeight', panelHeight.toString());
             }
+            setIsEventsHeightDragging(false);
+            setIsTrendsHeightDragging(false);
+            setIsBriefingHeightDragging(false);
+            setIsGithubHeightDragging(false);
+            setIsStatsHeightDragging(false);
         };
 
-        if (isDragging || isHeightDragging) {
+        if (isDragging || isHeightDragging || isEventsHeightDragging || isTrendsHeightDragging || isBriefingHeightDragging || isGithubHeightDragging || isStatsHeightDragging) {
             document.addEventListener('mousemove', handleMouseMove);
             document.addEventListener('mouseup', handleMouseUp);
         }
@@ -359,7 +471,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
             document.removeEventListener('mousemove', handleMouseMove);
             document.removeEventListener('mouseup', handleMouseUp);
         };
-    }, [isDragging, isHeightDragging, leftWidth, panelHeight]);
+    }, [isDragging, isHeightDragging, isEventsHeightDragging, isTrendsHeightDragging, isBriefingHeightDragging, isGithubHeightDragging, isStatsHeightDragging, leftWidth, panelHeight]);
 
     useEffect(() => {
         const timer = setInterval(() => setTime(new Date()), 1000);
@@ -629,38 +741,40 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
     };
 
     return (
-        <div className="p-10 space-y-10 h-full overflow-y-auto custom-scrollbar">
+        <div className="p-4 md:p-10 space-y-6 md:space-y-10 h-full overflow-y-auto custom-scrollbar">
             {/* Header Section */}
-            <div className="flex justify-between items-end">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
                 <div>
                     <motion.h1
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="text-5xl font-bold text-gray-800 dark:text-gray-100 mb-3 tracking-tight"
+                        className="text-3xl md:text-5xl font-bold text-gray-800 dark:text-gray-100 mb-2 md:mb-3 tracking-tight"
                     >
                         {getGreeting()}
                     </motion.h1>
-                    <p className="text-gray-500 dark:text-gray-400 text-lg">Here's your daily overview.</p>
+                    <p className="text-gray-500 dark:text-gray-400 text-base md:text-lg">Here's your daily overview.</p>
                 </div>
-                <div className="text-right">
-                    <h2 className="text-6xl font-bold text-gray-900 dark:text-gray-100 tracking-tighter">
+                <div className="text-left md:text-right">
+                    <h2 className="text-4xl md:text-6xl font-bold text-gray-900 dark:text-gray-100 tracking-tighter">
                         {format(time, 'h:mm a')}
                     </h2>
-                    <p className="text-gray-500 dark:text-gray-400 font-medium mt-2 text-lg">
+                    <p className="text-gray-500 dark:text-gray-400 font-medium mt-1 md:mt-2 text-base md:text-lg">
                         {format(time, 'EEEE, MMMM do')}
                     </p>
                 </div>
             </div>
 
             {/* Overview Section: Event Summary */}
-            <div className="grid grid-cols-1 gap-8">
+            <div className="grid grid-cols-1 gap-6 md:gap-8">
                 <motion.div
+                    ref={briefingRef}
+                    style={{ height: isMobile && briefingHeight ? `${briefingHeight}px` : 'auto' }}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3 }}
-                    className="p-8 rounded-[2rem] bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50"
+                    className="p-6 md:p-8 rounded-[2rem] bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50 relative flex flex-col overflow-hidden"
                 >
-                    <div className="flex items-center gap-4 mb-6">
+                    <div className="flex items-center gap-4 mb-6 flex-shrink-0">
                         <div className="p-4 rounded-2xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400">
                             <ListTodo className="w-7 h-7" />
                         </div>
@@ -669,7 +783,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                             <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Your Briefing</h3>
                         </div>
                     </div>
-                    <div className="p-6 rounded-2xl bg-gradient-to-br from-indigo-50 to-white dark:from-gray-800 dark:to-gray-900 border border-indigo-100 dark:border-gray-700 min-h-[100px] flex items-center">
+                    <div className="p-6 rounded-2xl bg-gradient-to-br from-indigo-50 to-white dark:from-gray-800 dark:to-gray-900 border border-indigo-100 dark:border-gray-700 min-h-[100px] flex items-center flex-1 overflow-y-auto custom-scrollbar">
                         <AnimatePresence mode="wait">
                             {isBriefingLoading ? (
                                 <motion.div 
@@ -702,14 +816,27 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                             )}
                         </AnimatePresence>
                     </div>
+
+                    {/* Mobile Resize Handle for Briefing */}
+                    {isMobile && (
+                        <div
+                            className="absolute bottom-0 left-0 right-0 h-4 flex items-center justify-center cursor-row-resize hover:bg-indigo-50/50 dark:hover:bg-indigo-700/50 rounded-b-[2rem] transition-colors group/handle"
+                            onMouseDown={handleBriefingHeightMouseDown}
+                        >
+                            <div className="w-12 h-1 bg-indigo-200 dark:bg-indigo-600 rounded-full group-hover/handle:bg-indigo-400 transition-colors shadow-sm" />
+                        </div>
+                    )}
                 </motion.div>
             </div>
 
             {/* Quick Stats Grid - Resizable */}
-            <div ref={containerRef} style={{ height: `${panelHeight}px` }} className="flex flex-col md:flex-row select-none">
+            <div ref={containerRef} style={{ height: isMobile ? 'auto' : `${panelHeight}px` }} className={clsx("flex select-none", isMobile ? "flex-col gap-6" : "flex-row gap-0")}>
                 {/* Upcoming Events - Resizable Left Column */}
                 <motion.div
-                    style={{ width: `${leftWidth}%` }}
+                    style={{ 
+                        width: isMobile ? '100%' : `${leftWidth}%`,
+                        height: isMobile ? `${eventsHeight}px` : '100%'
+                    }}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 }}
@@ -718,16 +845,16 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                         scale: 1.02,
                         boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15)'
                     }}
-                    className="p-8 rounded-[2rem] bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50 flex flex-col h-full relative group transition-colors"
+                    className="p-6 md:p-8 rounded-[2rem] bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50 flex flex-col h-full relative group transition-colors"
                 >
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-4">
-                            <div className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-900/30" style={{ color: 'var(--accent-primary)' }}>
-                                <CalendarIcon className="w-7 h-7" />
+                            <div className="p-3 md:p-4 rounded-2xl bg-blue-50 dark:bg-blue-900/30" style={{ color: 'var(--accent-primary)' }}>
+                                <CalendarIcon className="w-6 h-6 md:w-7 md:h-7" />
                             </div>
                             <div>
-                                <p className="text-sm font-medium text-gray-400 dark:text-gray-300 uppercase tracking-wider">Events</p>
-                                <h3 className="text-3xl font-bold text-gray-800 dark:text-gray-100">{upcomingEvents.length} Total</h3>
+                                <p className="text-xs md:text-sm font-medium text-gray-400 dark:text-gray-300 uppercase tracking-wider">Events</p>
+                                <h3 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100">{upcomingEvents.length} Total</h3>
                             </div>
                         </div>
                         <button
@@ -739,11 +866,11 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                         </button>
                     </div>
 
-                    <div className="flex gap-2 mb-4">
+                    <div className="flex flex-wrap gap-2 mb-4">
                         <button
                             onClick={() => setEventTab('upcoming')}
                             className={clsx(
-                                "flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-all",
+                                "flex-1 min-w-[80px] px-3 py-2 rounded-lg text-xs font-medium transition-all",
                                 eventTab === 'upcoming'
                                     ? "bg-white dark:bg-gray-700 shadow-md"
                                     : "bg-gray-50 dark:bg-gray-800 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -755,7 +882,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                         <button
                             onClick={() => setEventTab('completed')}
                             className={clsx(
-                                "flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-all",
+                                "flex-1 min-w-[80px] px-3 py-2 rounded-lg text-xs font-medium transition-all",
                                 eventTab === 'completed'
                                     ? "bg-white dark:bg-gray-700 shadow-md"
                                     : "bg-gray-50 dark:bg-gray-800 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -767,7 +894,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                         <button
                             onClick={() => setEventTab('notCompleted')}
                             className={clsx(
-                                "flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-all",
+                                "flex-1 min-w-[80px] px-3 py-2 rounded-lg text-xs font-medium transition-all",
                                 eventTab === 'notCompleted'
                                     ? "bg-white dark:bg-gray-700 shadow-md"
                                     : "bg-gray-50 dark:bg-gray-800 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -778,7 +905,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                         </button>
                     </div>
 
-                    <div className="flex gap-2 mb-4">
+                    <div className="flex flex-col sm:flex-row gap-2 mb-4">
                         <div className="relative flex-1">
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                             <input 
@@ -794,7 +921,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                             <select
                                 value={filterImportance}
                                 onChange={(e) => setFilterImportance(e.target.value)}
-                                className="pl-9 pr-8 py-2 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 appearance-none cursor-pointer text-gray-800 dark:text-gray-200"
+                                className="w-full sm:w-auto pl-9 pr-8 py-2 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 appearance-none cursor-pointer text-gray-800 dark:text-gray-200"
                             >
                                 <option value="all">All</option>
                                 <option value="high">High</option>
@@ -911,6 +1038,16 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                             </AnimatePresence>
                         )}
                     </div>
+
+                    {/* Mobile Resize Handle for Events */}
+                    {isMobile && (
+                        <div
+                            className="absolute bottom-0 left-0 right-0 h-4 flex items-center justify-center cursor-row-resize hover:bg-gray-50/50 dark:hover:bg-gray-700/50 rounded-b-[2rem] transition-colors group/handle"
+                            onMouseDown={handleEventsHeightMouseDown}
+                        >
+                            <div className="w-12 h-1 bg-gray-200 dark:bg-gray-600 rounded-full group-hover/handle:bg-blue-400 transition-colors shadow-sm" />
+                        </div>
+                    )}
                 </motion.div>
 
                 {/* Resizable Handle */}
@@ -923,7 +1060,10 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
 
                 {/* Weekly Trends Graph - Resizable Right Column */}
                 <motion.div
-                    style={{ width: `calc(${100 - leftWidth}% - 1.5rem)` }}
+                    style={{ 
+                        width: isMobile ? '100%' : `calc(${100 - leftWidth}% - 1.5rem)`,
+                        height: isMobile ? `${trendsHeight}px` : '100%'
+                    }}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.2 }}
@@ -932,7 +1072,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                         scale: 1.02,
                         boxShadow: '0 20px 60px rgba(147, 51, 234, 0.2)'
                     }}
-                    className="p-8 rounded-[2rem] bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border border-purple-100 dark:border-purple-800 shadow-xl flex flex-col h-full transition-colors"
+                    className="p-8 rounded-[2rem] bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border border-purple-100 dark:border-purple-800 shadow-xl flex flex-col h-full transition-colors relative"
                 >
                     <div className="flex items-center gap-4 mb-6">
                         <div className="p-4 rounded-2xl bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400">
@@ -958,32 +1098,46 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                             <TaskTrendChart notes={notes} />
                         )}
                     </div>
+
+                    {/* Mobile Resize Handle for Trends */}
+                    {isMobile && (
+                        <div
+                            className="absolute bottom-0 left-0 right-0 h-4 flex items-center justify-center cursor-row-resize hover:bg-purple-50/50 dark:hover:bg-purple-700/50 rounded-b-[2rem] transition-colors group/handle"
+                            onMouseDown={handleTrendsHeightMouseDown}
+                        >
+                            <div className="w-12 h-1 bg-purple-200 dark:bg-purple-600 rounded-full group-hover/handle:bg-purple-400 transition-colors shadow-sm" />
+                        </div>
+                    )}
                 </motion.div>
             </div>
 
-            {/* Height Resize Handle */}
-            <div
-                className="flex items-center justify-center h-3 cursor-row-resize hover:bg-gray-50/50 dark:hover:bg-gray-700/50 rounded-full transition-colors group"
-                onMouseDown={handleHeightMouseDown}
-                style={{ marginTop: '0.25rem', marginBottom: '0.25rem' }}
-            >
-                <div 
-                    className="w-12 h-1 bg-gray-200 dark:bg-gray-600 rounded-full transition-colors shadow-sm" 
-                    style={{ 
-                        backgroundColor: isHeightDragging ? 'var(--accent-primary)' : undefined 
-                    }}
-                />
-            </div>
+            {/* Height Resize Handle (Desktop Only) */}
+            {!isMobile && (
+                <div
+                    className="flex items-center justify-center h-3 cursor-row-resize hover:bg-gray-50/50 dark:hover:bg-gray-700/50 rounded-full transition-colors group"
+                    onMouseDown={handleHeightMouseDown}
+                    style={{ marginTop: '0.25rem', marginBottom: '0.25rem' }}
+                >
+                    <div 
+                        className="w-12 h-1 bg-gray-200 dark:bg-gray-600 rounded-full transition-colors shadow-sm" 
+                        style={{ 
+                            backgroundColor: isHeightDragging ? 'var(--accent-primary)' : undefined 
+                        }}
+                    />
+                </div>
+            )}
 
             {/* Github Contributions Graph */}
             {enabledFeatures.github && (
             <motion.div
+                ref={githubCardRef}
+                style={{ height: isMobile && githubHeight ? `${githubHeight}px` : 'auto' }}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.22 }}
-                className="p-8 rounded-[2rem] bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50"
+                className="p-8 rounded-[2rem] bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50 relative flex flex-col overflow-hidden"
             >
-                <div className="flex items-center gap-4 mb-6">
+                <div className="flex items-center gap-4 mb-6 flex-shrink-0">
                     <div className="p-4 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
                     </div>
@@ -994,7 +1148,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                 </div>
                 <div 
                     ref={githubContributionsRef}
-                    className="overflow-x-auto overflow-y-hidden rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 min-h-[156px] thin-scrollbar"
+                    className="overflow-x-auto overflow-y-hidden rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 min-h-[156px] thin-scrollbar flex-shrink-0"
                     style={{ 
                         WebkitOverflowScrolling: 'touch'
                     }}
@@ -1062,12 +1216,24 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                         </div>
                     </div>
                 )}
+
+                {/* Mobile Resize Handle for Github */}
+                {isMobile && (
+                    <div
+                        className="absolute bottom-0 left-0 right-0 h-4 flex items-center justify-center cursor-row-resize hover:bg-gray-50/50 dark:hover:bg-gray-700/50 rounded-b-[2rem] transition-colors group/handle"
+                        onMouseDown={handleGithubHeightMouseDown}
+                    >
+                        <div className="w-12 h-1 bg-gray-200 dark:bg-gray-600 rounded-full group-hover/handle:bg-gray-400 transition-colors shadow-sm" />
+                    </div>
+                )}
             </motion.div>
             )}
 
             {/* Fortnite Creator Stats - Full Width Below */}
             {enabledFeatures.stats && creatorCodes.length > 0 && (
             <motion.div
+                ref={statsRef}
+                style={{ height: isMobile && statsHeight ? `${statsHeight}px` : 'auto' }}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.25 }}
@@ -1154,6 +1320,16 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                         </div>
                     </div>
                 </div>
+
+                {/* Mobile Resize Handle for Stats */}
+                {isMobile && (
+                    <div
+                        className="absolute bottom-0 left-0 right-0 h-4 flex items-center justify-center cursor-row-resize hover:bg-purple-50/50 dark:hover:bg-purple-700/50 rounded-b-[2rem] transition-colors group/handle z-20"
+                        onMouseDown={handleStatsHeightMouseDown}
+                    >
+                        <div className="w-12 h-1 bg-purple-200 dark:bg-purple-600 rounded-full group-hover/handle:bg-purple-400 transition-colors shadow-sm" />
+                    </div>
+                )}
             </motion.div>
             )}
 

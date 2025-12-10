@@ -3,9 +3,22 @@ import { motion } from 'framer-motion';
 import { Trophy, Users, TrendingUp, Calendar } from 'lucide-react';
 import { processStatsData, StatsData as HistoricalStatsData } from '../utils/statsManager';
 import TrendChart from '../components/TrendChart';
+import clsx from 'clsx';
 
-export function StatsPage() {
+export function StatsPage({ isSidebarCollapsed = false }: { isSidebarCollapsed?: boolean }) {
     const [historicalStats, setHistoricalStats] = useState<HistoricalStatsData | null>(null);
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const checkMobile = () => {
+            const sidebarWidth = isSidebarCollapsed ? 0 : 240;
+            const availableWidth = window.innerWidth - sidebarWidth;
+            setIsMobile(availableWidth < 900);
+        };
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, [isSidebarCollapsed]);
 
     useEffect(() => {
         const hData = processStatsData();
@@ -22,7 +35,7 @@ export function StatsPage() {
             </div>
 
             {/* Baseline Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className={clsx("grid gap-6", isMobile ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2 lg:grid-cols-4")}>
                 <motion.div 
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}

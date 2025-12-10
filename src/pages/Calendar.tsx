@@ -27,10 +27,22 @@ interface CalendarPageProps {
     setCurrentMonth: (date: Date) => void;
 }
 
-export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMonth, setCurrentMonth }: Omit<CalendarPageProps, 'initialSelectedNoteId'>) {
+export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMonth, setCurrentMonth, isSidebarCollapsed = false }: Omit<CalendarPageProps, 'initialSelectedNoteId'> & { isSidebarCollapsed?: boolean }) {
     const [selectedDate, setSelectedDate] = useState<Date | null>(initialSelectedDate || null);
     const [direction, setDirection] = useState(0);
     const [isPanelOpen, setIsPanelOpen] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const checkMobile = () => {
+            const sidebarWidth = isSidebarCollapsed ? 0 : 240;
+            const availableWidth = window.innerWidth - sidebarWidth;
+            setIsMobile(availableWidth < 1000);
+        };
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, [isSidebarCollapsed]);
 
     // Form State
     const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
@@ -288,33 +300,33 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
     };
 
     return (
-        <div className="h-full flex gap-6 p-8 overflow-hidden relative">
+        <div className={clsx("h-full flex gap-4 md:gap-6 p-4 md:p-8 overflow-hidden relative", isMobile ? "flex-col" : "flex-col md:flex-row")}>
             <motion.div layout className="flex-1 flex flex-col h-full min-w-0">
-                <div className="flex items-center justify-between mb-8">
-                    <div className="flex items-center gap-8">
+                <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between mb-4 md:mb-8 gap-4">
+                    <div className="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-8 w-full xl:w-auto">
                         <div>
-                            <h2 className="text-3xl font-bold text-gray-800 dark:text-gray-100">
+                            <h2 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100">
                                 {format(currentMonth, 'MMMM')} <span className="text-gray-400 dark:text-gray-500">{format(currentMonth, 'yyyy')}</span>
                             </h2>
-                            <p className="text-gray-500 dark:text-gray-400">Manage your events and notes</p>
+                            <p className="text-sm md:text-base text-gray-500 dark:text-gray-400">Manage your events and notes</p>
                         </div>
 
-                        <div className="flex items-center gap-3 bg-white dark:bg-gray-800 p-1.5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-                            <div className="relative">
+                        <div className="flex flex-col sm:flex-row items-center gap-3 bg-white dark:bg-gray-800 p-1.5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 w-full md:w-auto">
+                            <div className="relative w-full sm:w-auto">
                                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                                 <input
                                     type="text"
                                     placeholder="Search events..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="pl-9 pr-4 py-1.5 text-sm bg-transparent border-none focus:ring-0 w-48 text-gray-700 dark:text-gray-200 placeholder-gray-400"
+                                    className="pl-9 pr-4 py-1.5 text-sm bg-transparent border-none focus:ring-0 w-full sm:w-48 text-gray-700 dark:text-gray-200 placeholder-gray-400"
                                 />
                             </div>
-                            <div className="h-4 w-px bg-gray-200 dark:bg-gray-700" />
+                            <div className="h-px w-full sm:h-4 sm:w-px bg-gray-200 dark:bg-gray-700" />
                             <select
                                 value={filterImportance}
                                 onChange={(e) => setFilterImportance(e.target.value as any)}
-                                className="text-sm bg-transparent border-none focus:ring-0 text-gray-600 dark:text-gray-300 py-1.5 pr-8 cursor-pointer"
+                                className="w-full sm:w-auto text-sm bg-transparent border-none focus:ring-0 text-gray-600 dark:text-gray-300 py-1.5 pr-8 cursor-pointer"
                             >
                                 <option value="all">All Priority</option>
                                 <option value="high">High</option>
@@ -325,7 +337,7 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2 bg-white dark:bg-gray-800 p-1.5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+                    <div className="flex items-center gap-2 bg-white dark:bg-gray-800 p-1.5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 self-end xl:self-auto">
                         <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={prevMonth} className="p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl transition-colors text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">
                             <ChevronLeft className="w-5 h-5" />
                         </motion.button>
@@ -425,7 +437,7 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
                         initial={{ x: 300, opacity: 0 }}
                         animate={{ x: 0, opacity: 1 }}
                         exit={{ x: 300, opacity: 0 }}
-                        className="w-96 shrink-0 bg-white/80 dark:bg-gray-900/90 backdrop-blur-xl rounded-[2rem] border border-white/60 dark:border-gray-700/60 shadow-2xl p-6 flex flex-col h-full"
+                        className="w-full md:w-96 shrink-0 bg-white/80 dark:bg-gray-900/90 backdrop-blur-xl rounded-[2rem] border border-white/60 dark:border-gray-700/60 shadow-2xl p-6 flex flex-col h-full absolute md:relative z-20 md:z-0"
                     >
                         <div className="flex justify-between items-center mb-6">
                             <div>

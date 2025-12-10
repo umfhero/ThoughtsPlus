@@ -1,27 +1,42 @@
 {
   "roadmap": [
     {
-      "task": "Auto Update",
+      "task": "Auto Update (will be replaced in future with microsoft store distribution)",
       "status": "completed",
       "plannedRelease": "11 Dec 2025 (v5.0.0)"
     },
     {
-      "task": "Task Completion Analytics",
+      "task": "Scaling CalendarPlus down in scale now formats proeprly on smaller screens (smoothly)",
       "status": "completed",
       "plannedRelease": "11 Dec 2025 (v5.0.0)"
     },
     {
-      "task": "Enhanced Data Visualization",
+      "task": "Added manual height Scaling to each widget (drag to resize)",
       "status": "completed",
       "plannedRelease": "11 Dec 2025 (v5.0.0)"
     },
     {
-      "task": "Global Keyboard Shortcuts",
+      "task": "Refined AI Briefing to be more relevant when refering to events, instead of saying focus on x then y, will now pull from descriptions and specify formatting (e.g., welldone for x, remember to bring y, almost finished with z)",
       "status": "completed",
       "plannedRelease": "11 Dec 2025 (v5.0.0)"
     },
     {
-      "task": "Dynamic AI Briefing (Completed/Missed Tasks)",
+      "task": "Task Completion Analytics (interactive stock grapghs showing completion rates over time)",
+      "status": "completed",
+      "plannedRelease": "11 Dec 2025 (v5.0.0)"
+    },
+    {
+      "task": "Enhanced Data Visualization with Charts (e.g., more options for event categories)",
+      "status": "completed",
+      "plannedRelease": "11 Dec 2025 (v5.0.0)"
+    },
+    {
+      "task": "Global Keyboard Shortcuts (Ctrl+c, Ctrl+v and Ctrl+a now all work in app)",
+      "status": "completed",
+      "plannedRelease": "11 Dec 2025 (v5.0.0)"
+    },
+    {
+      "task": "Dynamic AI Briefing (will now change based on toggled state of Completed/Missed Tasks)",
       "status": "completed",
       "plannedRelease": "11 Dec 2025 (v5.0.0)"
     },
@@ -72,6 +87,16 @@
     },
     {
       "task": "Settings Management (Notification Toggle, Export/Import, Factory Reset)",
+      "status": "planned",
+      "plannedRelease": "Pending (No Deadline)"
+    },
+    {
+      "task": "AI tone settings for briefing (e.g., formal, casual)",
+      "status": "planned",
+      "plannedRelease": "Pending (No Deadline)"
+    },
+    {
+      "task": "Sleep predictor to show you when youd wake up based on sleep cycles (slider based on calendar)",
       "status": "planned",
       "plannedRelease": "Pending (No Deadline)"
     }

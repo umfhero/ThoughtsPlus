@@ -198,6 +198,19 @@ CalendarPlus/
 
 ## 9. Planned Roadmap
 
+- **Implementation:** Integrated `electron-updater` for seamless one-click updates.
+- **Features:**
+
+### 4.5. Responsive Design & Mobile Experience (v5.1.0)
+
+- **Smart Layout Engine:**
+  - Dynamically detects "mobile" state based on available viewport width (accounting for sidebar toggle).
+  - Switches to a stacked layout when width < 900px.
+- **Adaptive Dashboard:**
+  - **Independent Resizing:** In mobile/stacked view, each container (Events, Trends, Briefing, GitHub, Stats) has its own independent height state.
+  - **Touch-Friendly Controls:** Replaced global sliders with individual "drag handles" at the bottom of each card for intuitive resizing on smaller screens.
+  - **Layout Fixes:** Optimized flexbox layouts for Briefing and GitHub cards to handle overflow and resizing gracefully without UI breakage.
+
 ### Data Persistence & Sync (Migration to v2)
 
 The application is transitioning from a local-only JSON architecture to a cloud-hybrid model to support multi-device syncing and mobile access.

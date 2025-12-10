@@ -64,6 +64,19 @@ function App() {
     const activeNotes = isMockMode ? mockNotesState : notes;
     const activeUserName = isMockMode ? "David Smith" : userName;
 
+    // Auto-collapse sidebar on mobile
+    useEffect(() => {
+        const handleResize = () => {
+            if (window.innerWidth < 768) {
+                setIsSidebarCollapsed(true);
+            }
+        };
+
+        handleResize(); // Initial check
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
     useEffect(() => {
         checkFirstRun();
         loadNotes();
@@ -352,6 +365,7 @@ function App() {
                                     onUpdateNote={handleUpdateNote}
                                     onOpenAiModal={() => setIsAiModalOpen(true)}
                                     isLoading={isLoading}
+                                    isSidebarCollapsed={isSidebarCollapsed}
                                 />
                             )}
                             {currentPage === 'calendar' && (
@@ -361,12 +375,13 @@ function App() {
                                     initialSelectedDate={selectedDate}
                                     currentMonth={currentMonth}
                                     setCurrentMonth={setCurrentMonth}
+                                    isSidebarCollapsed={isSidebarCollapsed}
                                 />
                             )}
-                            {currentPage === 'stats' && <StatsPage />}
+                            {currentPage === 'stats' && <StatsPage isSidebarCollapsed={isSidebarCollapsed} />}
                             {currentPage === 'drawing' && <DrawingPage />}
-                            {currentPage === 'github' && <GithubPage isMockMode={isMockMode} />}
-                            {currentPage === 'settings' && <SettingsPage />}
+                            {currentPage === 'github' && <GithubPage isMockMode={isMockMode} isSidebarCollapsed={isSidebarCollapsed} />}
+                            {currentPage === 'settings' && <SettingsPage isSidebarCollapsed={isSidebarCollapsed} />}
                             {currentPage === 'dev' && (
                                 <DevPage 
                                     isMockMode={isMockMode} 

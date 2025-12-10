@@ -763,7 +763,7 @@ export function DrawingPage({ refreshTrigger }: { refreshTrigger?: number }) {
                 onMouseLeave={() => setIsHoveringCanvas(false)}>
 
                 {/* Header Overlay */}
-                <div className="absolute top-4 left-6 z-10 flex items-center gap-3 select-none">
+                <div className="absolute top-4 left-6 z-10 flex flex-col sm:flex-row items-start sm:items-center gap-3 select-none">
                     <div className="relative">
                         <button onClick={() => setTabEmojiPickerOpenFor(tabEmojiPickerOpenFor === 'header' ? null : 'header')}
                             className="text-4xl hover:scale-110 transition-transform">
@@ -780,7 +780,7 @@ export function DrawingPage({ refreshTrigger }: { refreshTrigger?: number }) {
                     <div className="flex flex-col">
                         <input value={activeTab.name}
                             onChange={(e) => updateTabProperty(activeTabId, 'name', e.target.value)}
-                            className="text-3xl font-bold bg-transparent border-none focus:outline-none focus:ring-0 p-0 text-gray-800 dark:text-gray-100 placeholder-white/20 w-80"
+                            className="text-2xl sm:text-3xl font-bold bg-transparent border-none focus:outline-none focus:ring-0 p-0 text-gray-800 dark:text-gray-100 placeholder-white/20 w-full sm:w-80"
                             placeholder="Untitled"
                         />
                         <div className="text-xs text-gray-400 mt-1 flex items-center gap-2">
@@ -814,21 +814,21 @@ export function DrawingPage({ refreshTrigger }: { refreshTrigger?: number }) {
                 ))}
 
                 {/* Toolbar - Top Right */}
-                <div className="absolute top-6 right-6 flex items-center gap-2 bg-white dark:bg-gray-800 p-2 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 z-50">
-                    <div className="w-8 h-8 rounded-full border border-gray-200 overflow-hidden relative cursor-pointer" style={{ backgroundColor: color }}>
+                <div className="absolute top-6 right-4 sm:right-6 flex flex-wrap items-center gap-2 bg-white dark:bg-gray-800 p-2 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 z-50 max-w-[calc(100%-2rem)] sm:max-w-none justify-end">
+                    <div className="w-8 h-8 rounded-full border border-gray-200 overflow-hidden relative cursor-pointer shrink-0" style={{ backgroundColor: color }}>
                         <input type="color" value={color} onChange={e => setColor(e.target.value)} className="absolute inset-0 opacity-0 cursor-pointer" />
                     </div>
-                    <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
-                    <input type="range" min="1" max="50" value={brushSize} onChange={e => setBrushSize(parseInt(e.target.value))} className="w-20 accent-blue-500 h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer" />
-                    <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
-                    <button onClick={() => setTextMode(!textMode)} className={clsx("p-2 rounded-xl", textMode ? "bg-blue-100 text-blue-600" : "hover:bg-gray-100 text-gray-500")}><Type className="w-5 h-5" /></button>
-                    <button onClick={undo} className="p-2 rounded-xl hover:bg-gray-100 text-gray-500"><Undo className="w-5 h-5" /></button>
-                    <button onClick={redo} className="p-2 rounded-xl hover:bg-gray-100 text-gray-500"><Redo className="w-5 h-5" /></button>
-                    <button onClick={() => deleteAction()} className={clsx("p-2 rounded-xl hover:bg-red-50 text-red-500")}>
+                    <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1 hidden sm:block" />
+                    <input type="range" min="1" max="50" value={brushSize} onChange={e => setBrushSize(parseInt(e.target.value))} className="w-20 accent-blue-500 h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer shrink-0" />
+                    <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1 hidden sm:block" />
+                    <button onClick={() => setTextMode(!textMode)} className={clsx("p-2 rounded-xl shrink-0", textMode ? "bg-blue-100 text-blue-600" : "hover:bg-gray-100 text-gray-500")}><Type className="w-5 h-5" /></button>
+                    <button onClick={undo} className="p-2 rounded-xl hover:bg-gray-100 text-gray-500 shrink-0"><Undo className="w-5 h-5" /></button>
+                    <button onClick={redo} className="p-2 rounded-xl hover:bg-gray-100 text-gray-500 shrink-0"><Redo className="w-5 h-5" /></button>
+                    <button onClick={() => deleteAction()} className={clsx("p-2 rounded-xl hover:bg-red-50 text-red-500 shrink-0")}>
                         <Trash2 className="w-5 h-5" />
                     </button>
-                    <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
-                    <button onClick={() => setShowTabsPanel(!showTabsPanel)} className={clsx("p-2 rounded-xl text-gray-500 hover:bg-gray-100", showTabsPanel && "text-blue-600 bg-blue-50")}>
+                    <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1 hidden sm:block" />
+                    <button onClick={() => setShowTabsPanel(!showTabsPanel)} className={clsx("p-2 rounded-xl text-gray-500 hover:bg-gray-100 shrink-0", showTabsPanel && "text-blue-600 bg-blue-50")}>
                         <Layers className="w-5 h-5" />
                     </button>
                 </div>
@@ -838,7 +838,7 @@ export function DrawingPage({ refreshTrigger }: { refreshTrigger?: number }) {
             <AnimatePresence>
                 {showTabsPanel && (
                     <motion.div initial={{ x: 300, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 300, opacity: 0 }}
-                        className="absolute top-20 right-6 bottom-20 w-80 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 z-[120] flex flex-col overflow-hidden">
+                        className="absolute top-20 right-4 sm:right-6 bottom-20 w-full sm:w-80 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 z-[120] flex flex-col overflow-hidden max-w-[calc(100%-2rem)]">
                         <div className="p-4 border-b dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900/50">
                             <span className="font-bold text-gray-700 dark:text-gray-200">Drawings</span>
                             <div className="flex gap-1">
