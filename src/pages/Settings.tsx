@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import clsx from 'clsx';
 import { useTheme } from '../contexts/ThemeContext';
 import { useNotification } from '../contexts/NotificationContext';
+import { formatICSDate } from '../utils/icsHelper';
 
 interface SettingsPageProps {
     isSidebarCollapsed?: boolean;
@@ -1429,7 +1430,7 @@ function ImportModal({
                             <div>
                                 <h4 className="font-bold text-gray-800 dark:text-gray-100">{evt.summary || 'Untitled Event'}</h4>
                                 <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                                    {evt.start ? evt.start.replace('T', ' ').replace('Z', '') : 'No Date'}
+                                    {evt.start ? formatICSDate(evt.start) : 'No Date'}
                                 </div>
                                 {evt.description && <p className="text-xs text-gray-400 mt-2 line-clamp-2">{evt.description}</p>}
                             </div>

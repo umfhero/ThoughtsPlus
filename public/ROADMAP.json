@@ -62,8 +62,8 @@
     },
     {
       "task": "Advanced Appearance Settings (Custom Fonts, Extended Accent Colors)",
-      "status": "planned",
-      "plannedRelease": "Pending (No Deadline)"
+      "status": "completed",
+      "plannedRelease": "11 Dec 2025 (v5.0.0)"
     },
     {
       "task": "Dashboard Edit Mode (Rearrange & Add Widgets)",
@@ -82,11 +82,6 @@
     },
     {
       "task": "AI Quick Note with Recurring Options",
-      "status": "planned",
-      "plannedRelease": "Pending (No Deadline)"
-    },
-    {
-      "task": "Settings Management (Notification Toggle, Export/Import, Factory Reset)",
       "status": "planned",
       "plannedRelease": "Pending (No Deadline)"
     },
