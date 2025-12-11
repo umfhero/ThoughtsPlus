@@ -67,8 +67,8 @@
     },
     {
       "task": "Dashboard Edit Mode (Rearrange & Add Widgets)",
-      "status": "planned",
-      "plannedRelease": "Pending (No Deadline)"
+      "status": "completed",
+      "plannedRelease": "11 Dec 2025 (v5.0.0)"
     },
     {
       "task": "Refactor API Logic (Robust AI Model Fallback)",
@@ -77,8 +77,8 @@
     },
     {
       "task": "Third-Party Calendar Imports (Selective Import)",
-      "status": "planned",
-      "plannedRelease": "Pending (No Deadline)"
+      "status": "completed",
+      "plannedRelease": "11 Dec 2025 (v5.0.0)"
     },
     {
       "task": "AI Quick Note with Recurring Options",

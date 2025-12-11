@@ -1,5 +1,5 @@
-import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar as CalendarIcon, ArrowUpRight, ListTodo, Loader, Circle, Search, Filter, Activity as ActivityIcon, CheckCircle2, Sparkles } from 'lucide-react';
+import { motion, AnimatePresence, Reorder } from 'framer-motion';
+import { Calendar as CalendarIcon, ArrowUpRight, ListTodo, Loader, Circle, Search, Filter, Activity as ActivityIcon, CheckCircle2, Sparkles, X, Plus, MousePointerClick } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { format, parseISO } from 'date-fns';
 import { NotesData, Note } from '../types';
@@ -53,6 +53,67 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
     const [blockSize, setBlockSize] = useState(12);
     const githubContributionsRef = useRef<HTMLDivElement>(null);
 
+    // Edit Mode State
+    const [isEditMode, setIsEditMode] = useState(false);
+    const [dashboardOrder, setDashboardOrder] = useState<string[]>(['briefing', 'main_content', 'github', 'fortnite']);
+    const [hiddenWidgets, setHiddenWidgets] = useState<string[]>([]);
+    const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+    const [showEditTip, setShowEditTip] = useState(false);
+
+    // Load saved dashboard order
+    useEffect(() => {
+        const savedOrder = localStorage.getItem('dashboard_order');
+        if (savedOrder) {
+            setDashboardOrder(JSON.parse(savedOrder));
+        }
+        const savedHidden = localStorage.getItem('dashboard_hidden_widgets');
+        if (savedHidden) {
+            setHiddenWidgets(JSON.parse(savedHidden));
+        }
+
+        // Check if edit tip has been shown
+        const tipShown = localStorage.getItem('dashboard_edit_tip_shown');
+        if (!tipShown) {
+            // Show tip after a short delay
+            setTimeout(() => setShowEditTip(true), 2000);
+        }
+    }, []);
+
+    // Save order on change
+    useEffect(() => {
+        localStorage.setItem('dashboard_order', JSON.stringify(dashboardOrder));
+    }, [dashboardOrder]);
+
+    useEffect(() => {
+        localStorage.setItem('dashboard_hidden_widgets', JSON.stringify(hiddenWidgets));
+    }, [hiddenWidgets]);
+
+    const handleLongPressStart = () => {
+        longPressTimer.current = setTimeout(() => {
+            setIsEditMode(true);
+            // Vibrate if available (mobile)
+            if (navigator.vibrate) navigator.vibrate(50);
+        }, 800); // 800ms for long press
+    };
+
+    const handleLongPressEnd = () => {
+        if (longPressTimer.current) {
+            clearTimeout(longPressTimer.current);
+        }
+    };
+
+    const toggleWidgetVisibility = (widgetId: string) => {
+        if (hiddenWidgets.includes(widgetId)) {
+            // Unhide: Remove from hidden, add to order
+            setHiddenWidgets(prev => prev.filter(id => id !== widgetId));
+            setDashboardOrder(prev => [...prev, widgetId]);
+        } else {
+            // Hide: Remove from order, add to hidden
+            setDashboardOrder(prev => prev.filter(id => id !== widgetId));
+            setHiddenWidgets(prev => [...prev, widgetId]);
+        }
+    };
+
     // Completion Modal State
     const [completionModal, setCompletionModal] = useState<{
         isOpen: boolean;
@@ -60,6 +121,8 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
         dateKey: string;
         noteTitle: string;
     }>({ isOpen: false, noteId: '', dateKey: '', noteTitle: '' });
+
+
 
     useEffect(() => {
         const updateSize = () => {
@@ -787,6 +850,576 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
         });
     };
 
+    const renderWidget = (id: string) => {
+        switch (id) {
+            case 'briefing':
+                return (
+                    <motion.div
+                        ref={briefingRef}
+                        style={{ height: isMobile && briefingHeight ? `${briefingHeight}px` : 'auto' }}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.3 }}
+                        className="p-6 md:p-8 rounded-[2rem] bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50 relative flex flex-col overflow-hidden"
+                    >
+                        <div className="flex items-center gap-4 mb-6 flex-shrink-0">
+                            <div className="p-4 rounded-2xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400">
+                                <ListTodo className="w-7 h-7" />
+                            </div>
+                            <div>
+                                <p className="text-sm font-medium text-gray-400 uppercase tracking-wider">Overview</p>
+                                <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Your Briefing</h3>
+                            </div>
+                        </div>
+                        <div className="p-6 rounded-2xl bg-gradient-to-br from-indigo-50 to-white dark:from-gray-800 dark:to-gray-900 border border-indigo-100 dark:border-gray-700 min-h-[100px] flex items-center flex-1 overflow-y-auto custom-scrollbar">
+                            <AnimatePresence mode="wait">
+                                {isBriefingLoading ? (
+                                    <motion.div
+                                        key="loading"
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        exit={{ opacity: 0 }}
+                                        className="flex items-center gap-3 text-indigo-600 w-full"
+                                    >
+                                        <Loader className="w-5 h-5 animate-spin flex-shrink-0" />
+                                        <motion.p
+                                            key={loadingMessage}
+                                            initial={{ opacity: 0, y: 5 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: -5 }}
+                                            className="text-sm font-medium"
+                                        >
+                                            {loadingMessage}
+                                        </motion.p>
+                                    </motion.div>
+                                ) : (
+                                    <motion.p
+                                        key="content"
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        className="text-lg text-gray-700 dark:text-gray-300 leading-relaxed font-medium text-justify w-full"
+                                    >
+                                        {aiSummary ? renderFormattedText(aiSummary) : "Analyzing your schedule..."}
+                                    </motion.p>
+                                )}
+                            </AnimatePresence>
+                        </div>
+
+                        {/* Mobile Resize Handle for Briefing */}
+                        {isMobile && (
+                            <div
+                                className="absolute bottom-0 left-0 right-0 h-4 flex items-center justify-center cursor-row-resize hover:bg-indigo-50/50 dark:hover:bg-indigo-700/50 rounded-b-[2rem] transition-colors group/handle"
+                                onMouseDown={handleBriefingHeightMouseDown}
+                            >
+                                <div className="w-12 h-1 bg-indigo-200 dark:bg-indigo-600 rounded-full group-hover/handle:bg-indigo-400 transition-colors shadow-sm" />
+                            </div>
+                        )}
+                    </motion.div>
+                );
+            case 'main_content':
+                return (
+                    <>
+                        <div ref={containerRef} style={{ height: isMobile ? 'auto' : `${panelHeight}px` }} className={clsx("flex select-none", isMobile ? "flex-col gap-6" : "flex-row gap-0")}>
+                            {/* Upcoming Events - Resizable Left Column */}
+                            <motion.div
+                                style={{
+                                    width: isMobile ? '100%' : `${leftWidth}%`,
+                                    height: isMobile ? `${eventsHeight}px` : '100%'
+                                }}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.1 }}
+                                className="p-6 md:p-8 rounded-[2rem] bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 transition-colors flex flex-col h-full relative group shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50"
+                            >
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-4">
+                                        <div className="p-3 md:p-4 rounded-2xl" style={{ backgroundColor: `${accentColor}15`, color: accentColor }}>
+                                            <CalendarIcon className="w-6 h-6 md:w-7 md:h-7" />
+                                        </div>
+                                        <div>
+                                            <p className="text-xs md:text-sm font-medium text-gray-400 dark:text-gray-300 uppercase tracking-wider">Events</p>
+                                            <h3 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100">{upcomingEvents.length} Total</h3>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={onOpenAiModal}
+                                        className="p-3 rounded-xl bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 transition-colors group/btn"
+                                        title="AI Quick Note"
+                                    >
+                                        <Sparkles className="w-5 h-5 group-hover/btn:scale-110 transition-transform" />
+                                    </button>
+                                </div>
+
+                                <div className="flex flex-wrap gap-2 mb-4">
+                                    <button
+                                        onClick={() => setEventTab('upcoming')}
+                                        className={clsx(
+                                            "flex-1 min-w-[80px] px-3 py-2 rounded-lg text-xs font-medium transition-all",
+                                            eventTab === 'upcoming'
+                                                ? "bg-white dark:bg-gray-700 shadow-md"
+                                                : "bg-gray-50 dark:bg-gray-800 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                        )}
+                                        style={eventTab === 'upcoming' ? { color: 'var(--accent-primary)' } : undefined}
+                                    >
+                                        Upcoming ({upcomingEvents.filter(e => !e.isOverdue && !e.note.completed).length})
+                                    </button>
+                                    <button
+                                        onClick={() => setEventTab('completed')}
+                                        className={clsx(
+                                            "flex-1 min-w-[80px] px-3 py-2 rounded-lg text-xs font-medium transition-all",
+                                            eventTab === 'completed'
+                                                ? "bg-white dark:bg-gray-700 shadow-md"
+                                                : "bg-gray-50 dark:bg-gray-800 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                        )}
+                                        style={eventTab === 'completed' ? { color: 'var(--accent-primary)' } : undefined}
+                                    >
+                                        Completed ({upcomingEvents.filter(e => e.note.completed === true).length})
+                                    </button>
+                                    <button
+                                        onClick={() => setEventTab('notCompleted')}
+                                        className={clsx(
+                                            "flex-1 min-w-[80px] px-3 py-2 rounded-lg text-xs font-medium transition-all",
+                                            eventTab === 'notCompleted'
+                                                ? "bg-white dark:bg-gray-700 shadow-md"
+                                                : "bg-gray-50 dark:bg-gray-800 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                        )}
+                                        style={eventTab === 'notCompleted' ? { color: 'var(--accent-primary)' } : undefined}
+                                    >
+                                        Missed ({upcomingEvents.filter(e => e.isOverdue && !e.note.completed).length})
+                                    </button>
+                                </div>
+
+                                <div className="flex flex-col sm:flex-row gap-2 mb-4">
+                                    <div className="relative flex-1">
+                                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                        <input
+                                            type="text"
+                                            placeholder="Search events..."
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            className="w-full pl-9 pr-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-gray-800 dark:text-gray-200"
+                                        />
+                                    </div>
+                                    <div className="relative">
+                                        <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                        <select
+                                            value={filterImportance}
+                                            onChange={(e) => setFilterImportance(e.target.value)}
+                                            className="w-full sm:w-auto pl-9 pr-8 py-2 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 appearance-none cursor-pointer text-gray-800 dark:text-gray-200"
+                                        >
+                                            <option value="all">All</option>
+                                            <option value="high">High</option>
+                                            <option value="medium">Medium</option>
+                                            <option value="low">Low</option>
+                                            <option value="misc">Misc</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4 flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                                    {filteredEventsForTab.length === 0 ? (
+                                        <p className="text-gray-400 dark:text-gray-500 text-sm">
+                                            {eventTab === 'upcoming' ? 'No upcoming events.' : eventTab === 'completed' ? 'No completed events.' : 'No missed events.'}
+                                        </p>
+                                    ) : (
+                                        <AnimatePresence mode="popLayout">
+                                            {filteredEventsForTab.slice(0, 10).map(({ date, note, dateKey }) => (
+                                                <motion.div
+                                                    key={note.id}
+                                                    layout
+                                                    initial={{ opacity: 0, scale: 0.8, y: -10 }}
+                                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                                    exit={{ opacity: 0, scale: 0.8, x: 50 }}
+                                                    transition={{
+                                                        duration: 0.3,
+                                                        layout: { duration: 0.3 }
+                                                    }}
+                                                    whileHover={{ scale: 1.02 }}
+                                                    className={clsx(
+                                                        "p-3 rounded-xl border transition-colors",
+                                                        note.completed ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-900/50" : importanceColors[note.importance]
+                                                    )}
+                                                >
+                                                    <div className="flex items-start gap-3">
+                                                        {/* Completion Checkbox */}
+                                                        <motion.button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleToggleComplete(note.id, dateKey, note.completed || false);
+                                                            }}
+                                                            whileTap={{ scale: 0.8 }}
+                                                            className={clsx(
+                                                                "mt-0.5 flex-shrink-0 transition-all",
+                                                                note.completed
+                                                                    ? "text-green-500 hover:text-green-600"
+                                                                    : "text-gray-300 hover:text-gray-400 dark:text-gray-600 dark:hover:text-gray-500"
+                                                            )}
+                                                        >
+                                                            <motion.div
+                                                                initial={false}
+                                                                animate={note.completed ? { scale: [1, 1.3, 1], rotate: [0, 10, 0] } : { scale: 1 }}
+                                                                transition={{ duration: 0.3 }}
+                                                            >
+                                                                {note.completed ? (
+                                                                    <CheckCircle2 className="w-5 h-5" />
+                                                                ) : (
+                                                                    <Circle className="w-5 h-5" />
+                                                                )}
+                                                            </motion.div>
+                                                        </motion.button>
+
+                                                        <div
+                                                            className="flex-1 cursor-pointer"
+                                                            onClick={() => onNavigateToNote(date, note.id)}
+                                                        >
+                                                            <div className="flex justify-between items-start mb-1">
+                                                                <span className={clsx(
+                                                                    "font-bold text-sm",
+                                                                    note.completed && "line-through text-gray-500 dark:text-gray-400"
+                                                                )}>
+                                                                    {note.title}
+                                                                </span>
+                                                                <div className="text-right flex flex-col items-end gap-1">
+                                                                    <div className="text-xs opacity-70">{format(date, 'MMM d')} {convertTo12Hour(note.time)}</div>
+
+                                                                    {note.completed ? (
+                                                                        <button
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                handleToggleLate(note.id, dateKey, note.completedLate || false);
+                                                                            }}
+                                                                            className={clsx(
+                                                                                "text-[10px] font-semibold px-2 py-0.5 rounded-full transition-colors",
+                                                                                note.completedLate
+                                                                                    ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50"
+                                                                                    : "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50"
+                                                                            )}
+                                                                        >
+                                                                            {note.completedLate ? 'Late' : 'On Time'}
+                                                                        </button>
+                                                                    ) : (
+                                                                        <div className="text-[10px] opacity-60 font-semibold">
+                                                                            {getCountdown(date, note.time)}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex items-start gap-2 text-xs opacity-80">
+                                                                {!note.completed && (
+                                                                    <Circle className={clsx("w-2 h-2 mt-[3px] flex-shrink-0 fill-current", importanceIconColors[note.importance])} />
+                                                                )}
+                                                                <span className={clsx(
+                                                                    "break-words",
+                                                                    note.completed && "text-gray-500 dark:text-gray-400"
+                                                                )}>
+                                                                    {note.description || 'No description'}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </motion.div>
+                                            ))}
+                                        </AnimatePresence>
+                                    )}
+                                </div>
+
+                                {/* Mobile Resize Handle for Events */}
+                                {isMobile && (
+                                    <div
+                                        className="absolute bottom-0 left-0 right-0 h-4 flex items-center justify-center cursor-row-resize hover:bg-gray-50/50 dark:hover:bg-gray-700/50 rounded-b-[2rem] transition-colors group/handle"
+                                        onMouseDown={handleEventsHeightMouseDown}
+                                    >
+                                        <div className="w-12 h-1 bg-gray-200 dark:bg-gray-600 rounded-full group-hover/handle:bg-blue-400 transition-colors shadow-sm" />
+                                    </div>
+                                )}
+                            </motion.div>
+
+                            {/* Resizable Handle */}
+                            {!isMobile && (
+                                <div
+                                    className="hidden md:flex w-4 items-center justify-center cursor-col-resize hover:bg-gray-50/50 dark:hover:bg-gray-700/50 rounded-full transition-colors group mx-1"
+                                    onMouseDown={handleMouseDown}
+                                >
+                                    <div className="h-12 w-1 bg-gray-200 dark:bg-gray-600 rounded-full group-hover:bg-blue-400 transition-colors shadow-sm" />
+                                </div>
+                            )}
+
+                            {/* Weekly Trends Graph - Resizable Right Column */}
+                            {/* Weekly Trends Graph - Resizable Right Column */}
+                            <motion.div
+                                style={{
+                                    width: isMobile ? '100%' : `calc(${100 - leftWidth}% - 1.5rem)`,
+                                    height: isMobile ? `${trendsHeight}px` : '100%'
+                                }}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.2 }}
+                                className="p-8 rounded-[2rem] bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50 flex flex-col h-full transition-colors relative"
+                            >
+                                <div className="flex items-center gap-4 mb-6">
+                                    <div className="p-4 rounded-2xl" style={{ backgroundColor: `${accentColor}15`, color: accentColor }}>
+                                        <ArrowUpRight className="w-7 h-7" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-medium text-gray-400 dark:text-gray-300 uppercase tracking-wider">Task Trends</p>
+                                        <h3 className="text-2xl font-bold text-gray-800 dark:text-white">Completion Rate</h3>
+                                    </div>
+                                </div>
+
+                                {/* Task Completion Trend Graph */}
+                                <div className="flex-1 w-full min-h-0">
+                                    {Object.keys(notes).length === 0 ? (
+                                        <div className="h-full flex items-center justify-center bg-white/50 dark:bg-gray-700/50 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700">
+                                            <div className="text-center py-6 px-4">
+                                                <ArrowUpRight className="w-12 h-12 mb-3 mx-auto text-gray-300 dark:text-gray-600" />
+                                                <p className="text-sm font-medium text-gray-500 dark:text-gray-300 mb-2">No Tasks Yet</p>
+                                                <p className="text-xs text-gray-400 dark:text-gray-400">Add some events to see your completion trends</p>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <TaskTrendChart notes={notes} />
+                                    )}
+                                </div>
+
+                                {/* Mobile Resize Handle for Trends */}
+                                {isMobile && (
+                                    <div
+                                        className="absolute bottom-0 left-0 right-0 h-4 flex items-center justify-center cursor-row-resize rounded-b-[2rem] transition-colors group/handle"
+                                        style={{ backgroundColor: 'transparent' }} // Handled by hover state mostly, but cleaner to use classes
+                                        onMouseDown={handleTrendsHeightMouseDown}
+                                    >
+                                        <div className="w-12 h-1 rounded-full transition-colors shadow-sm" style={{ backgroundColor: `${accentColor}40` }} />
+                                    </div>
+                                )}
+                            </motion.div>
+                        </div>
+
+                        {/* Height Resize Handle (Desktop Only) */}
+                        {!isMobile && (
+                            <div
+                                className="flex items-center justify-center h-3 cursor-row-resize hover:bg-gray-50/50 dark:hover:bg-gray-700/50 rounded-full transition-colors group"
+                                onMouseDown={handleHeightMouseDown}
+                                style={{ marginTop: '0.25rem', marginBottom: '0.25rem' }}
+                            >
+                                <div
+                                    className="w-12 h-1 bg-gray-200 dark:bg-gray-600 rounded-full transition-colors shadow-sm"
+                                    style={{
+                                        backgroundColor: isHeightDragging ? 'var(--accent-primary)' : undefined
+                                    }}
+                                />
+                            </div>
+                        )}
+                    </>
+                );
+            case 'github':
+                if (!enabledFeatures.github) return null;
+                return (
+                    <motion.div
+                        ref={githubCardRef}
+                        style={{ height: isMobile && githubHeight ? `${githubHeight}px` : 'auto' }}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.22 }}
+                        className="p-8 rounded-[2rem] bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50 relative flex flex-col overflow-hidden"
+                    >
+                        <div className="flex items-center gap-4 mb-6 flex-shrink-0">
+                            <div className="p-4 rounded-2xl" style={{ backgroundColor: `${accentColor}15`, color: accentColor }}>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+                            </div>
+                            <div>
+                                <p className="text-sm font-medium text-gray-400 dark:text-gray-300 uppercase tracking-wider">Github Activity</p>
+                                <h3 className="text-2xl font-bold text-gray-800 dark:text-white">Contributions</h3>
+                            </div>
+                        </div>
+                        <div
+                            ref={githubContributionsRef}
+                            className="overflow-x-auto overflow-y-hidden rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 min-h-[156px] thin-scrollbar flex-shrink-0"
+                            style={{
+                                WebkitOverflowScrolling: 'touch'
+                            }}
+                        >
+                            {!githubUsername ? (
+                                <div className="flex flex-col items-center justify-center text-center py-6">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-12 h-12 text-gray-300 dark:text-gray-600 mb-3"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+                                    <p className="text-gray-500 dark:text-gray-400 text-sm mb-2">GitHub not configured</p>
+                                    <p className="text-xs text-gray-400 dark:text-gray-500">Add your GitHub username in Settings to view contributions</p>
+                                </div>
+                            ) : contributions.length > 0 ? (
+                                <div className="flex justify-center min-w-full px-4 pt-4 pb-2">
+                                    <ActivityCalendar
+                                        data={contributions}
+                                        colorScheme={theme}
+                                        theme={(() => {
+                                            const rgb = hexToRgb(accentColor);
+                                            if (!rgb) return undefined;
+                                            const { r, g, b } = rgb;
+                                            return {
+                                                light: ['#ebedf0', `rgba(${r}, ${g}, ${b}, 0.4)`, `rgba(${r}, ${g}, ${b}, 0.6)`, `rgba(${r}, ${g}, ${b}, 0.8)`, `rgba(${r}, ${g}, ${b}, 1)`],
+                                                dark: ['#161b22', `rgba(${r}, ${g}, ${b}, 0.4)`, `rgba(${r}, ${g}, ${b}, 0.6)`, `rgba(${r}, ${g}, ${b}, 0.8)`, `rgba(${r}, ${g}, ${b}, 1)`],
+                                            };
+                                        })()}
+                                        blockSize={blockSize}
+                                        blockMargin={4}
+                                        fontSize={12}
+                                        showWeekdayLabels
+                                    />
+                                </div>
+                            ) : (
+                                <div className="flex items-center justify-center text-gray-400 dark:text-gray-500">
+                                    <Loader className="w-6 h-6 animate-spin mr-2" />
+                                    <span>Loading contributions...</span>
+                                </div>
+                            )}
+                        </div>
+                        {contributions.length > 0 && githubUsername && (
+                            <div className="flex items-center justify-between mt-2 px-4">
+                                <span className="text-sm text-gray-600 dark:text-gray-400">
+                                    {contributions.reduce((sum, day) => sum + day.count, 0)} contributions in {new Date().getFullYear()}
+                                </span>
+                                <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                                    <span>Less</span>
+                                    <div className="flex gap-1">
+                                        {theme === 'dark' ? (
+                                            <>
+                                                <div className="w-3 h-3 rounded-sm bg-[#161b22]"></div>
+                                                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: `rgba(${hexToRgb(accentColor)?.r}, ${hexToRgb(accentColor)?.g}, ${hexToRgb(accentColor)?.b}, 0.4)` }}></div>
+                                                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: `rgba(${hexToRgb(accentColor)?.r}, ${hexToRgb(accentColor)?.g}, ${hexToRgb(accentColor)?.b}, 0.6)` }}></div>
+                                                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: `rgba(${hexToRgb(accentColor)?.r}, ${hexToRgb(accentColor)?.g}, ${hexToRgb(accentColor)?.b}, 0.8)` }}></div>
+                                                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: accentColor }}></div>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div className="w-3 h-3 rounded-sm bg-[#ebedf0]"></div>
+                                                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: `rgba(${hexToRgb(accentColor)?.r}, ${hexToRgb(accentColor)?.g}, ${hexToRgb(accentColor)?.b}, 0.4)` }}></div>
+                                                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: `rgba(${hexToRgb(accentColor)?.r}, ${hexToRgb(accentColor)?.g}, ${hexToRgb(accentColor)?.b}, 0.6)` }}></div>
+                                                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: `rgba(${hexToRgb(accentColor)?.r}, ${hexToRgb(accentColor)?.g}, ${hexToRgb(accentColor)?.b}, 0.8)` }}></div>
+                                                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: accentColor }}></div>
+                                            </>
+                                        )}
+                                    </div>
+                                    <span>More</span>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Mobile Resize Handle for Github */}
+                        {isMobile && (
+                            <div
+                                className="absolute bottom-0 left-0 right-0 h-4 flex items-center justify-center cursor-row-resize hover:bg-gray-50/50 dark:hover:bg-gray-700/50 rounded-b-[2rem] transition-colors group/handle"
+                                onMouseDown={handleGithubHeightMouseDown}
+                            >
+                                <div className="w-12 h-1 bg-gray-200 dark:bg-gray-600 rounded-full group-hover/handle:bg-gray-400 transition-colors shadow-sm" />
+                            </div>
+                        )}
+                    </motion.div>
+                );
+            case 'fortnite':
+                if (!enabledFeatures.stats || creatorCodes.length === 0) return null;
+                return (
+                    <motion.div
+                        ref={statsRef}
+                        style={{ height: isMobile && statsHeight ? `${statsHeight}px` : 'auto' }}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.25 }}
+                        whileHover={{
+                            y: -8,
+                            scale: 1.01,
+                            boxShadow: '0 25px 70px rgba(0, 0, 0, 0.15)'
+                        }}
+                        className="p-8 rounded-[2rem] bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50 relative overflow-hidden transition-colors"
+                    >
+                        <div className="flex items-center justify-between mb-8 relative z-10">
+                            <div className="flex items-center gap-4">
+                                <div className="p-4 rounded-2xl backdrop-blur-sm border" style={{ backgroundColor: `${accentColor}15`, borderColor: `${accentColor}30` }}>
+                                    <ActivityIcon className="w-12 h-12" style={{ color: accentColor }} />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fortnite Creative</p>
+                                    <h3 className="text-3xl font-bold text-gray-800 dark:text-gray-100">Live Stats ({creatorCodes.length} Maps)</h3>
+                                </div>
+                            </div>
+                            <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={loadStats}
+                                className="px-6 py-3 rounded-xl bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm border border-gray-200 dark:border-gray-600 shadow-lg shadow-gray-100 dark:shadow-gray-900 text-sm font-bold text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                            >
+                                Refresh Data
+                            </motion.button>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 relative z-10">
+                            <div className="p-6 rounded-2xl bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm shadow-sm border border-gray-100 dark:border-gray-600">
+                                <div className="flex justify-between items-start mb-2">
+                                    <p className="text-sm font-medium text-gray-400 dark:text-gray-300">Total Minutes Played</p>
+                                    <ArrowUpRight className="w-4 h-4 text-green-500" />
+                                </div>
+                                <p className="text-3xl font-bold text-gray-800 dark:text-white">
+                                    <span className="hidden xl:inline">{(stats?.fortnite?.raw?.minutesPlayed || 0).toLocaleString()}</span>
+                                    <span className="xl:hidden">{formatCompactNumber(stats?.fortnite?.raw?.minutesPlayed || 0)}</span>
+                                </p>
+                                <div className="mt-2 text-xs text-gray-400 dark:text-gray-400">
+                                    <span>Across all maps</span>
+                                </div>
+                            </div>
+                            <div className="p-6 rounded-2xl bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm shadow-sm border border-gray-100 dark:border-gray-600">
+                                <div className="flex justify-between items-start mb-2">
+                                    <p className="text-sm font-medium text-gray-400 dark:text-gray-300">Unique Players</p>
+                                    <ArrowUpRight className="w-4 h-4 text-green-500" />
+                                </div>
+                                <p className="text-3xl font-bold text-gray-800 dark:text-white">
+                                    <span className="hidden xl:inline">{(stats?.fortnite?.raw?.uniquePlayers || 0).toLocaleString()}</span>
+                                    <span className="xl:hidden">{formatCompactNumber(stats?.fortnite?.raw?.uniquePlayers || 0)}</span>
+                                </p>
+                                <div className="mt-2 text-xs text-gray-400 dark:text-gray-400">
+                                    <span>Total reach</span>
+                                </div>
+                            </div>
+                            <div className="p-6 rounded-2xl bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm shadow-sm border border-gray-100 dark:border-gray-600">
+                                <div className="flex justify-between items-start mb-2">
+                                    <p className="text-sm font-medium text-gray-400 dark:text-gray-300">Total Favorites</p>
+                                    <ArrowUpRight className="w-4 h-4 text-green-500" />
+                                </div>
+                                <p className="text-3xl font-bold text-gray-800 dark:text-white">
+                                    <span className="hidden xl:inline">{(stats?.fortnite?.raw?.favorites || 0).toLocaleString()}</span>
+                                    <span className="xl:hidden">{formatCompactNumber(stats?.fortnite?.raw?.favorites || 0)}</span>
+                                </p>
+                                <div className="mt-2 text-xs text-gray-400 dark:text-gray-400">
+                                    <span>Community love</span>
+                                </div>
+                            </div>
+                            <div className="p-6 rounded-2xl bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm shadow-sm border border-gray-100 dark:border-gray-600">
+                                <div className="flex justify-between items-start mb-2">
+                                    <p className="text-sm font-medium text-gray-400 dark:text-gray-300">Total Plays</p>
+                                    <ArrowUpRight className="w-4 h-4 text-green-500" />
+                                </div>
+                                <p className="text-3xl font-bold text-gray-800 dark:text-white">
+                                    <span className="hidden xl:inline">{(stats?.fortnite?.raw?.plays || 0).toLocaleString()}</span>
+                                    <span className="xl:hidden">{formatCompactNumber(stats?.fortnite?.raw?.plays || 0)}</span>
+                                </p>
+                                <div className="mt-2 text-xs text-gray-400 dark:text-gray-400">
+                                    <span>Game sessions</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Mobile Resize Handle for Stats */}
+                        {isMobile && (
+                            <div
+                                className="absolute bottom-0 left-0 right-0 h-4 flex items-center justify-center cursor-row-resize rounded-b-[2rem] transition-colors group/handle z-20"
+                                onMouseDown={handleStatsHeightMouseDown}
+                            >
+                                <div className="w-12 h-1 rounded-full transition-colors shadow-sm" style={{ backgroundColor: `${accentColor}40` }} />
+                            </div>
+                        )}
+                    </motion.div>
+                );
+            default:
+                return null;
+        }
+    };
+
     return (
         <div className="p-4 md:p-4 space-y-6 md:space-y-6 h-full overflow-y-auto custom-scrollbar">
             {/* Header Section */}
@@ -811,566 +1444,126 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                 </div>
             </div>
 
-            {/* Overview Section: Event Summary */}
-            <div className="grid grid-cols-1 gap-6 md:gap-8">
-                <motion.div
-                    ref={briefingRef}
-                    style={{ height: isMobile && briefingHeight ? `${briefingHeight}px` : 'auto' }}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
-                    className="p-6 md:p-8 rounded-[2rem] bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50 relative flex flex-col overflow-hidden"
-                >
-                    <div className="flex items-center gap-4 mb-6 flex-shrink-0">
-                        <div className="p-4 rounded-2xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400">
-                            <ListTodo className="w-7 h-7" />
-                        </div>
-                        <div>
-                            <p className="text-sm font-medium text-gray-400 uppercase tracking-wider">Overview</p>
-                            <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Your Briefing</h3>
-                        </div>
-                    </div>
-                    <div className="p-6 rounded-2xl bg-gradient-to-br from-indigo-50 to-white dark:from-gray-800 dark:to-gray-900 border border-indigo-100 dark:border-gray-700 min-h-[100px] flex items-center flex-1 overflow-y-auto custom-scrollbar">
-                        <AnimatePresence mode="wait">
-                            {isBriefingLoading ? (
-                                <motion.div
-                                    key="loading"
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    exit={{ opacity: 0 }}
-                                    className="flex items-center gap-3 text-indigo-600 w-full"
-                                >
-                                    <Loader className="w-5 h-5 animate-spin flex-shrink-0" />
-                                    <motion.p
-                                        key={loadingMessage}
-                                        initial={{ opacity: 0, y: 5 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: -5 }}
-                                        className="text-sm font-medium"
-                                    >
-                                        {loadingMessage}
-                                    </motion.p>
-                                </motion.div>
-                            ) : (
-                                <motion.p
-                                    key="content"
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    className="text-lg text-gray-700 dark:text-gray-300 leading-relaxed font-medium text-justify w-full"
-                                >
-                                    {aiSummary ? renderFormattedText(aiSummary) : "Analyzing your schedule..."}
-                                </motion.p>
-                            )}
-                        </AnimatePresence>
-                    </div>
+            {/* Draggable Dashboard Layout */}
+            <Reorder.Group
+                axis="y"
+                values={dashboardOrder}
+                onReorder={setDashboardOrder}
+                className="space-y-6 md:space-y-8"
+                style={{
+                    transform: isEditMode ? 'scale(0.6)' : 'none',
+                    transformOrigin: 'top center',
+                    height: isEditMode ? '100vh' : 'auto', // Force height to ensure visibility during drag if needed, or let it flow
+                    transition: 'transform 0.3s ease'
+                }}
+            >
+                {dashboardOrder.map((widgetId) => {
+                    if (hiddenWidgets.includes(widgetId)) return null;
 
-                    {/* Mobile Resize Handle for Briefing */}
-                    {isMobile && (
-                        <div
-                            className="absolute bottom-0 left-0 right-0 h-4 flex items-center justify-center cursor-row-resize hover:bg-indigo-50/50 dark:hover:bg-indigo-700/50 rounded-b-[2rem] transition-colors group/handle"
-                            onMouseDown={handleBriefingHeightMouseDown}
+                    return (
+                        <Reorder.Item
+                            key={widgetId}
+                            value={widgetId}
+                            dragListener={isEditMode}
+                            className="relative"
                         >
-                            <div className="w-12 h-1 bg-indigo-200 dark:bg-indigo-600 rounded-full group-hover/handle:bg-indigo-400 transition-colors shadow-sm" />
-                        </div>
-                    )}
-                </motion.div>
-            </div>
-
-            {/* Quick Stats Grid - Resizable */}
-            <div ref={containerRef} style={{ height: isMobile ? 'auto' : `${panelHeight}px` }} className={clsx("flex select-none", isMobile ? "flex-col gap-6" : "flex-row gap-0")}>
-                {/* Upcoming Events - Resizable Left Column */}
-                <motion.div
-                    style={{
-                        width: isMobile ? '100%' : `${leftWidth}%`,
-                        height: isMobile ? `${eventsHeight}px` : '100%'
-                    }}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
-                    className="p-6 md:p-8 rounded-[2rem] bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 transition-colors flex flex-col h-full relative group shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50"
-                >
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-4">
-                            <div className="p-3 md:p-4 rounded-2xl" style={{ backgroundColor: `${accentColor}15`, color: accentColor }}>
-                                <CalendarIcon className="w-6 h-6 md:w-7 md:h-7" />
-                            </div>
-                            <div>
-                                <p className="text-xs md:text-sm font-medium text-gray-400 dark:text-gray-300 uppercase tracking-wider">Events</p>
-                                <h3 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100">{upcomingEvents.length} Total</h3>
-                            </div>
-                        </div>
-                        <button
-                            onClick={onOpenAiModal}
-                            className="p-3 rounded-xl bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 transition-colors group/btn"
-                            title="AI Quick Note"
-                        >
-                            <Sparkles className="w-5 h-5 group-hover/btn:scale-110 transition-transform" />
-                        </button>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2 mb-4">
-                        <button
-                            onClick={() => setEventTab('upcoming')}
-                            className={clsx(
-                                "flex-1 min-w-[80px] px-3 py-2 rounded-lg text-xs font-medium transition-all",
-                                eventTab === 'upcoming'
-                                    ? "bg-white dark:bg-gray-700 shadow-md"
-                                    : "bg-gray-50 dark:bg-gray-800 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
-                            )}
-                            style={eventTab === 'upcoming' ? { color: 'var(--accent-primary)' } : undefined}
-                        >
-                            Upcoming ({upcomingEvents.filter(e => !e.isOverdue && !e.note.completed).length})
-                        </button>
-                        <button
-                            onClick={() => setEventTab('completed')}
-                            className={clsx(
-                                "flex-1 min-w-[80px] px-3 py-2 rounded-lg text-xs font-medium transition-all",
-                                eventTab === 'completed'
-                                    ? "bg-white dark:bg-gray-700 shadow-md"
-                                    : "bg-gray-50 dark:bg-gray-800 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
-                            )}
-                            style={eventTab === 'completed' ? { color: 'var(--accent-primary)' } : undefined}
-                        >
-                            Completed ({upcomingEvents.filter(e => e.note.completed === true).length})
-                        </button>
-                        <button
-                            onClick={() => setEventTab('notCompleted')}
-                            className={clsx(
-                                "flex-1 min-w-[80px] px-3 py-2 rounded-lg text-xs font-medium transition-all",
-                                eventTab === 'notCompleted'
-                                    ? "bg-white dark:bg-gray-700 shadow-md"
-                                    : "bg-gray-50 dark:bg-gray-800 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
-                            )}
-                            style={eventTab === 'notCompleted' ? { color: 'var(--accent-primary)' } : undefined}
-                        >
-                            Missed ({upcomingEvents.filter(e => e.isOverdue && !e.note.completed).length})
-                        </button>
-                    </div>
-
-                    <div className="flex flex-col sm:flex-row gap-2 mb-4">
-                        <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                            <input
-                                type="text"
-                                placeholder="Search events..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full pl-9 pr-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-gray-800 dark:text-gray-200"
-                            />
-                        </div>
-                        <div className="relative">
-                            <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                            <select
-                                value={filterImportance}
-                                onChange={(e) => setFilterImportance(e.target.value)}
-                                className="w-full sm:w-auto pl-9 pr-8 py-2 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 appearance-none cursor-pointer text-gray-800 dark:text-gray-200"
+                            <div
+                                className={clsx("relative", isEditMode && "shake-animation cursor-move")}
+                                onMouseDown={handleLongPressStart}
+                                onMouseUp={handleLongPressEnd}
+                                onTouchStart={handleLongPressStart}
+                                onTouchEnd={handleLongPressEnd}
+                                onMouseLeave={handleLongPressEnd}
                             >
-                                <option value="all">All</option>
-                                <option value="high">High</option>
-                                <option value="medium">Medium</option>
-                                <option value="low">Low</option>
-                                <option value="misc">Misc</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div className="space-y-4 flex-1 overflow-y-auto pr-2 custom-scrollbar">
-                        {filteredEventsForTab.length === 0 ? (
-                            <p className="text-gray-400 dark:text-gray-500 text-sm">
-                                {eventTab === 'upcoming' ? 'No upcoming events.' : eventTab === 'completed' ? 'No completed events.' : 'No missed events.'}
-                            </p>
-                        ) : (
-                            <AnimatePresence mode="popLayout">
-                                {filteredEventsForTab.slice(0, 10).map(({ date, note, dateKey }) => (
-                                    <motion.div
-                                        key={note.id}
-                                        layout
-                                        initial={{ opacity: 0, scale: 0.8, y: -10 }}
-                                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                                        exit={{ opacity: 0, scale: 0.8, x: 50 }}
-                                        transition={{
-                                            duration: 0.3,
-                                            layout: { duration: 0.3 }
+                                {isEditMode && (
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            toggleWidgetVisibility(widgetId);
                                         }}
-                                        whileHover={{ scale: 1.02 }}
-                                        className={clsx(
-                                            "p-3 rounded-xl border transition-colors",
-                                            note.completed ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-900/50" : importanceColors[note.importance]
-                                        )}
+                                        className="absolute -top-3 -right-3 z-50 p-2 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600 transition-colors"
                                     >
-                                        <div className="flex items-start gap-3">
-                                            {/* Completion Checkbox */}
-                                            <motion.button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleToggleComplete(note.id, dateKey, note.completed || false);
-                                                }}
-                                                whileTap={{ scale: 0.8 }}
-                                                className={clsx(
-                                                    "mt-0.5 flex-shrink-0 transition-all",
-                                                    note.completed
-                                                        ? "text-green-500 hover:text-green-600"
-                                                        : "text-gray-300 hover:text-gray-400 dark:text-gray-600 dark:hover:text-gray-500"
-                                                )}
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                )}
+
+                                {renderWidget(widgetId)}
+                            </div>
+                        </Reorder.Item>
+                    );
+                })}
+            </Reorder.Group>
+
+            {/* Edit Mode Controls */}
+            <AnimatePresence>
+                {isEditMode && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 50, scale: 0.9 }}
+                            className="fixed bottom-24 right-8 z-50 flex flex-col items-end gap-4 w-auto max-w-sm"
+                        >
+                            {/* Hidden Widgets List */}
+                            {hiddenWidgets.length > 0 && (
+                                <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-md p-4 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full">
+                                    <h3 className="text-sm font-bold text-gray-500 dark:text-gray-400 mb-3 text-center uppercase tracking-wider">Add Widgets</h3>
+                                    <div className="flex flex-wrap gap-2 justify-center">
+                                        {hiddenWidgets.map(widgetId => (
+                                            <button
+                                                key={widgetId}
+                                                onClick={() => toggleWidgetVisibility(widgetId)}
+                                                className="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg text-sm font-medium hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors whitespace-nowrap"
                                             >
-                                                <motion.div
-                                                    initial={false}
-                                                    animate={note.completed ? { scale: [1, 1.3, 1], rotate: [0, 10, 0] } : { scale: 1 }}
-                                                    transition={{ duration: 0.3 }}
-                                                >
-                                                    {note.completed ? (
-                                                        <CheckCircle2 className="w-5 h-5" />
-                                                    ) : (
-                                                        <Circle className="w-5 h-5" />
-                                                    )}
-                                                </motion.div>
-                                            </motion.button>
-
-                                            <div
-                                                className="flex-1 cursor-pointer"
-                                                onClick={() => onNavigateToNote(date, note.id)}
-                                            >
-                                                <div className="flex justify-between items-start mb-1">
-                                                    <span className={clsx(
-                                                        "font-bold text-sm",
-                                                        note.completed && "line-through text-gray-500 dark:text-gray-400"
-                                                    )}>
-                                                        {note.title}
-                                                    </span>
-                                                    <div className="text-right flex flex-col items-end gap-1">
-                                                        <div className="text-xs opacity-70">{format(date, 'MMM d')} {convertTo12Hour(note.time)}</div>
-
-                                                        {note.completed ? (
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleToggleLate(note.id, dateKey, note.completedLate || false);
-                                                                }}
-                                                                className={clsx(
-                                                                    "text-[10px] font-semibold px-2 py-0.5 rounded-full transition-colors",
-                                                                    note.completedLate
-                                                                        ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50"
-                                                                        : "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50"
-                                                                )}
-                                                            >
-                                                                {note.completedLate ? 'Late' : 'On Time'}
-                                                            </button>
-                                                        ) : (
-                                                            <div className="text-[10px] opacity-60 font-semibold">
-                                                                {getCountdown(date, note.time)}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-start gap-2 text-xs opacity-80">
-                                                    {!note.completed && (
-                                                        <Circle className={clsx("w-2 h-2 mt-[3px] flex-shrink-0 fill-current", importanceIconColors[note.importance])} />
-                                                    )}
-                                                    <span className={clsx(
-                                                        "break-words",
-                                                        note.completed && "text-gray-500 dark:text-gray-400"
-                                                    )}>
-                                                        {note.description || 'No description'}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </motion.div>
-                                ))}
-                            </AnimatePresence>
-                        )}
-                    </div>
-
-                    {/* Mobile Resize Handle for Events */}
-                    {isMobile && (
-                        <div
-                            className="absolute bottom-0 left-0 right-0 h-4 flex items-center justify-center cursor-row-resize hover:bg-gray-50/50 dark:hover:bg-gray-700/50 rounded-b-[2rem] transition-colors group/handle"
-                            onMouseDown={handleEventsHeightMouseDown}
-                        >
-                            <div className="w-12 h-1 bg-gray-200 dark:bg-gray-600 rounded-full group-hover/handle:bg-blue-400 transition-colors shadow-sm" />
-                        </div>
-                    )}
-                </motion.div>
-
-                {/* Resizable Handle */}
-                {!isMobile && (
-                    <div
-                        className="hidden md:flex w-4 items-center justify-center cursor-col-resize hover:bg-gray-50/50 dark:hover:bg-gray-700/50 rounded-full transition-colors group mx-1"
-                        onMouseDown={handleMouseDown}
-                    >
-                        <div className="h-12 w-1 bg-gray-200 dark:bg-gray-600 rounded-full group-hover:bg-blue-400 transition-colors shadow-sm" />
-                    </div>
-                )}
-
-                {/* Weekly Trends Graph - Resizable Right Column */}
-                {/* Weekly Trends Graph - Resizable Right Column */}
-                <motion.div
-                    style={{
-                        width: isMobile ? '100%' : `calc(${100 - leftWidth}% - 1.5rem)`,
-                        height: isMobile ? `${trendsHeight}px` : '100%'
-                    }}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
-                    className="p-8 rounded-[2rem] bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50 flex flex-col h-full transition-colors relative"
-                >
-                    <div className="flex items-center gap-4 mb-6">
-                        <div className="p-4 rounded-2xl" style={{ backgroundColor: `${accentColor}15`, color: accentColor }}>
-                            <ArrowUpRight className="w-7 h-7" />
-                        </div>
-                        <div>
-                            <p className="text-sm font-medium text-gray-400 dark:text-gray-300 uppercase tracking-wider">Task Trends</p>
-                            <h3 className="text-2xl font-bold text-gray-800 dark:text-white">Completion Rate</h3>
-                        </div>
-                    </div>
-
-                    {/* Task Completion Trend Graph */}
-                    <div className="flex-1 w-full min-h-0">
-                        {Object.keys(notes).length === 0 ? (
-                            <div className="h-full flex items-center justify-center bg-white/50 dark:bg-gray-700/50 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700">
-                                <div className="text-center py-6 px-4">
-                                    <ArrowUpRight className="w-12 h-12 mb-3 mx-auto text-gray-300 dark:text-gray-600" />
-                                    <p className="text-sm font-medium text-gray-500 dark:text-gray-300 mb-2">No Tasks Yet</p>
-                                    <p className="text-xs text-gray-400 dark:text-gray-400">Add some events to see your completion trends</p>
+                                                <Plus className="w-4 h-4" />
+                                                <span className="capitalize">{widgetId.replace('_', ' ')}</span>
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
-                        ) : (
-                            <TaskTrendChart notes={notes} />
-                        )}
-                    </div>
+                            )}
+                        </motion.div>
 
-                    {/* Mobile Resize Handle for Trends */}
-                    {isMobile && (
-                        <div
-                            className="absolute bottom-0 left-0 right-0 h-4 flex items-center justify-center cursor-row-resize rounded-b-[2rem] transition-colors group/handle"
-                            style={{ backgroundColor: 'transparent' }} // Handled by hover state mostly, but cleaner to use classes
-                            onMouseDown={handleTrendsHeightMouseDown}
-                        >
-                            <div className="w-12 h-1 rounded-full transition-colors shadow-sm" style={{ backgroundColor: `${accentColor}40` }} />
-                        </div>
-                    )}
-                </motion.div>
-            </div>
-
-            {/* Height Resize Handle (Desktop Only) */}
-            {!isMobile && (
-                <div
-                    className="flex items-center justify-center h-3 cursor-row-resize hover:bg-gray-50/50 dark:hover:bg-gray-700/50 rounded-full transition-colors group"
-                    onMouseDown={handleHeightMouseDown}
-                    style={{ marginTop: '0.25rem', marginBottom: '0.25rem' }}
-                >
-                    <div
-                        className="w-12 h-1 bg-gray-200 dark:bg-gray-600 rounded-full transition-colors shadow-sm"
-                        style={{
-                            backgroundColor: isHeightDragging ? 'var(--accent-primary)' : undefined
-                        }}
-                    />
-                </div>
-            )}
-
-            {/* Github Contributions Graph */}
-            {enabledFeatures.github && (
-                <motion.div
-                    ref={githubCardRef}
-                    style={{ height: isMobile && githubHeight ? `${githubHeight}px` : 'auto' }}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.22 }}
-                    className="p-8 rounded-[2rem] bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50 relative flex flex-col overflow-hidden"
-                >
-                    <div className="flex items-center gap-4 mb-6 flex-shrink-0">
-                        <div className="p-4 rounded-2xl" style={{ backgroundColor: `${accentColor}15`, color: accentColor }}>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
-                        </div>
-                        <div>
-                            <p className="text-sm font-medium text-gray-400 dark:text-gray-300 uppercase tracking-wider">Github Activity</p>
-                            <h3 className="text-2xl font-bold text-gray-800 dark:text-white">Contributions</h3>
-                        </div>
-                    </div>
-                    <div
-                        ref={githubContributionsRef}
-                        className="overflow-x-auto overflow-y-hidden rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 min-h-[156px] thin-scrollbar flex-shrink-0"
-                        style={{
-                            WebkitOverflowScrolling: 'touch'
-                        }}
-                    >
-                        {!githubUsername ? (
-                            <div className="flex flex-col items-center justify-center text-center py-6">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-12 h-12 text-gray-300 dark:text-gray-600 mb-3"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
-                                <p className="text-gray-500 dark:text-gray-400 text-sm mb-2">GitHub not configured</p>
-                                <p className="text-xs text-gray-400 dark:text-gray-500">Add your GitHub username in Settings to view contributions</p>
-                            </div>
-                        ) : contributions.length > 0 ? (
-                            <div className="flex justify-center min-w-full px-4 pt-4 pb-2">
-                                <ActivityCalendar
-                                    data={contributions}
-                                    colorScheme={theme}
-                                    theme={(() => {
-                                        const rgb = hexToRgb(accentColor);
-                                        if (!rgb) return undefined;
-                                        const { r, g, b } = rgb;
-                                        return {
-                                            light: ['#ebedf0', `rgba(${r}, ${g}, ${b}, 0.4)`, `rgba(${r}, ${g}, ${b}, 0.6)`, `rgba(${r}, ${g}, ${b}, 0.8)`, `rgba(${r}, ${g}, ${b}, 1)`],
-                                            dark: ['#161b22', `rgba(${r}, ${g}, ${b}, 0.4)`, `rgba(${r}, ${g}, ${b}, 0.6)`, `rgba(${r}, ${g}, ${b}, 0.8)`, `rgba(${r}, ${g}, ${b}, 1)`],
-                                        };
-                                    })()}
-                                    blockSize={blockSize}
-                                    blockMargin={4}
-                                    fontSize={12}
-                                    showWeekdayLabels
-                                />
-                            </div>
-                        ) : (
-                            <div className="flex items-center justify-center text-gray-400 dark:text-gray-500">
-                                <Loader className="w-6 h-6 animate-spin mr-2" />
-                                <span>Loading contributions...</span>
-                            </div>
-                        )}
-                    </div>
-                    {contributions.length > 0 && githubUsername && (
-                        <div className="flex items-center justify-between mt-2 px-4">
-                            <span className="text-sm text-gray-600 dark:text-gray-400">
-                                {contributions.reduce((sum, day) => sum + day.count, 0)} contributions in {new Date().getFullYear()}
-                            </span>
-                            <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                                <span>Less</span>
-                                <div className="flex gap-1">
-                                    {theme === 'dark' ? (
-                                        <>
-                                            <div className="w-3 h-3 rounded-sm bg-[#161b22]"></div>
-                                            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: `rgba(${hexToRgb(accentColor)?.r}, ${hexToRgb(accentColor)?.g}, ${hexToRgb(accentColor)?.b}, 0.4)` }}></div>
-                                            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: `rgba(${hexToRgb(accentColor)?.r}, ${hexToRgb(accentColor)?.g}, ${hexToRgb(accentColor)?.b}, 0.6)` }}></div>
-                                            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: `rgba(${hexToRgb(accentColor)?.r}, ${hexToRgb(accentColor)?.g}, ${hexToRgb(accentColor)?.b}, 0.8)` }}></div>
-                                            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: accentColor }}></div>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <div className="w-3 h-3 rounded-sm bg-[#ebedf0]"></div>
-                                            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: `rgba(${hexToRgb(accentColor)?.r}, ${hexToRgb(accentColor)?.g}, ${hexToRgb(accentColor)?.b}, 0.4)` }}></div>
-                                            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: `rgba(${hexToRgb(accentColor)?.r}, ${hexToRgb(accentColor)?.g}, ${hexToRgb(accentColor)?.b}, 0.6)` }}></div>
-                                            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: `rgba(${hexToRgb(accentColor)?.r}, ${hexToRgb(accentColor)?.g}, ${hexToRgb(accentColor)?.b}, 0.8)` }}></div>
-                                            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: accentColor }}></div>
-                                        </>
-                                    )}
-                                </div>
-                                <span>More</span>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Mobile Resize Handle for Github */}
-                    {isMobile && (
-                        <div
-                            className="absolute bottom-0 left-0 right-0 h-4 flex items-center justify-center cursor-row-resize hover:bg-gray-50/50 dark:hover:bg-gray-700/50 rounded-b-[2rem] transition-colors group/handle"
-                            onMouseDown={handleGithubHeightMouseDown}
-                        >
-                            <div className="w-12 h-1 bg-gray-200 dark:bg-gray-600 rounded-full group-hover/handle:bg-gray-400 transition-colors shadow-sm" />
-                        </div>
-                    )}
-                </motion.div>
-            )}
-
-            {/* Fortnite Creator Stats - Full Width Below */}
-            {enabledFeatures.stats && creatorCodes.length > 0 && (
-                <motion.div
-                    ref={statsRef}
-                    style={{ height: isMobile && statsHeight ? `${statsHeight}px` : 'auto' }}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.25 }}
-                    whileHover={{
-                        y: -8,
-                        scale: 1.01,
-                        boxShadow: '0 25px 70px rgba(0, 0, 0, 0.15)'
-                    }}
-                    className="p-8 rounded-[2rem] bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50 relative overflow-hidden transition-colors"
-                >
-                    <div className="flex items-center justify-between mb-8 relative z-10">
-                        <div className="flex items-center gap-4">
-                            <div className="p-4 rounded-2xl backdrop-blur-sm border" style={{ backgroundColor: `${accentColor}15`, borderColor: `${accentColor}30` }}>
-                                <ActivityIcon className="w-12 h-12" style={{ color: accentColor }} />
-                            </div>
-                            <div>
-                                <p className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fortnite Creative</p>
-                                <h3 className="text-3xl font-bold text-gray-800 dark:text-gray-100">Live Stats ({creatorCodes.length} Maps)</h3>
-                            </div>
-                        </div>
                         <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={loadStats}
-                            className="px-6 py-3 rounded-xl bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm border border-gray-200 dark:border-gray-600 shadow-lg shadow-gray-100 dark:shadow-gray-900 text-sm font-bold text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.8 }}
+                            onClick={() => setIsEditMode(false)}
+                            className="fixed bottom-8 right-8 z-50 px-8 py-3 bg-black dark:bg-white text-white dark:text-black rounded-full font-bold shadow-xl hover:scale-105 transition-transform"
                         >
-                            Refresh Data
+                            Done
                         </motion.button>
-                    </div>
+                    </>
+                )}
+            </AnimatePresence>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 relative z-10">
-                        <div className="p-6 rounded-2xl bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm shadow-sm border border-gray-100 dark:border-gray-600">
-                            <div className="flex justify-between items-start mb-2">
-                                <p className="text-sm font-medium text-gray-400 dark:text-gray-300">Total Minutes Played</p>
-                                <ArrowUpRight className="w-4 h-4 text-green-500" />
-                            </div>
-                            <p className="text-3xl font-bold text-gray-800 dark:text-white">
-                                <span className="hidden xl:inline">{(stats?.fortnite?.raw?.minutesPlayed || 0).toLocaleString()}</span>
-                                <span className="xl:hidden">{formatCompactNumber(stats?.fortnite?.raw?.minutesPlayed || 0)}</span>
-                            </p>
-                            <div className="mt-2 text-xs text-gray-400 dark:text-gray-400">
-                                <span>Across all maps</span>
-                            </div>
+            {/* Edit Mode Tip Notification */}
+            <AnimatePresence>
+                {showEditTip && !isEditMode && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 50, x: '-50%' }}
+                        animate={{ opacity: 1, y: 0, x: '-50%' }}
+                        exit={{ opacity: 0, y: 50, x: '-50%' }}
+                        className="fixed bottom-8 left-1/2 z-40 bg-gray-900 dark:bg-white text-white dark:text-gray-900 pl-4 pr-3 py-3 rounded-full shadow-2xl flex items-center gap-3 backdrop-blur-md bg-opacity-90 max-w-sm w-auto whitespace-nowrap border border-gray-800 dark:border-gray-200"
+                    >
+                        <MousePointerClick className="w-5 h-5 animate-pulse" />
+                        <div className="flex flex-col">
+                            <span className="text-sm font-bold">Customize Dashboard</span>
+                            <span className="text-[10px] opacity-80 uppercase tracking-wide">Press & Hold to Edit</span>
                         </div>
-                        <div className="p-6 rounded-2xl bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm shadow-sm border border-gray-100 dark:border-gray-600">
-                            <div className="flex justify-between items-start mb-2">
-                                <p className="text-sm font-medium text-gray-400 dark:text-gray-300">Unique Players</p>
-                                <ArrowUpRight className="w-4 h-4 text-green-500" />
-                            </div>
-                            <p className="text-3xl font-bold text-gray-800 dark:text-white">
-                                <span className="hidden xl:inline">{(stats?.fortnite?.raw?.uniquePlayers || 0).toLocaleString()}</span>
-                                <span className="xl:hidden">{formatCompactNumber(stats?.fortnite?.raw?.uniquePlayers || 0)}</span>
-                            </p>
-                            <div className="mt-2 text-xs text-gray-400 dark:text-gray-400">
-                                <span>Total reach</span>
-                            </div>
-                        </div>
-                        <div className="p-6 rounded-2xl bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm shadow-sm border border-gray-100 dark:border-gray-600">
-                            <div className="flex justify-between items-start mb-2">
-                                <p className="text-sm font-medium text-gray-400 dark:text-gray-300">Total Favorites</p>
-                                <ArrowUpRight className="w-4 h-4 text-green-500" />
-                            </div>
-                            <p className="text-3xl font-bold text-gray-800 dark:text-white">
-                                <span className="hidden xl:inline">{(stats?.fortnite?.raw?.favorites || 0).toLocaleString()}</span>
-                                <span className="xl:hidden">{formatCompactNumber(stats?.fortnite?.raw?.favorites || 0)}</span>
-                            </p>
-                            <div className="mt-2 text-xs text-gray-400 dark:text-gray-400">
-                                <span>Community love</span>
-                            </div>
-                        </div>
-                        <div className="p-6 rounded-2xl bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm shadow-sm border border-gray-100 dark:border-gray-600">
-                            <div className="flex justify-between items-start mb-2">
-                                <p className="text-sm font-medium text-gray-400 dark:text-gray-300">Total Plays</p>
-                                <ArrowUpRight className="w-4 h-4 text-green-500" />
-                            </div>
-                            <p className="text-3xl font-bold text-gray-800 dark:text-white">
-                                <span className="hidden xl:inline">{(stats?.fortnite?.raw?.plays || 0).toLocaleString()}</span>
-                                <span className="xl:hidden">{formatCompactNumber(stats?.fortnite?.raw?.plays || 0)}</span>
-                            </p>
-                            <div className="mt-2 text-xs text-gray-400 dark:text-gray-400">
-                                <span>Game sessions</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Mobile Resize Handle for Stats */}
-                    {isMobile && (
-                        <div
-                            className="absolute bottom-0 left-0 right-0 h-4 flex items-center justify-center cursor-row-resize rounded-b-[2rem] transition-colors group/handle z-20"
-                            onMouseDown={handleStatsHeightMouseDown}
+                        <div className="w-px h-8 bg-white/20 dark:bg-black/10 mx-1" />
+                        <button
+                            onClick={() => {
+                                setShowEditTip(false);
+                                localStorage.setItem('dashboard_edit_tip_shown', 'true');
+                            }}
+                            className="p-1.5 hover:bg-white/20 dark:hover:bg-black/10 rounded-full transition-colors"
                         >
-                            <div className="w-12 h-1 rounded-full transition-colors shadow-sm" style={{ backgroundColor: `${accentColor}40` }} />
-                        </div>
-                    )}
-                </motion.div>
-            )}
+                            <X className="w-4 h-4" />
+                        </button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Completion Confirmation Modal */}
             <AnimatePresence>
