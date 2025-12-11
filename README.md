@@ -8,6 +8,8 @@
 ![GitHub last commit](https://img.shields.io/github/last-commit/umfhero/CalendarPlus)
 ![GitHub stars](https://img.shields.io/github/stars/umfhero/CalendarPlus?style=social)
 
+[![Website](https://img.shields.io/badge/Website-officialcalendarplus.netlify.app-blue?style=for-the-badge&logo=netlify)](https://officialcalendarplus.netlify.app/)
+
 > **New in v4.5.0:** Fully user-configurable with your own API keys, GitHub profile and analytics integrations (Only creator stats for now). No more hardcoded personal data!
 
 </div>
