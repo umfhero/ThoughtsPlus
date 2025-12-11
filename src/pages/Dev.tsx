@@ -1,6 +1,6 @@
 import { useNotification } from '../contexts/NotificationContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { AlertTriangle, CheckCircle, Info, AlertCircle, ToggleLeft, ToggleRight, Trash2, RefreshCw, Rocket, Bell } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Info, AlertCircle, ToggleLeft, ToggleRight, Trash2, RefreshCw, Rocket, Bell, MousePointerClick } from 'lucide-react';
 
 interface DevPageProps {
     isMockMode: boolean;
@@ -48,19 +48,25 @@ export function DevPage({ isMockMode, toggleMockMode, onForceSetup }: DevPagePro
             title: 'Setup Required',
             message: 'Please configure your API Key in settings to enable AI features.',
             type: 'warning',
-            action: { label: 'Go to Settings', onClick: () => {} }
+            action: { label: 'Go to Settings', onClick: () => { } }
         },
         {
             title: 'GitHub Integration',
             message: 'Connect your GitHub account to track your contributions.',
             type: 'info',
-            action: { label: 'Connect', onClick: () => {} }
+            action: { label: 'Connect', onClick: () => { } }
         },
         {
             title: 'Run on Startup',
             message: 'Enable auto-launch to never miss your schedule.',
             type: 'info',
-            action: { label: 'Enable', onClick: () => {} }
+            action: { label: 'Enable', onClick: () => { } }
+        },
+        {
+            title: 'Customize Dashboard',
+            message: 'Press & Hold to Edit your dashboard layout.',
+            type: 'info',
+            icon: MousePointerClick
         },
         {
             title: 'Quick Tip',
@@ -121,7 +127,7 @@ export function DevPage({ isMockMode, toggleMockMode, onForceSetup }: DevPagePro
         <div className="h-full p-8 overflow-y-auto">
             <h1 className="text-3xl font-bold mb-8">Developer Tools</h1>
 
-            <div className="grid gap-8 max-w-2xl">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full max-w-7xl mx-auto">
                 {/* Mock Mode Toggle */}
                 <div className="bg-white/50 dark:bg-gray-800/50 rounded-xl p-6 border border-white/20 dark:border-gray-700/30 shadow-sm">
                     <div className="flex items-center justify-between mb-4">
@@ -150,7 +156,7 @@ export function DevPage({ isMockMode, toggleMockMode, onForceSetup }: DevPagePro
                 {/* Notification Tester */}
                 <div className="bg-white/50 dark:bg-gray-800/50 rounded-xl p-6 border border-white/20 dark:border-gray-700/30 shadow-sm">
                     <h2 className="text-xl font-semibold mb-4">Test Notifications</h2>
-                    
+
                     <div className="mb-6">
                         <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wider">Generic Types</h3>
                         <div className="grid grid-cols-2 gap-4">
@@ -159,7 +165,7 @@ export function DevPage({ isMockMode, toggleMockMode, onForceSetup }: DevPagePro
                                     key={notif.type}
                                     onClick={() => triggerNotification(notif.type)}
                                     className="flex items-center gap-3 p-4 rounded-lg border transition-all hover:scale-[1.02] active:scale-[0.98]"
-                                    style={{ 
+                                    style={{
                                         borderColor: 'rgba(0,0,0,0.1)',
                                         backgroundColor: 'rgba(255,255,255,0.5)'
                                     }}
@@ -191,6 +197,51 @@ export function DevPage({ isMockMode, toggleMockMode, onForceSetup }: DevPagePro
                     </div>
                 </div>
 
+                {/* Dashboard Tools */}
+                <div className="bg-blue-50 dark:bg-blue-900/10 rounded-xl p-6 border border-blue-200 dark:border-blue-800/30 shadow-sm">
+                    <h2 className="text-xl font-semibold mb-4 text-blue-600 dark:text-blue-400">Dashboard Tools</h2>
+                    <div className="space-y-4">
+                        <button
+                            onClick={() => {
+                                localStorage.removeItem('dashboard_order');
+                                localStorage.removeItem('dashboard_hidden_widgets');
+                                addNotification({
+                                    title: 'Layout Reset',
+                                    message: 'Dashboard layout has been reset to default.',
+                                    type: 'success',
+                                    duration: 3000
+                                });
+                            }}
+                            className="w-full flex items-center gap-3 p-4 rounded-lg border border-blue-200 dark:border-blue-800/30 bg-white/50 dark:bg-gray-800/50 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-blue-600 dark:text-blue-400"
+                        >
+                            <RefreshCw size={20} />
+                            <div className="text-left">
+                                <div className="font-medium">Reset Layout</div>
+                                <div className="text-xs opacity-80">Restores default widget order and visibility</div>
+                            </div>
+                        </button>
+
+                        <button
+                            onClick={() => {
+                                localStorage.removeItem('dashboard_edit_tip_shown');
+                                addNotification({
+                                    title: 'Tip Reset',
+                                    message: 'Edit mode tip will appear next time you visit Dashboard.',
+                                    type: 'info',
+                                    duration: 3000
+                                });
+                            }}
+                            className="w-full flex items-center gap-3 p-4 rounded-lg border border-blue-200 dark:border-blue-800/30 bg-white/50 dark:bg-gray-800/50 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-blue-600 dark:text-blue-400"
+                        >
+                            <MousePointerClick size={20} />
+                            <div className="text-left">
+                                <div className="font-medium">Reset "Edit Tip" History</div>
+                                <div className="text-xs opacity-80">Forces the "Press & Hold" helper to show again</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
                 {/* Danger Zone */}
                 <div className="bg-red-50 dark:bg-red-900/10 rounded-xl p-6 border border-red-200 dark:border-red-800/30 shadow-sm">
                     <h2 className="text-xl font-semibold mb-4 text-red-600 dark:text-red-400">Danger Zone</h2>
@@ -212,8 +263,8 @@ export function DevPage({ isMockMode, toggleMockMode, onForceSetup }: DevPagePro
                         >
                             <Trash2 size={20} />
                             <div className="text-left">
-                                <div className="font-medium">Clear Local Storage</div>
-                                <div className="text-xs opacity-80">Resets feature toggles and local preferences</div>
+                                <div className="font-medium">Clear All Local Storage</div>
+                                <div className="text-xs opacity-80">Resets EVERYTHING: features, settings, dashboard, etc.</div>
                             </div>
                         </button>
 

@@ -1,14 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Folder, Palette, Sparkles, Check, ExternalLink, Clipboard, AlertCircle, LayoutDashboard, Calendar, PieChart, Github, PenTool, Calendar as CalendarIcon, Code, RefreshCw, Map, Bell, BellOff, Type, Upload, FileUp } from 'lucide-react';
+import { Folder, Palette, Sparkles, Check, ExternalLink, Clipboard, AlertCircle, LayoutDashboard, PieChart, Github, PenTool, Calendar as CalendarIcon, Code, RefreshCw, Map, Bell, BellOff, Type, Upload, FileUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import clsx from 'clsx';
 import { useTheme } from '../contexts/ThemeContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { formatICSDate } from '../utils/icsHelper';
-
-interface SettingsPageProps {
-    isSidebarCollapsed?: boolean;
-}
 
 interface RoadmapItem {
     task: string;
@@ -16,22 +12,12 @@ interface RoadmapItem {
     plannedRelease: string;
 }
 
-export function SettingsPage({ isSidebarCollapsed = false }: SettingsPageProps) {
+export function SettingsPage() {
     const [dataPath, setDataPath] = useState<string>('Loading...');
     const [autoLaunch, setAutoLaunch] = useState(false);
 
-    const [isMobile, setIsMobile] = useState(false);
 
-    useEffect(() => {
-        const checkMobile = () => {
-            const sidebarWidth = isSidebarCollapsed ? 0 : 240;
-            const availableWidth = window.innerWidth - sidebarWidth;
-            setIsMobile(availableWidth < 900);
-        };
-        checkMobile();
-        window.addEventListener('resize', checkMobile);
-        return () => window.removeEventListener('resize', checkMobile);
-    }, [isSidebarCollapsed]);
+
 
     // User Name
     const [userName, setUserName] = useState('');
@@ -391,39 +377,63 @@ export function SettingsPage({ isSidebarCollapsed = false }: SettingsPageProps) 
         }
     };
 
-    // Mini App Preview Component
-    const AppPreview = ({ mode, accent }: { mode: 'light' | 'dark', accent: string }) => {
+    // Updated Mini App Preview Component
+    const AppPreview = ({ mode, accent, font }: { mode: 'light' | 'dark', accent: string, font: string }) => {
         const isDark = mode === 'dark';
         const bg = isDark ? '#1f2937' : '#ffffff';
-        const text = isDark ? '#9ca3af' : '#6b7280';
+        const textMain = isDark ? '#f3f4f6' : '#111827';
+        const textMuted = isDark ? '#9ca3af' : '#6b7280';
         const border = isDark ? '#374151' : '#e5e7eb';
         const sidebarBg = isDark ? '#111827' : '#f9fafb';
 
+        // Ensure font is applied. If it's a standard font, quote it.
+        const fontFamily = font === 'CustomFont' ? 'var(--app-font)' : `"${font}", sans-serif`;
+
         return (
-            <div className="w-full aspect-[16/10] rounded-xl overflow-hidden border shadow-sm flex" style={{ backgroundColor: bg, borderColor: border }}>
+            <div className="w-full aspect-video rounded-xl overflow-hidden border shadow-sm flex transition-all"
+                style={{ backgroundColor: bg, borderColor: border, fontFamily: fontFamily }}>
                 {/* Sidebar */}
-                <div className="w-1/3 h-full border-r p-2 flex flex-col gap-2" style={{ backgroundColor: sidebarBg, borderColor: border }}>
-                    <div className="flex items-center gap-1.5 mb-1">
-                        <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: accent }} />
-                        <div className="h-1.5 w-8 rounded-full bg-gray-300 dark:bg-gray-600" />
+                <div className="w-[80px] h-full border-r p-3 flex flex-col gap-3" style={{ backgroundColor: sidebarBg, borderColor: border }}>
+                    <div className="flex items-center gap-2 mb-2">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: accent }} />
                     </div>
-                    <div className="space-y-1.5">
-                        {[LayoutDashboard, Calendar, PieChart, Github].map((Icon, i) => (
-                            <div key={i} className="flex items-center gap-1.5 opacity-60">
-                                <Icon size={8} color={text} />
-                                <div className="h-1 w-10 rounded-full" style={{ backgroundColor: text, opacity: 0.3 }} />
-                            </div>
-                        ))}
-                    </div>
+                    {[1, 2, 3].map((i) => (
+                        <div key={i} className="h-2 w-12 rounded-full opacity-50" style={{ backgroundColor: textMuted }} />
+                    ))}
                 </div>
                 {/* Content */}
-                <div className="flex-1 p-2">
-                    <div className="h-2 w-16 rounded-full mb-2" style={{ backgroundColor: text, opacity: 0.2 }} />
-                    <div className="w-full h-12 rounded-lg border border-dashed" style={{ borderColor: border, backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' }} />
+                <div className="flex-1 p-4 flex flex-col gap-3">
+                    <div className="flex justify-between items-center mb-1">
+                        <div className="h-3 w-24 rounded-full" style={{ backgroundColor: textMain, opacity: 0.8 }} />
+                        <div className="h-6 w-6 rounded-full" style={{ backgroundColor: textMuted, opacity: 0.2 }} />
+                    </div>
+
+                    <div className="flex-1 rounded-lg border border-dashed p-3" style={{ borderColor: border, backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.02)' }}>
+                        <div className="flex gap-3 mb-3">
+                            <div className="w-8 h-8 rounded-lg" style={{ backgroundColor: accent, opacity: 0.2 }} />
+                            <div className="flex-1">
+                                <div className="text-[10px] font-bold mb-0.5 leading-tight" style={{ color: textMain }}>Meeting with Team</div>
+                                <div className="text-[8px] opacity-70 leading-tight" style={{ color: textMuted }}>Discuss prompt...</div>
+                            </div>
+                        </div>
+                        <div className="space-y-1.5">
+                            <div className="h-2 w-full rounded-full opacity-40" style={{ backgroundColor: textMuted }} />
+                            <div className="h-2 w-5/6 rounded-full opacity-40" style={{ backgroundColor: textMuted }} />
+                        </div>
+                    </div>
                 </div>
             </div>
         );
     };
+
+    // ... handleFontChange ...
+
+    // ... handleImportCalendar ...
+
+    // ... confirmImport ...
+
+
+
 
     const handleFontChange = async (fontName: string, type: 'preloaded' | 'custom' = 'preloaded', file?: File) => {
         if (type === 'custom' && file) {
@@ -547,7 +557,7 @@ export function SettingsPage({ isSidebarCollapsed = false }: SettingsPageProps) 
 
     return (
         <div className="p-4 md:p-8 h-full overflow-y-auto">
-            <div className="max-w-5xl mx-auto">
+            <div className="w-full max-w-[95%] 2xl:max-w-[90%] mx-auto">
                 <div className="mb-8">
                     <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-2">Settings</h1>
                     <p className="text-gray-500 dark:text-gray-400">Manage your preferences and configurations</p>
@@ -594,8 +604,8 @@ export function SettingsPage({ isSidebarCollapsed = false }: SettingsPageProps) 
 
 
 
-                {/* Top Row: AI + GitHub */}
-                <div className={clsx("grid gap-6 mb-6", isMobile ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2")}>
+                {/* Main Grid: AI, GitHub, Storage, Creator, Notifications, Import */}
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-6">
                     {/* AI Configuration */}
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
@@ -775,10 +785,8 @@ export function SettingsPage({ isSidebarCollapsed = false }: SettingsPageProps) 
                             </div>
                         </div>
                     </motion.div>
-                </div>
 
-                {/* Second Row: Data Storage + Creator Codes */}
-                <div className={clsx("grid gap-6 mb-6", isMobile ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2")}>
+
                     {/* Data Storage */}
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
@@ -944,6 +952,69 @@ export function SettingsPage({ isSidebarCollapsed = false }: SettingsPageProps) 
                             </div>
                         </div>
                     </motion.div>
+
+
+                    {/* Notifications */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.25 }}
+                        className="p-6 rounded-3xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50"
+                    >
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="p-2.5 rounded-xl bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400">
+                                {isSuppressed ? <BellOff className="w-5 h-5" /> : <Bell className="w-5 h-5" />}
+                            </div>
+                            <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Notifications</h2>
+                        </div>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                            Manage application notifications and alerts.
+                        </p>
+                        <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600">
+                            <div className="flex items-center gap-3">
+                                <span className="font-medium text-gray-800 dark:text-gray-200">Stop All Notifications</span>
+                            </div>
+                            <button
+                                onClick={() => toggleSuppression(!isSuppressed)}
+                                className={clsx(
+                                    "w-10 h-6 rounded-full p-1 transition-colors duration-300 focus:outline-none",
+                                    isSuppressed ? "bg-red-500" : "bg-gray-300 dark:bg-gray-600"
+                                )}
+                            >
+                                <motion.div
+                                    layout
+                                    className="w-4 h-4 rounded-full bg-white shadow-md"
+                                    animate={{ x: isSuppressed ? 16 : 0 }}
+                                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                                />
+                            </button>
+                        </div>
+                    </motion.div>
+
+                    {/* Calendar Import */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.25 }}
+                        className="p-6 rounded-3xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50"
+                    >
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="p-2.5 rounded-xl bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400">
+                                <FileUp className="w-5 h-5" />
+                            </div>
+                            <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Import Calendar</h2>
+                        </div>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                            Import events from .ics files.
+                        </p>
+                        <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl cursor-pointer bg-gray-50 dark:bg-gray-700/30 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                <Upload className="w-6 h-6 text-gray-400 mb-2" />
+                                <p className="text-sm text-gray-500 dark:text-gray-400"><span className="font-semibold">Click to upload</span> .ics file</p>
+                            </div>
+                            <input type="file" className="hidden" accept=".ics" onChange={handleImportCalendar} />
+                        </label>
+                    </motion.div>
                 </div>
 
                 {/* Appearance Section - Full Width */}
@@ -960,133 +1031,139 @@ export function SettingsPage({ isSidebarCollapsed = false }: SettingsPageProps) 
                         <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Appearance</h2>
                     </div>
 
-                    {/* Theme Selection with Previews */}
-                    <div className="mb-8">
-                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Theme Mode</p>
-                        <div className="grid grid-cols-2 gap-4">
-                            <button
-                                onClick={() => setTheme('light')}
-                                className={clsx(
-                                    "group relative p-2 rounded-2xl border-2 transition-all text-left overflow-hidden",
-                                    theme === 'light'
-                                        ? "border-blue-500 bg-blue-50/50 dark:bg-blue-900/10"
-                                        : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
-                                )}
-                            >
-                                <div className="mb-3">
-                                    <AppPreview mode="light" accent={accentColor} />
-                                </div>
-                                <div className="flex items-center justify-between px-1">
-                                    <span className={clsx("text-sm font-semibold", theme === 'light' ? "text-blue-700 dark:text-blue-300" : "text-gray-600 dark:text-gray-400")}>Light</span>
-                                    {theme === 'light' && <Check className="w-4 h-4 text-blue-500" />}
-                                </div>
-                            </button>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        {/* Left Column: Accent & Font */}
+                        <div className="flex flex-col gap-8 h-full">
+                            {/* Accent Color */}
+                            <div className="flex-1 flex flex-col">
+                                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Accent Color</p>
 
-                            <button
-                                onClick={() => setTheme('dark')}
-                                className={clsx(
-                                    "group relative p-2 rounded-2xl border-2 transition-all text-left overflow-hidden",
-                                    theme === 'dark'
-                                        ? "border-purple-500 bg-purple-50/50 dark:bg-purple-900/10"
-                                        : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
-                                )}
-                            >
-                                <div className="mb-3">
-                                    <AppPreview mode="dark" accent={accentColor} />
-                                </div>
-                                <div className="flex items-center justify-between px-1">
-                                    <span className={clsx("text-sm font-semibold", theme === 'dark' ? "text-purple-400" : "text-gray-600 dark:text-gray-400")}>Dark</span>
-                                    {theme === 'dark' && <Check className="w-4 h-4 text-purple-500" />}
-                                </div>
-                            </button>
-                        </div>
-                    </div>
+                                <div className="bg-gray-50 dark:bg-gray-800 rounded-2xl p-4 border border-gray-100 dark:border-gray-700 flex-1 flex flex-col justify-center">
+                                    <div className="flex items-center gap-4 mb-4">
+                                        <div className="relative group">
+                                            <input
+                                                type="color"
+                                                value={accentColor.startsWith('#') ? accentColor : '#3b82f6'}
+                                                onChange={(e) => setAccentColor(e.target.value)}
+                                                className="w-10 h-10 rounded-lg cursor-pointer opacity-0 absolute inset-0 z-10"
+                                            />
+                                            <div
+                                                className="w-10 h-10 rounded-lg border-2 border-gray-200 dark:border-gray-600 shadow-sm flex items-center justify-center transition-transform group-hover:scale-105"
+                                                style={{ backgroundColor: accentColor.startsWith('#') ? accentColor : 'var(--accent-primary)' }}
+                                            >
+                                                <Palette className="w-4 h-4 text-white drop-shadow-md" />
+                                            </div>
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Custom Color</p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 font-mono mt-0.5">
+                                                {accentColor.startsWith('#') ? accentColor.toUpperCase() : 'Default'}
+                                            </p>
+                                        </div>
+                                    </div>
 
-                    {/* Accent Color */}
-                    <div>
-                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Accent Color</p>
-
-                        <div className="bg-gray-50 dark:bg-gray-800 rounded-2xl p-4 border border-gray-100 dark:border-gray-700">
-                            <div className="flex items-center gap-4 mb-4">
-                                <div className="relative group">
-                                    <input
-                                        type="color"
-                                        value={accentColor.startsWith('#') ? accentColor : '#3b82f6'}
-                                        onChange={(e) => setAccentColor(e.target.value)}
-                                        className="w-10 h-10 rounded-lg cursor-pointer opacity-0 absolute inset-0 z-10"
-                                    />
-                                    <div
-                                        className="w-10 h-10 rounded-lg border-2 border-gray-200 dark:border-gray-600 shadow-sm flex items-center justify-center transition-transform group-hover:scale-105"
-                                        style={{ backgroundColor: accentColor.startsWith('#') ? accentColor : 'var(--accent-primary)' }}
-                                    >
-                                        <Palette className="w-4 h-4 text-white drop-shadow-md" />
+                                    <div className="flex flex-wrap gap-2">
+                                        {['#3b82f6', '#8b5cf6', '#22c55e', '#ec4899', '#f97316', '#ef4444', '#06b6d4', '#eab308', '#6366f1', '#14b8a6', '#f43f5e', '#84cc16', '#d946ef', '#0ea5e9', '#f59e0b', '#64748b'].map((color) => (
+                                            <button
+                                                key={color}
+                                                onClick={() => setAccentColor(color)}
+                                                className="w-8 h-8 rounded-md transition-all hover:scale-110 hover:shadow-md relative border border-transparent hover:border-gray-300 dark:hover:border-gray-500"
+                                                style={{ backgroundColor: color, width: '2rem', height: '2rem', minWidth: '2rem', minHeight: '2rem' }}
+                                                title={color}
+                                            >
+                                                {accentColor === color && (
+                                                    <div className="absolute inset-0 flex items-center justify-center">
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-white shadow-sm" />
+                                                    </div>
+                                                )}
+                                            </button>
+                                        ))}
                                     </div>
                                 </div>
-                                <div className="flex-1">
-                                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Custom Color</p>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 font-mono mt-0.5">
-                                        {accentColor.startsWith('#') ? accentColor.toUpperCase() : 'Default'}
-                                    </p>
+                            </div>
+
+                            {/* Font Selection */}
+                            <div className="flex-[1.5] flex flex-col">
+                                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Application Font</p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 h-full">
+                                    {['Outfit', 'Inter', 'Roboto', 'Poppins', 'Lato'].map(font => (
+                                        <button
+                                            key={font}
+                                            onClick={() => handleFontChange(font)}
+                                            className={clsx(
+                                                "p-3 rounded-xl border text-left transition-all flex flex-col justify-center",
+                                                currentFont === font
+                                                    ? "bg-blue-50 dark:bg-blue-900/20 border-blue-500 ring-1 ring-blue-500"
+                                                    : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-blue-300"
+                                            )}
+                                        >
+                                            <div className="flex items-center justify-between mb-1">
+                                                <span className="font-medium" style={{ fontFamily: font }}>{font}</span>
+                                                {currentFont === font && <Check className="w-4 h-4 text-blue-500" />}
+                                            </div>
+                                            <span className="text-xs text-gray-400" style={{ fontFamily: font }}>The quick brown fox jumps over the lazy dog.</span>
+                                        </button>
+                                    ))}
+                                    <label className={clsx(
+                                        "p-3 rounded-xl border text-left transition-all cursor-pointer bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-blue-300 flex flex-col justify-center",
+                                        currentFont === 'CustomFont' && "border-blue-500 ring-1 ring-blue-500"
+                                    )}>
+                                        <div className="flex items-center justify-between mb-1">
+                                            <span className="font-medium flex items-center gap-2">
+                                                <Type className="w-4 h-4" /> Custom Font
+                                            </span>
+                                            {currentFont === 'CustomFont' && <Check className="w-4 h-4 text-blue-500" />}
+                                        </div>
+                                        <span className="text-xs text-gray-400 block mb-2">{customFontFile ? customFontFile.name : 'Click to select a font file (.ttf, .otf, .woff)'}</span>
+                                        <input type="file" className="hidden" accept=".ttf,.otf,.woff,.woff2" onChange={(e) => {
+                                            if (e.target.files?.[0]) handleFontChange('CustomFont', 'custom', e.target.files[0]);
+                                        }} />
+                                    </label>
                                 </div>
                             </div>
-
-                            <div className="flex flex-wrap gap-2">
-                                {['#3b82f6', '#8b5cf6', '#22c55e', '#ec4899', '#f97316', '#ef4444', '#06b6d4', '#eab308', '#6366f1', '#14b8a6', '#f43f5e', '#84cc16', '#d946ef', '#0ea5e9', '#f59e0b', '#64748b'].map((color) => (
-                                    <button
-                                        key={color}
-                                        onClick={() => setAccentColor(color)}
-                                        className="w-8 h-8 rounded-md transition-all hover:scale-110 hover:shadow-md relative border border-transparent hover:border-gray-300 dark:hover:border-gray-500"
-                                        style={{ backgroundColor: color, width: '2rem', height: '2rem', minWidth: '2rem', minHeight: '2rem' }}
-                                        title={color}
-                                    >
-                                        {accentColor === color && (
-                                            <div className="absolute inset-0 flex items-center justify-center">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-white shadow-sm" />
-                                            </div>
-                                        )}
-                                    </button>
-                                ))}
-                            </div>
                         </div>
-                    </div>
 
-                    {/* Font Selection */}
-                    <div className="mt-8">
-                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Application Font</p>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {['Outfit', 'Inter', 'Roboto', 'Poppins', 'Lato'].map(font => (
+                        {/* Right Column: Theme Previews */}
+                        {/* Right Column: Theme Previews */}
+                        <div className="flex flex-col h-full">
+                            <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Theme Mode</p>
+                            <div className="grid grid-cols-1 gap-6 h-full">
                                 <button
-                                    key={font}
-                                    onClick={() => handleFontChange(font)}
+                                    onClick={() => setTheme('light')}
                                     className={clsx(
-                                        "p-3 rounded-xl border text-left transition-all",
-                                        currentFont === font
-                                            ? "bg-blue-50 dark:bg-blue-900/20 border-blue-500 ring-1 ring-blue-500"
-                                            : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-blue-300"
+                                        "group relative p-2 rounded-2xl border-2 transition-all text-left overflow-hidden flex flex-col justify-between",
+                                        theme === 'light'
+                                            ? "border-blue-500 bg-blue-50/50 dark:bg-blue-900/10"
+                                            : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
                                     )}
                                 >
-                                    <div className="flex items-center justify-between">
-                                        <span className="font-medium" style={{ fontFamily: font }}>{font}</span>
-                                        {currentFont === font && <Check className="w-4 h-4 text-blue-500" />}
+                                    <div className="mb-3 w-full">
+                                        <AppPreview mode="light" accent={accentColor} font={currentFont} />
                                     </div>
-                                    <span className="text-xs text-gray-400" style={{ fontFamily: font }}>The quick brown fox jumps over the lazy dog.</span>
+                                    <div className="flex items-center justify-between px-1">
+                                        <span className={clsx("text-sm font-semibold", theme === 'light' ? "text-blue-700 dark:text-blue-300" : "text-gray-600 dark:text-gray-400")}>Light Mode</span>
+                                        {theme === 'light' && <Check className="w-5 h-5 text-blue-500" />}
+                                    </div>
                                 </button>
-                            ))}
-                            <label className={clsx(
-                                "p-3 rounded-xl border text-left transition-all cursor-pointer bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-blue-300",
-                                currentFont === 'CustomFont' && "border-blue-500 ring-1 ring-blue-500"
-                            )}>
-                                <div className="flex items-center justify-between mb-1">
-                                    <span className="font-medium flex items-center gap-2">
-                                        <Type className="w-4 h-4" /> Custom Font
-                                    </span>
-                                    {currentFont === 'CustomFont' && <Check className="w-4 h-4 text-blue-500" />}
-                                </div>
-                                <span className="text-xs text-gray-400 block mb-2">{customFontFile ? customFontFile.name : 'Click to select a font file (.ttf, .otf, .woff)'}</span>
-                                <input type="file" className="hidden" accept=".ttf,.otf,.woff,.woff2" onChange={(e) => {
-                                    if (e.target.files?.[0]) handleFontChange('CustomFont', 'custom', e.target.files[0]);
-                                }} />
-                            </label>
+
+                                <button
+                                    onClick={() => setTheme('dark')}
+                                    className={clsx(
+                                        "group relative p-2 rounded-2xl border-2 transition-all text-left overflow-hidden flex flex-col justify-between",
+                                        theme === 'dark'
+                                            ? "border-purple-500 bg-purple-50/50 dark:bg-purple-900/10"
+                                            : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                                    )}
+                                >
+                                    <div className="mb-3 w-full">
+                                        <AppPreview mode="dark" accent={accentColor} font={currentFont} />
+                                    </div>
+                                    <div className="flex items-center justify-between px-1">
+                                        <span className={clsx("text-sm font-semibold", theme === 'dark' ? "text-purple-400" : "text-gray-600 dark:text-gray-400")}>Dark Mode</span>
+                                        {theme === 'dark' && <Check className="w-5 h-5 text-purple-500" />}
+                                    </div>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </motion.div>
@@ -1204,68 +1281,7 @@ export function SettingsPage({ isSidebarCollapsed = false }: SettingsPageProps) 
                     </p>
                 </motion.div>
 
-                {/* Notifications & Import Section (New Location) */}
-                <div className={clsx("grid gap-6 mb-6 mt-6", isMobile ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2")}>
-                    {/* Notifications */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="p-6 rounded-3xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50"
-                    >
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="p-2.5 rounded-xl bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400">
-                                {isSuppressed ? <BellOff className="w-5 h-5" /> : <Bell className="w-5 h-5" />}
-                            </div>
-                            <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Notifications</h2>
-                        </div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                            Manage application notifications and alerts.
-                        </p>
-                        <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600">
-                            <div className="flex items-center gap-3">
-                                <span className="font-medium text-gray-800 dark:text-gray-200">Stop All Notifications</span>
-                            </div>
-                            <button
-                                onClick={() => toggleSuppression(!isSuppressed)}
-                                className={clsx(
-                                    "w-10 h-6 rounded-full p-1 transition-colors duration-300 focus:outline-none",
-                                    isSuppressed ? "bg-red-500" : "bg-gray-300 dark:bg-gray-600"
-                                )}
-                            >
-                                <motion.div
-                                    layout
-                                    className="w-4 h-4 rounded-full bg-white shadow-md"
-                                    animate={{ x: isSuppressed ? 16 : 0 }}
-                                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                                />
-                            </button>
-                        </div>
-                    </motion.div>
 
-                    {/* Calendar Import */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="p-6 rounded-3xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50"
-                    >
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="p-2.5 rounded-xl bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400">
-                                <FileUp className="w-5 h-5" />
-                            </div>
-                            <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Import Calendar</h2>
-                        </div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                            Import events from .ics files.
-                        </p>
-                        <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl cursor-pointer bg-gray-50 dark:bg-gray-700/30 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                            <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                <Upload className="w-6 h-6 text-gray-400 mb-2" />
-                                <p className="text-sm text-gray-500 dark:text-gray-400"><span className="font-semibold">Click to upload</span> .ics file</p>
-                            </div>
-                            <input type="file" className="hidden" accept=".ics" onChange={handleImportCalendar} />
-                        </label>
-                    </motion.div>
-                </div>
 
                 {/* Roadmap Section */}
                 <motion.div

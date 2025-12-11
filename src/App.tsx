@@ -381,7 +381,7 @@ function App() {
                             {currentPage === 'stats' && <StatsPage isSidebarCollapsed={isSidebarCollapsed} />}
                             {currentPage === 'drawing' && <DrawingPage />}
                             {currentPage === 'github' && <GithubPage isMockMode={isMockMode} isSidebarCollapsed={isSidebarCollapsed} />}
-                            {currentPage === 'settings' && <SettingsPage isSidebarCollapsed={isSidebarCollapsed} />}
+                            {currentPage === 'settings' && <SettingsPage />}
                             {currentPage === 'dev' && (
                                 <DevPage
                                     isMockMode={isMockMode}
