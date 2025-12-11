@@ -390,7 +390,7 @@ export function SettingsPage() {
         const fontFamily = font === 'CustomFont' ? 'var(--app-font)' : `"${font}", sans-serif`;
 
         return (
-            <div className="w-full aspect-video xl:aspect-[2.2/1] rounded-xl overflow-hidden border shadow-sm flex transition-all"
+            <div className="w-full h-full min-h-[140px] rounded-xl overflow-hidden border shadow-sm flex transition-all"
                 style={{ backgroundColor: bg, borderColor: border, fontFamily: fontFamily }}>
                 {/* Sidebar */}
                 <div className="w-[80px] h-full border-r p-3 flex flex-col gap-3" style={{ backgroundColor: sidebarBg, borderColor: border }}>
@@ -623,34 +623,54 @@ export function SettingsPage() {
                             Configure your Gemini API key to enable AI features.
                         </p>
 
-                        <div className="space-y-3">
-                            <div className="relative">
-                                <input
-                                    type="password"
-                                    value={apiKey}
-                                    onChange={(e) => {
-                                        setApiKey(e.target.value);
-                                        setKeyStatus('idle');
-                                    }}
-                                    placeholder="Paste your API Key here"
-                                    className={clsx(
-                                        "w-full pl-4 pr-12 py-3 rounded-xl bg-gray-50 dark:bg-gray-700/50 border transition-all outline-none text-sm",
-                                        keyStatus === 'invalid'
-                                            ? "border-red-500 dark:border-red-500 focus:ring-2 focus:ring-red-500/20"
-                                            : keyStatus === 'valid'
-                                                ? "border-green-500 dark:border-green-500 focus:ring-2 focus:ring-green-500/20"
-                                                : "border-gray-200 dark:border-gray-600 focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                        <div className="space-y-4">
+                            <div className="flex gap-2 items-start">
+                                <div className="relative flex-1">
+                                    <input
+                                        type="password"
+                                        value={apiKey}
+                                        onChange={(e) => {
+                                            setApiKey(e.target.value);
+                                            setKeyStatus('idle');
+                                        }}
+                                        placeholder="Paste your API Key here"
+                                        className={clsx(
+                                            "w-full pl-4 pr-12 py-3 rounded-xl bg-gray-50 dark:bg-gray-700/50 border transition-all outline-none text-sm",
+                                            keyStatus === 'invalid'
+                                                ? "border-red-500 dark:border-red-500 focus:ring-2 focus:ring-red-500/20"
+                                                : keyStatus === 'valid'
+                                                    ? "border-green-500 dark:border-green-500 focus:ring-2 focus:ring-green-500/20"
+                                                    : "border-gray-200 dark:border-gray-600 focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                                        )}
+                                    />
+                                    {!apiKey && (
+                                        <button
+                                            onClick={handlePasteKey}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                                            title="Paste from clipboard"
+                                        >
+                                            <Clipboard className="w-4 h-4" />
+                                        </button>
                                     )}
-                                />
-                                {!apiKey && (
-                                    <button
-                                        onClick={handlePasteKey}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                                        title="Paste from clipboard"
-                                    >
-                                        <Clipboard className="w-4 h-4" />
-                                    </button>
-                                )}
+                                </div>
+                                <button
+                                    onClick={validateAndSaveKey}
+                                    disabled={keyStatus === 'validating' || !apiKey}
+                                    className={clsx(
+                                        "px-4 py-3 rounded-xl font-medium text-sm transition-all flex items-center gap-2 shadow-md shrink-0",
+                                        keyStatus === 'valid'
+                                            ? "bg-green-500 text-white shadow-green-500/20"
+                                            : "bg-purple-600 hover:bg-purple-700 text-white shadow-purple-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    )}
+                                >
+                                    {keyStatus === 'validating' ? (
+                                        <RefreshCw className="w-5 h-5 animate-spin" />
+                                    ) : keyStatus === 'valid' ? (
+                                        <Check className="w-5 h-5" />
+                                    ) : (
+                                        <>Verify</>
+                                    )}
+                                </button>
                             </div>
 
                             <AnimatePresence mode="wait">
@@ -678,37 +698,16 @@ export function SettingsPage() {
                                 )}
                             </AnimatePresence>
 
-                            <div className="flex items-center justify-between pt-4">
-                                <div className="flex flex-col gap-1">
-                                    <button
-                                        onClick={() => openExternalLink('https://aistudio.google.com/app/apikey')}
-                                        className="flex items-center gap-1.5 text-xs font-medium text-purple-600 dark:text-purple-400 hover:underline cursor-pointer"
-                                    >
-                                        Get a free Google Studio API key <ExternalLink className="w-3 h-3" />
-                                    </button>
-                                    <p className="text-[10px] text-gray-400 dark:text-gray-500">
-                                        Note: Ensure "All models" are enabled in your <button onClick={() => openExternalLink('https://aistudio.google.com/usage')} className="underline hover:text-purple-500">Google AI Studio settings</button> if you encounter issues.
-                                    </p>
-                                </div>
-
+                            <div className="flex flex-col gap-1 pt-2">
                                 <button
-                                    onClick={validateAndSaveKey}
-                                    disabled={keyStatus === 'validating' || !apiKey}
-                                    className={clsx(
-                                        "px-4 py-2 rounded-lg font-medium text-sm transition-all flex items-center gap-2 shadow-md",
-                                        keyStatus === 'valid'
-                                            ? "bg-green-500 text-white shadow-green-500/20"
-                                            : "bg-purple-600 hover:bg-purple-700 text-white shadow-purple-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    )}
+                                    onClick={() => openExternalLink('https://aistudio.google.com/app/apikey')}
+                                    className="flex items-center gap-1.5 text-xs font-medium text-purple-600 dark:text-purple-400 hover:underline cursor-pointer w-fit"
                                 >
-                                    {keyStatus === 'validating' ? (
-                                        <>Checking...</>
-                                    ) : keyStatus === 'valid' ? (
-                                        <>Saved <Check className="w-4 h-4" /></>
-                                    ) : (
-                                        <>Verify & Save</>
-                                    )}
+                                    Get a free Google Studio API key <ExternalLink className="w-3 h-3" />
                                 </button>
+                                <p className="text-[10px] text-gray-400 dark:text-gray-500 leading-relaxed">
+                                    Note: Ensure "All models" are enabled in your <button onClick={() => openExternalLink('https://aistudio.google.com/usage')} className="underline hover:text-purple-500">Google AI Studio settings</button> if you encounter issues.
+                                </p>
                             </div>
                         </div>
                     </motion.div>
@@ -1034,13 +1033,13 @@ export function SettingsPage() {
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                         {/* Left Column: Accent & Font */}
                         {/* Left Column: Accent & Font */}
-                        <div className="flex flex-col gap-8 h-full">
+                        <div className="flex flex-col gap-6 h-full">
                             {/* Accent Color */}
                             <div className="flex-1 flex flex-col">
                                 <p className="text-sm xl:text-lg font-medium text-gray-700 dark:text-gray-300 mb-4">Accent Color</p>
 
-                                <div className="bg-gray-50 dark:bg-gray-800 rounded-2xl p-4 xl:p-8 border border-gray-100 dark:border-gray-700 flex-1 flex flex-col justify-center">
-                                    <div className="flex items-center gap-4 xl:gap-6 mb-4 xl:mb-8">
+                                <div className="bg-gray-50 dark:bg-gray-800 rounded-2xl p-4 xl:p-6 border border-gray-100 dark:border-gray-700 flex-1 flex flex-col justify-center">
+                                    <div className="flex items-center gap-4 xl:gap-5 mb-4 xl:mb-5">
                                         <div className="relative group">
                                             <input
                                                 type="color"
@@ -1086,19 +1085,19 @@ export function SettingsPage() {
                             {/* Font Selection */}
                             <div className="flex-[1.5] flex flex-col">
                                 <p className="text-sm xl:text-lg font-medium text-gray-700 dark:text-gray-300 mb-4">Application Font</p>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 xl:gap-6 h-full">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 xl:gap-4 h-full">
                                     {['Outfit', 'Inter', 'Roboto', 'Poppins', 'Lato'].map(font => (
                                         <button
                                             key={font}
                                             onClick={() => handleFontChange(font)}
                                             className={clsx(
-                                                "p-3 xl:p-6 rounded-xl border text-left transition-all flex flex-col justify-center",
+                                                "p-3 xl:p-4 rounded-xl border text-left transition-all flex flex-col justify-center",
                                                 currentFont === font
                                                     ? "bg-blue-50 dark:bg-blue-900/20 border-blue-500 ring-1 ring-blue-500"
                                                     : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-blue-300"
                                             )}
                                         >
-                                            <div className="flex items-center justify-between mb-1 xl:mb-3">
+                                            <div className="flex items-center justify-between mb-1 xl:mb-2">
                                                 <span className="font-medium xl:text-2xl" style={{ fontFamily: font }}>{font}</span>
                                                 {currentFont === font && <Check className="w-4 h-4 xl:w-6 xl:h-6 text-blue-500" />}
                                             </div>
@@ -1106,10 +1105,10 @@ export function SettingsPage() {
                                         </button>
                                     ))}
                                     <label className={clsx(
-                                        "p-3 xl:p-6 rounded-xl border text-left transition-all cursor-pointer bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-blue-300 flex flex-col justify-center",
+                                        "p-3 xl:p-4 rounded-xl border text-left transition-all cursor-pointer bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-blue-300 flex flex-col justify-center",
                                         currentFont === 'CustomFont' && "border-blue-500 ring-1 ring-blue-500"
                                     )}>
-                                        <div className="flex items-center justify-between mb-1 xl:mb-3">
+                                        <div className="flex items-center justify-between mb-1 xl:mb-2">
                                             <span className="font-medium flex items-center gap-2 xl:text-2xl">
                                                 <Type className="w-4 h-4 xl:w-6 xl:h-6" /> Custom Font
                                             </span>
@@ -1138,7 +1137,7 @@ export function SettingsPage() {
                                             : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
                                     )}
                                 >
-                                    <div className="mb-3 w-full">
+                                    <div className="flex-1 w-full mb-3 min-h-0">
                                         <AppPreview mode="light" accent={accentColor} font={currentFont} />
                                     </div>
                                     <div className="flex items-center justify-between px-1">
@@ -1156,7 +1155,7 @@ export function SettingsPage() {
                                             : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
                                     )}
                                 >
-                                    <div className="mb-3 w-full">
+                                    <div className="flex-1 w-full mb-3 min-h-0">
                                         <AppPreview mode="dark" accent={accentColor} font={currentFont} />
                                     </div>
                                     <div className="flex items-center justify-between px-1">
