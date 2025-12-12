@@ -865,7 +865,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
         const parts = text.split(/(\*\*.*?\*\*)/g);
         return parts.map((part, index) => {
             if (part.startsWith('**') && part.endsWith('**')) {
-                return <strong key={index} className="font-bold text-indigo-700 dark:text-indigo-400">{part.slice(2, -2)}</strong>;
+                return <strong key={index} className="font-bold" style={{ color: accentColor }}>{part.slice(2, -2)}</strong>;
             }
             return part;
         });
