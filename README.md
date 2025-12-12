@@ -147,8 +147,6 @@ If you're forking this project, you can preserve your personal baseline data:
 
 ### Planned Features
 
-- [ ] **Data Persistence & Sync (Migration to v2)** - Transitioning to a cloud-hybrid model using Supabase (PostgreSQL) for real-time multi-device syncing, while retaining offline capabilities via local caching.
-- [ ] **Mobile Support (PWA)** - A Progressive Web App implementation for mobile access, featuring "Add to Home Screen" capability and push notifications for task reminders without app store fees.
 - [ ] **Microsoft Store Distribution** - Publishing to the Microsoft Store to resolve "Unknown Publisher" warnings and enable seamless background updates, utilizing the one-time developer fee for a cost-effective signing solution.
 - [x] **Advanced Appearance Settings** - Custom font uploads, extended accent color support (backgrounds, icons).
 - [x] **Dashboard Edit Mode** - Rearrange and add widgets to customize the dashboard layout.
@@ -164,9 +162,8 @@ If you're forking this project, you can preserve your personal baseline data:
 
 ### Future Considerations
 
-- Plugin/extension system
-- Calendar sharing and permissions
-- Advanced AI suggestions and insights
+- [ ] **Mobile Support (PWA)** - A Progressive Web App implementation for mobile access, featuring "Add to Home Screen" capability and push notifications for task reminders without app store fees.
+- [ ] **Data Persistence & Sync (Migration to v2)** - Transitioning to a cloud-hybrid model using Supabase (PostgreSQL) for real-time multi-device syncing, while retaining offline capabilities via local caching.
 
 ---
 
