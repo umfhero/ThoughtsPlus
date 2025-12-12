@@ -19,6 +19,7 @@ import {
 } from 'date-fns';
 import clsx from 'clsx';
 import { NotesData, Note } from '../types';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface CalendarPageProps {
     notes: NotesData;
@@ -30,21 +31,10 @@ interface CalendarPageProps {
 }
 
 export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMonth, setCurrentMonth, isSidebarCollapsed = false }: Omit<CalendarPageProps, 'initialSelectedNoteId'> & { isSidebarCollapsed?: boolean }) {
+    const { accentColor } = useTheme();
     const [selectedDate, setSelectedDate] = useState<Date | null>(initialSelectedDate || null);
     const [direction, setDirection] = useState(0);
     const [isPanelOpen, setIsPanelOpen] = useState(false);
-    const [isMobile, setIsMobile] = useState(false);
-
-    useEffect(() => {
-        const checkMobile = () => {
-            const sidebarWidth = isSidebarCollapsed ? 0 : 240;
-            const availableWidth = window.innerWidth - sidebarWidth;
-            setIsMobile(availableWidth < 1000);
-        };
-        checkMobile();
-        window.addEventListener('resize', checkMobile);
-        return () => window.removeEventListener('resize', checkMobile);
-    }, [isSidebarCollapsed]);
 
     // Form State
     const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
@@ -411,8 +401,8 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
     };
 
     return (
-        <div className={clsx("h-full flex gap-4 md:gap-6 p-4 md:p-8 overflow-hidden relative", isMobile ? "flex-col" : "flex-col md:flex-row")}>
-            <motion.div layout className="flex-1 flex flex-col h-full min-w-0">
+        <div className="h-full flex flex-col p-4 md:p-8 overflow-hidden relative">
+            <motion.div layout className="flex-1 flex flex-col h-full min-w-0 w-full">
                 <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between mb-4 md:mb-8 gap-4">
                     <div className="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-8 w-full xl:w-auto">
                         <div>
@@ -506,16 +496,29 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
                                                 "relative border-b border-r border-gray-100/50 dark:border-gray-700/50 p-2 transition-all cursor-pointer group flex flex-col",
                                                 !isCurrentMonth && "bg-gray-50/50 dark:bg-gray-900/50 text-gray-300 dark:text-gray-600",
                                                 isCurrentMonth && "hover:bg-white dark:hover:bg-gray-700/50 hover:shadow-lg hover:z-10",
-                                                isSelected && "bg-blue-50 dark:bg-blue-900/20 !border-blue-100 dark:!border-blue-800 z-10"
+                                                isSelected && "z-10"
                                             )}
+                                            style={isSelected ? {
+                                                backgroundColor: `${accentColor}15`,
+                                                borderColor: `${accentColor}40`
+                                            } : {}}
                                         >
                                             <div className="flex justify-between items-start mb-1">
-                                                <span className={clsx(
-                                                    "w-7 h-7 flex items-center justify-center rounded-full text-sm font-bold transition-all",
-                                                    isTodayDate ? "bg-blue-600 text-white shadow-lg shadow-blue-500/30" :
-                                                        isSelected ? "text-blue-600 bg-blue-100 dark:bg-blue-900/50 dark:text-blue-200" :
-                                                            isCurrentMonth ? "text-gray-700 dark:text-gray-200 group-hover:bg-gray-100 dark:group-hover:bg-gray-600" : "text-gray-400 dark:text-gray-600"
-                                                )}>
+                                                <span
+                                                    className={clsx(
+                                                        "w-7 h-7 flex items-center justify-center rounded-full text-sm font-bold transition-all",
+                                                        isTodayDate ? "text-white shadow-lg" :
+                                                            isSelected ? "" :
+                                                                isCurrentMonth ? "text-gray-700 dark:text-gray-200 group-hover:bg-gray-100 dark:group-hover:bg-gray-600" : "text-gray-400 dark:text-gray-600"
+                                                    )}
+                                                    style={isTodayDate ? {
+                                                        backgroundColor: accentColor,
+                                                        boxShadow: `0 10px 25px -5px ${accentColor}30`
+                                                    } : isSelected ? {
+                                                        backgroundColor: `${accentColor}30`,
+                                                        color: accentColor
+                                                    } : {}}
+                                                >
                                                     {format(day, 'd')}
                                                 </span>
                                                 {dayNotes.length > 0 && (
@@ -548,7 +551,7 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
                         initial={{ x: 300, opacity: 0 }}
                         animate={{ x: 0, opacity: 1 }}
                         exit={{ x: 300, opacity: 0 }}
-                        className="w-full md:w-96 shrink-0 bg-white/80 dark:bg-gray-900/90 backdrop-blur-xl rounded-[2rem] border border-white/60 dark:border-gray-700/60 shadow-2xl p-6 flex flex-col h-full absolute md:relative z-20 md:z-0"
+                        className="absolute right-4 md:right-8 top-4 md:top-8 bottom-4 md:bottom-8 w-[calc(100%-2rem)] sm:w-96 md:w-[384px] shrink-0 bg-white/80 dark:bg-gray-900/90 backdrop-blur-xl rounded-[2rem] border border-white/60 dark:border-gray-700/60 shadow-2xl p-4 md:p-6 flex flex-col z-30 overflow-hidden"
                     >
                         <div className="flex justify-between items-center mb-6">
                             <div>
@@ -568,7 +571,7 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
                                 <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                             </button>
                         </div>
-                        <div className="flex-1 overflow-y-auto custom-scrollbar space-y-4 mb-6">
+                        <div className="flex-1 overflow-y-auto custom-scrollbar space-y-4 mb-4 min-h-0">
                             {isSearchActive ? (
                                 filteredNotes.length > 0 ? (
                                     filteredNotes.map(({ date, note }) => (
@@ -627,10 +630,16 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
                                         </div>
                                         <p className="text-sm opacity-80 mb-3">{note.description}</p>
                                         <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button onClick={() => loadNoteForEditing(note)} className="p-1.5 hover:bg-white/50 dark:hover:bg-gray-700/50 rounded-lg transition-colors">
+                                            <button onClick={(e) => {
+                                                e.stopPropagation();
+                                                loadNoteForEditing(note);
+                                            }} className="p-1.5 hover:bg-white/50 dark:hover:bg-gray-700/50 rounded-lg transition-colors">
                                                 <Edit2 className="w-3.5 h-3.5" />
                                             </button>
-                                            <button onClick={() => handleDeleteNote(note.id)} className="p-1.5 hover:bg-red-100 text-red-600 rounded-lg transition-colors">
+                                            <button onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDeleteNote(note.id);
+                                            }} className="p-1.5 hover:bg-red-100 text-red-600 rounded-lg transition-colors">
                                                 <Trash2 className="w-3.5 h-3.5" />
                                             </button>
                                         </div>
@@ -638,13 +647,13 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
                                 ))
                             )}
                             {!isSearchActive && (!notes[format(selectedDate!, 'yyyy-MM-dd')] || notes[format(selectedDate!, 'yyyy-MM-dd')].length === 0) && (
-                                <div className="text-center py-10 text-gray-400 dark:text-gray-500">
-                                    <p>No events for this day</p>
+                                <div className="text-center py-4 text-gray-400 dark:text-gray-500">
+                                    <p className="text-sm">No events for this day</p>
                                 </div>
                             )}
                         </div>
 
-                        <div className="space-y-4 bg-white/50 dark:bg-gray-800/50 p-4 rounded-2xl border border-white/50 dark:border-gray-700/50">
+                        <div className="space-y-3 bg-white/50 dark:bg-gray-800/50 p-4 rounded-2xl border border-white/50 dark:border-gray-700/50 shrink-0">
                             <input
                                 type="text"
                                 placeholder="Event Title"
@@ -653,7 +662,7 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
                                 className="w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                             />
                             <textarea
-                                placeholder="Description (AI summary available for long texts)"
+                                placeholder="Description"
                                 value={description}
                                 onChange={(e) => setDescription(e.target.value)}
                                 className="w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 h-24 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/20"
@@ -663,12 +672,24 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
                                     type="time"
                                     value={time}
                                     onChange={(e) => setTime(e.target.value)}
-                                    className="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                    className="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
+                                    style={{ colorScheme: 'light' }}
                                 />
                                 <select
                                     value={importance}
                                     onChange={(e) => setImportance(e.target.value as any)}
-                                    className="flex-1 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                    className="flex-1 border-2 rounded-xl px-4 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-offset-1 cursor-pointer"
+                                    style={{
+                                        backgroundColor: importance === 'high' ? '#fee2e2' :
+                                            importance === 'medium' ? '#fef3c7' :
+                                                importance === 'low' ? '#dcfce7' : '#f3f4f6',
+                                        borderColor: importance === 'high' ? '#ef4444' :
+                                            importance === 'medium' ? '#f59e0b' :
+                                                importance === 'low' ? '#22c55e' : '#9ca3af',
+                                        color: importance === 'high' ? '#991b1b' :
+                                            importance === 'medium' ? '#92400e' :
+                                                importance === 'low' ? '#166534' : '#374151'
+                                    }}
                                 >
                                     <option value="low">Low Priority</option>
                                     <option value="medium">Medium Priority</option>
@@ -749,7 +770,10 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
                             <button
                                 onClick={handleSaveNote}
                                 disabled={!title.trim() || isGenerating}
-                                className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                                className="w-full text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                                style={{
+                                    backgroundColor: accentColor
+                                }}
                             >
                                 {isGenerating ? <Sparkles className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                                 {editingNoteId ? 'Update Event' : 'Add Event'}

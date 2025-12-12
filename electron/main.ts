@@ -454,7 +454,7 @@ app.whenReady().then(async () => {
         }
     });
 
-    ipcMain.handle('parse-natural-language-note', async (_, input) => {
+    ipcMain.handle('parse-natural-language-note', async (_, input, generateDescriptions = false) => {
         try {
             const apiKey = deviceSettings.apiKey || process.env.GEMINI_API_KEY;
             if (!apiKey) {
@@ -467,6 +467,10 @@ app.whenReady().then(async () => {
             const genAI = new GoogleGenerativeAI(apiKey);
 
             const now = new Date();
+            const descriptionField = generateDescriptions
+                ? `- descriptionOptions: Generate 3 distinct, helpful, professional, and slightly detailed description options based on the input context. Do not just copy the input. Use British English spelling (e.g. 'colour', 'centre', 'programme', 'organise').`
+                : `- description: Leave empty or set to empty string.`;
+
             const prompt = `
             You are a smart calendar assistant.
             Current Date/Time: ${now.toISOString()} (${now.toLocaleDateString('en-GB', { weekday: 'long' })})
@@ -475,7 +479,7 @@ app.whenReady().then(async () => {
             
             Extract the event details into a JSON object with these fields:
             - title: Short summary (max 5 words). Use British English.
-            - descriptionOptions: Generate 3 distinct, helpful, professional, and slightly detailed description options based on the input context. Do not just copy the input. Use British English spelling (e.g. 'colour', 'centre', 'programme', 'organise').
+            ${descriptionField}
             - date: YYYY-MM-DD format. NOTE: If the user says "next week" without a specific day, assume it means exactly 7 days from today.
             - time: HH:mm format (24h). Default to "09:00" if not specified.
             - importance: "low", "medium", or "high" (infer from urgency/tone)

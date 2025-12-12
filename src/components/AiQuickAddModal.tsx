@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, X, Check, Repeat } from 'lucide-react';
+import { Sparkles, X, Check, Repeat, FileText } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import clsx from 'clsx';
 import { Note } from '../types';
@@ -22,6 +22,7 @@ export function AiQuickAddModal({ isOpen, onClose, onSave }: AiQuickAddModalProp
     const [selectedOptionIndex, setSelectedOptionIndex] = useState(0);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [isRecurring, setIsRecurring] = useState(false);
+    const [generateDescriptions, setGenerateDescriptions] = useState(false);
 
     // --- AI Note Logic ---
     const handleAiSubmit = async () => {
@@ -36,7 +37,7 @@ export function AiQuickAddModal({ isOpen, onClose, onSave }: AiQuickAddModalProp
             );
 
             // @ts-ignore
-            const resultPromise = window.ipcRenderer.invoke('parse-natural-language-note', aiInput);
+            const resultPromise = window.ipcRenderer.invoke('parse-natural-language-note', aiInput, generateDescriptions);
 
             const result = await Promise.race([resultPromise, timeoutPromise]);
 
@@ -149,6 +150,21 @@ export function AiQuickAddModal({ isOpen, onClose, onSave }: AiQuickAddModalProp
                                         autoFocus
                                         spellCheck={true}
                                     />
+
+                                    {/* Description Toggle */}
+                                    <button
+                                        onClick={() => setGenerateDescriptions(!generateDescriptions)}
+                                        className={clsx(
+                                            "flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all",
+                                            generateDescriptions
+                                                ? "bg-blue-500 text-white"
+                                                : "bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300"
+                                        )}
+                                    >
+                                        <FileText className="w-4 h-4" />
+                                        {generateDescriptions ? 'AI Descriptions Enabled' : 'AI Descriptions Disabled (Save Tokens)'}
+                                    </button>
+
                                     <button
                                         onClick={handleAiSubmit}
                                         disabled={!aiInput.trim() || isAiProcessing}
@@ -183,12 +199,24 @@ export function AiQuickAddModal({ isOpen, onClose, onSave }: AiQuickAddModalProp
                                                     type="time"
                                                     value={aiProposedNote.note.time}
                                                     onChange={(e) => setAiProposedNote({ ...aiProposedNote, note: { ...aiProposedNote.note, time: e.target.value } })}
-                                                    className="bg-white/60 dark:bg-gray-800/60 border border-blue-200 dark:border-blue-700 rounded-lg px-3 py-1.5 text-sm text-blue-800 dark:text-blue-200 focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium"
+                                                    className="bg-white/60 dark:bg-gray-800/60 border border-blue-200 dark:border-blue-700 rounded-lg px-3 py-1.5 text-sm text-blue-800 dark:text-blue-200 focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium cursor-pointer"
+                                                    style={{ colorScheme: 'light' }}
                                                 />
                                                 <select
                                                     value={aiProposedNote.note.importance}
                                                     onChange={(e) => setAiProposedNote({ ...aiProposedNote, note: { ...aiProposedNote.note, importance: e.target.value as any } })}
-                                                    className="bg-white/60 dark:bg-gray-800/60 border border-blue-200 dark:border-blue-700 rounded-lg px-3 py-1.5 text-sm text-blue-800 dark:text-blue-200 focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium"
+                                                    className="border-2 rounded-lg px-3 py-1.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-offset-1 cursor-pointer"
+                                                    style={{
+                                                        backgroundColor: aiProposedNote.note.importance === 'high' ? '#fee2e2' :
+                                                            aiProposedNote.note.importance === 'medium' ? '#fef3c7' :
+                                                                aiProposedNote.note.importance === 'low' ? '#dbeafe' : '#f3f4f6',
+                                                        borderColor: aiProposedNote.note.importance === 'high' ? '#ef4444' :
+                                                            aiProposedNote.note.importance === 'medium' ? '#f59e0b' :
+                                                                aiProposedNote.note.importance === 'low' ? '#3b82f6' : '#9ca3af',
+                                                        color: aiProposedNote.note.importance === 'high' ? '#991b1b' :
+                                                            aiProposedNote.note.importance === 'medium' ? '#92400e' :
+                                                                aiProposedNote.note.importance === 'low' ? '#1e40af' : '#374151'
+                                                    }}
                                                 >
                                                     <option value="low">Low Priority</option>
                                                     <option value="medium">Medium Priority</option>
