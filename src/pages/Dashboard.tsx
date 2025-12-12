@@ -57,17 +57,42 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
 
     // Edit Mode State
     const [isEditMode, setIsEditMode] = useState(false);
-    const [dashboardOrder, setDashboardOrder] = useState<string[]>(['briefing', 'main_content', 'github', 'fortnite']);
+
+    // New grid-based layout structure
+    // Each row can contain 1-2 widgets
+    type DashboardRow = {
+        id: string;
+        widgets: string[]; // 1-2 widget IDs
+        widthRatio?: number; // For 2-widget rows: left widget width percentage (0-100)
+    };
+
+    const [dashboardLayout, setDashboardLayout] = useState<DashboardRow[]>(() => {
+        const saved = localStorage.getItem('dashboard_layout_v2');
+        if (saved) {
+            return JSON.parse(saved);
+        }
+        // Default layout: each widget in its own row
+        return [
+            { id: 'row-1', widgets: ['briefing'] },
+            { id: 'row-2', widgets: ['main_content'] },
+            { id: 'row-3', widgets: ['github'] },
+            { id: 'row-4', widgets: ['fortnite'] }
+        ];
+    });
+
     const [hiddenWidgets, setHiddenWidgets] = useState<string[]>([]);
     const longPressTimer = useRef<NodeJS.Timeout | null>(null);
     const [showEditTip, setShowEditTip] = useState(false);
 
-    // Load saved dashboard order
+    // Debug logging
     useEffect(() => {
-        const savedOrder = localStorage.getItem('dashboard_order');
-        if (savedOrder) {
-            setDashboardOrder(JSON.parse(savedOrder));
-        }
+        console.log('🎯 Dashboard Layout State:', dashboardLayout);
+        console.log('👁️ Hidden Widgets:', hiddenWidgets);
+        console.log('✏️ Edit Mode:', isEditMode);
+    }, [dashboardLayout, hiddenWidgets, isEditMode]);
+
+    // Load saved hidden widgets
+    useEffect(() => {
         const savedHidden = localStorage.getItem('dashboard_hidden_widgets');
         if (savedHidden) {
             setHiddenWidgets(JSON.parse(savedHidden));
@@ -76,15 +101,14 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
         // Check if edit tip has been shown
         const tipShown = localStorage.getItem('dashboard_edit_tip_shown');
         if (!tipShown && !isSuppressed) {
-            // Show tip after a short delay
             setTimeout(() => setShowEditTip(true), 2000);
         }
     }, [isSuppressed]);
 
-    // Save order on change
+    // Save layout on change
     useEffect(() => {
-        localStorage.setItem('dashboard_order', JSON.stringify(dashboardOrder));
-    }, [dashboardOrder]);
+        localStorage.setItem('dashboard_layout_v2', JSON.stringify(dashboardLayout));
+    }, [dashboardLayout]);
 
     useEffect(() => {
         localStorage.setItem('dashboard_hidden_widgets', JSON.stringify(hiddenWidgets));
@@ -93,9 +117,8 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
     const handleLongPressStart = () => {
         longPressTimer.current = setTimeout(() => {
             setIsEditMode(true);
-            // Vibrate if available (mobile)
             if (navigator.vibrate) navigator.vibrate(50);
-        }, 800); // 800ms for long press
+        }, 800);
     };
 
     const handleLongPressEnd = () => {
@@ -106,14 +129,63 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
 
     const toggleWidgetVisibility = (widgetId: string) => {
         if (hiddenWidgets.includes(widgetId)) {
-            // Unhide: Remove from hidden, add to order
+            // Unhide: Remove from hidden, add as new row
             setHiddenWidgets(prev => prev.filter(id => id !== widgetId));
-            setDashboardOrder(prev => [...prev, widgetId]);
+            setDashboardLayout(prev => [...prev, { id: `row-${Date.now()}`, widgets: [widgetId] }]);
         } else {
-            // Hide: Remove from order, add to hidden
-            setDashboardOrder(prev => prev.filter(id => id !== widgetId));
+            // Hide: Remove from all rows
+            setDashboardLayout(prev =>
+                prev.map(row => ({
+                    ...row,
+                    widgets: row.widgets.filter(w => w !== widgetId)
+                })).filter(row => row.widgets.length > 0)
+            );
             setHiddenWidgets(prev => [...prev, widgetId]);
         }
+    };
+
+    // Move widget to combine with another (side-by-side)
+    const combineWidgets = (widgetId: string, targetRowId: string) => {
+        const targetRow = dashboardLayout.find(r => r.id === targetRowId);
+        if (!targetRow || targetRow.widgets.length >= 2 || targetRow.widgets.includes(widgetId)) return;
+
+        setDashboardLayout(prev => {
+            // Remove widget from current row
+            const withoutWidget = prev.map(row => ({
+                ...row,
+                widgets: row.widgets.filter(w => w !== widgetId)
+            })).filter(row => row.widgets.length > 0);
+
+            // Add to target row
+            return withoutWidget.map(row => {
+                if (row.id === targetRowId) {
+                    return { ...row, widgets: [...row.widgets, widgetId], widthRatio: 50 };
+                }
+                return row;
+            });
+        });
+    };
+
+    // Separate widget to its own row
+    const separateWidget = (widgetId: string, rowId: string) => {
+        setDashboardLayout(prev => {
+            const newLayout: DashboardRow[] = [];
+            prev.forEach(row => {
+                if (row.id === rowId && row.widgets.includes(widgetId)) {
+                    if (row.widgets.length === 2) {
+                        // Split into two rows
+                        const otherWidget = row.widgets.find(w => w !== widgetId);
+                        newLayout.push({ id: `row-${Date.now()}-1`, widgets: [otherWidget!] });
+                        newLayout.push({ id: `row-${Date.now()}-2`, widgets: [widgetId] });
+                    } else {
+                        newLayout.push(row);
+                    }
+                } else {
+                    newLayout.push(row);
+                }
+            });
+            return newLayout;
+        });
     };
 
     // Completion Modal State
@@ -1465,50 +1537,163 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                 </div>
             </div>
 
-            {/* Draggable Dashboard Layout */}
+            {/* Draggable Dashboard Grid Layout */}
             <Reorder.Group
                 axis="y"
-                values={dashboardOrder}
-                onReorder={setDashboardOrder}
+                values={dashboardLayout}
+                onReorder={(newLayout) => {
+                    console.log('📊 Dashboard reordered:', newLayout);
+                    setDashboardLayout(newLayout);
+                }}
                 className="space-y-6 md:space-y-8"
                 style={{
-                    transform: isEditMode ? 'scale(0.6)' : 'none',
+                    transform: isEditMode ? 'scale(0.95)' : 'none',
                     transformOrigin: 'top center',
-                    height: isEditMode ? '100vh' : 'auto', // Force height to ensure visibility during drag if needed, or let it flow
                     transition: 'transform 0.3s ease'
                 }}
             >
-                {dashboardOrder.map((widgetId) => {
-                    if (hiddenWidgets.includes(widgetId)) return null;
+                {dashboardLayout.map((row) => {
+                    console.log(`🔄 Rendering row ${row.id}:`, row.widgets);
+
+                    // Filter out hidden widgets from this row
+                    const visibleWidgets = row.widgets.filter(w => !hiddenWidgets.includes(w));
+                    if (visibleWidgets.length === 0) {
+                        console.log(`⚠️ Row ${row.id} has no visible widgets, skipping`);
+                        return null;
+                    }
 
                     return (
                         <Reorder.Item
-                            key={widgetId}
-                            value={widgetId}
+                            key={row.id}
+                            value={row}
                             dragListener={isEditMode}
                             className="relative"
                         >
                             <div
-                                className={clsx("relative", isEditMode && "shake-animation cursor-move")}
+                                className={clsx("relative", isEditMode && "shake-animation")}
                                 onMouseDown={handleLongPressStart}
                                 onMouseUp={handleLongPressEnd}
                                 onTouchStart={handleLongPressStart}
                                 onTouchEnd={handleLongPressEnd}
                                 onMouseLeave={handleLongPressEnd}
                             >
-                                {isEditMode && (
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            toggleWidgetVisibility(widgetId);
-                                        }}
-                                        className="absolute -top-3 -right-3 z-50 p-2 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600 transition-colors"
-                                    >
-                                        <X className="w-4 h-4" />
-                                    </button>
-                                )}
+                                {/* Row Container */}
+                                {visibleWidgets.length === 1 ? (
+                                    // Single widget row
+                                    <div className="relative">
+                                        {isEditMode && (
+                                            <div className="absolute -top-3 -right-3 z-50 flex gap-2">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        console.log(`🗑️ Hiding widget: ${visibleWidgets[0]}`);
+                                                        toggleWidgetVisibility(visibleWidgets[0]);
+                                                    }}
+                                                    className="p-2 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600 transition-colors"
+                                                    title="Hide widget"
+                                                >
+                                                    <X className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        )}
+                                        {renderWidget(visibleWidgets[0])}
+                                    </div>
+                                ) : (
+                                    // Two widget row with width slider
+                                    <div className="relative flex gap-4">
+                                        {isEditMode && (
+                                            <div className="absolute -top-3 -right-3 z-50 flex gap-2">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        console.log(`✂️ Separating widgets in row ${row.id}`);
+                                                        separateWidget(visibleWidgets[0], row.id);
+                                                    }}
+                                                    className="p-2 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600 transition-colors"
+                                                    title="Separate widgets"
+                                                >
+                                                    <MousePointerClick className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        )}
 
-                                {renderWidget(widgetId)}
+                                        {/* Left Widget */}
+                                        <div
+                                            style={{ width: `${row.widthRatio || 50}%` }}
+                                            className="relative"
+                                        >
+                                            {isEditMode && (
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        console.log(`🗑️ Hiding widget: ${visibleWidgets[0]}`);
+                                                        toggleWidgetVisibility(visibleWidgets[0]);
+                                                    }}
+                                                    className="absolute -top-3 -right-3 z-50 p-2 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600 transition-colors"
+                                                    title="Hide widget"
+                                                >
+                                                    <X className="w-4 h-4" />
+                                                </button>
+                                            )}
+                                            {renderWidget(visibleWidgets[0])}
+                                        </div>
+
+                                        {/* Width Resizer */}
+                                        <div
+                                            className="w-1 bg-gray-300 dark:bg-gray-600 hover:bg-blue-500 dark:hover:bg-blue-400 cursor-col-resize transition-colors rounded-full"
+                                            onMouseDown={(e) => {
+                                                e.preventDefault();
+                                                console.log(`📏 Starting width resize for row ${row.id}`);
+                                                const startX = e.clientX;
+                                                const startRatio = row.widthRatio || 50;
+                                                const container = e.currentTarget.parentElement;
+                                                if (!container) return;
+
+                                                const containerWidth = container.offsetWidth;
+
+                                                const handleMouseMove = (moveEvent: MouseEvent) => {
+                                                    const deltaX = moveEvent.clientX - startX;
+                                                    const deltaPercent = (deltaX / containerWidth) * 100;
+                                                    const newRatio = Math.max(20, Math.min(80, startRatio + deltaPercent));
+
+                                                    setDashboardLayout(prev => prev.map(r =>
+                                                        r.id === row.id ? { ...r, widthRatio: newRatio } : r
+                                                    ));
+                                                };
+
+                                                const handleMouseUp = () => {
+                                                    console.log(`✅ Width resize complete for row ${row.id}`);
+                                                    document.removeEventListener('mousemove', handleMouseMove);
+                                                    document.removeEventListener('mouseup', handleMouseUp);
+                                                };
+
+                                                document.addEventListener('mousemove', handleMouseMove);
+                                                document.addEventListener('mouseup', handleMouseUp);
+                                            }}
+                                        />
+
+                                        {/* Right Widget */}
+                                        <div
+                                            style={{ width: `${100 - (row.widthRatio || 50)}%` }}
+                                            className="relative"
+                                        >
+                                            {isEditMode && (
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        console.log(`🗑️ Hiding widget: ${visibleWidgets[1]}`);
+                                                        toggleWidgetVisibility(visibleWidgets[1]);
+                                                    }}
+                                                    className="absolute -top-3 -right-3 z-50 p-2 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600 transition-colors"
+                                                    title="Hide widget"
+                                                >
+                                                    <X className="w-4 h-4" />
+                                                </button>
+                                            )}
+                                            {renderWidget(visibleWidgets[1])}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </Reorder.Item>
                     );
