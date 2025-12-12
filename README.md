@@ -150,15 +150,15 @@ If you're forking this project, you can preserve your personal baseline data:
 - [ ] **Data Persistence & Sync (Migration to v2)** - Transitioning to a cloud-hybrid model using Supabase (PostgreSQL) for real-time multi-device syncing, while retaining offline capabilities via local caching.
 - [ ] **Mobile Support (PWA)** - A Progressive Web App implementation for mobile access, featuring "Add to Home Screen" capability and push notifications for task reminders without app store fees.
 - [ ] **Microsoft Store Distribution** - Publishing to the Microsoft Store to resolve "Unknown Publisher" warnings and enable seamless background updates, utilizing the one-time developer fee for a cost-effective signing solution.
-- [ ] **Advanced Appearance Settings** - Custom font uploads, extended accent color support (backgrounds, icons).
-- [ ] **Dashboard Edit Mode** - Rearrange and add widgets to customize the dashboard layout.
+- [x] **Advanced Appearance Settings** - Custom font uploads, extended accent color support (backgrounds, icons).
+- [x] **Dashboard Edit Mode** - Rearrange and add widgets to customize the dashboard layout.
 - [x] **Refactor API Logic** - Implemented robust AI model fallback system (Gemini 2.5 → 2.0 → 1.5) to prevent API errors and ensure reliability.
-- [ ] **Third-Party Calendar Imports** - Selective import/export capabilities for external calendars.
-- [ ] **AI Quick Note with Recurring Options** - Quick note creation with flexible repetition settings.
-- [ ] **Settings Management** - Notification toggles, quick export/import of settings, and factory reset options.
+- [x] **Third-Party Calendar Imports** - Selective import/export capabilities for external calendars.
+- [x] **AI Quick Note with Recurring Options** - Quick note creation with flexible repetition settings.
+- [x] **Settings Management** - Notification toggles etc
 - [x] **Task Completion Analytics** - Track completed vs incomplete tasks with weekly/monthly/yearly performance graphs
 - [x] **Enhanced Data Visualization** - More charts, trends, and insights into your productivity patterns
-- [ ] **Self-hosted Website** - Official website for CalendarPlus with intuitive onboarding, easy downloads and the latest news and updates
+- [x] **Self-hosted Website** - Official website for CalendarPlus with intuitive onboarding, easy downloads and the latest news and updates
 - [x] **Auto Update** - Automatic updates with self-deletion of old versions and seamless data migration, removing the need to manually uninstall and transfer files
 - [x] **Global Keyboard Shortcuts** - Native support for standard shortcuts (Ctrl+C, Ctrl+V, Ctrl+A) across the entire application
 
