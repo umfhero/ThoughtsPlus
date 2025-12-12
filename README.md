@@ -42,6 +42,17 @@ Built for frictionless event management, quick notes, and constant reminders tha
 - **Modern UI** - Dark/light themes with customizable accent colors
 - **Privacy-Focused** - All data stays local, no tracking or telemetry
 
+### AI Optimization for Free Tier Users
+
+CalendarPlus is designed to work seamlessly with **Google Gemini's free tier** (50 requests/day). Through planned caching and smart quota management:
+
+- **Use AI Quick Notes ~25-30 times per day** - Efficient model selection ensures you get the most out of your daily quota
+- **Daily briefings without exhausting quota** - Smart caching prevents unnecessary API calls
+- **Navigate Settings without wasting calls** - Validation results are cached, no repeated checks
+- **Clear quota messages** - Know exactly when you've hit limits and when they'll reset
+
+**No premium API subscription needed** - CalendarPlus maximizes the free tier so you can enjoy AI features without worrying about costs.
+
 ## Getting Started
 
 ### First-Time Setup
