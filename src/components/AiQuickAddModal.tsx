@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, X, Check, Repeat, FileText } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
@@ -22,7 +22,43 @@ export function AiQuickAddModal({ isOpen, onClose, onSave }: AiQuickAddModalProp
     const [selectedOptionIndex, setSelectedOptionIndex] = useState(0);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [isRecurring, setIsRecurring] = useState(false);
-    const [generateDescriptions, setGenerateDescriptions] = useState(false);
+    const [generateDescriptions, setGenerateDescriptions] = useState(() => {
+        const saved = localStorage.getItem('feature-toggles');
+        if (saved) {
+            const features = JSON.parse(saved);
+            return features.aiDescriptions ?? true; // Default to true to match Settings
+        }
+        return true; // Default to true to match Settings
+    });
+
+    // Listen for feature toggle changes from Settings
+    useEffect(() => {
+        const handleFeatureToggleChange = (event: CustomEvent) => {
+            const features = event.detail;
+            if (features.aiDescriptions !== undefined) {
+                setGenerateDescriptions(features.aiDescriptions);
+            }
+        };
+
+        window.addEventListener('feature-toggles-changed', handleFeatureToggleChange as EventListener);
+
+        return () => {
+            window.removeEventListener('feature-toggles-changed', handleFeatureToggleChange as EventListener);
+        };
+    }, []);
+
+    // Reload state from localStorage when modal opens
+    useEffect(() => {
+        if (isOpen) {
+            const saved = localStorage.getItem('feature-toggles');
+            if (saved) {
+                const features = JSON.parse(saved);
+                if (features.aiDescriptions !== undefined) {
+                    setGenerateDescriptions(features.aiDescriptions);
+                }
+            }
+        }
+    }, [isOpen]);
 
     // --- AI Note Logic ---
     const handleAiSubmit = async () => {
@@ -151,19 +187,42 @@ export function AiQuickAddModal({ isOpen, onClose, onSave }: AiQuickAddModalProp
                                         spellCheck={true}
                                     />
 
-                                    {/* Description Toggle */}
-                                    <button
-                                        onClick={() => setGenerateDescriptions(!generateDescriptions)}
-                                        className={clsx(
-                                            "flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all",
-                                            generateDescriptions
-                                                ? "bg-blue-500 text-white"
-                                                : "bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300"
-                                        )}
-                                    >
-                                        <FileText className="w-4 h-4" />
-                                        {generateDescriptions ? 'AI Descriptions Enabled' : 'AI Descriptions Disabled (Save Tokens)'}
-                                    </button>
+                                    {/* AI Descriptions Toggle Switch */}
+                                    <div className="flex items-center justify-between p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/30">
+                                        <div className="flex items-center gap-2">
+                                            <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                                            <div className="flex flex-col">
+                                                <span className="font-medium text-gray-800 dark:text-gray-200 text-sm">AI Note Descriptions</span>
+                                                <span className="text-xs text-gray-500 dark:text-gray-400">Generate detailed descriptions (uses more tokens)</span>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                const newValue = !generateDescriptions;
+                                                setGenerateDescriptions(newValue);
+
+                                                // Update localStorage to sync with Settings
+                                                const saved = localStorage.getItem('feature-toggles');
+                                                const features = saved ? JSON.parse(saved) : {};
+                                                features.aiDescriptions = newValue;
+                                                localStorage.setItem('feature-toggles', JSON.stringify(features));
+
+                                                // Dispatch event to notify other components
+                                                window.dispatchEvent(new CustomEvent('feature-toggles-changed', { detail: features }));
+                                            }}
+                                            className={clsx(
+                                                "w-10 h-6 rounded-full p-1 transition-colors duration-300 focus:outline-none",
+                                                generateDescriptions ? "bg-blue-500" : "bg-gray-300 dark:bg-gray-600"
+                                            )}
+                                        >
+                                            <motion.div
+                                                layout
+                                                className="w-4 h-4 rounded-full bg-white shadow-md"
+                                                animate={{ x: generateDescriptions ? 16 : 0 }}
+                                                transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                                            />
+                                        </button>
+                                    </div>
 
                                     <button
                                         onClick={handleAiSubmit}

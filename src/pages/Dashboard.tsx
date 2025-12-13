@@ -49,7 +49,8 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
         calendar: true,
         drawing: true,
         stats: true,
-        github: true
+        github: true,
+        aiDescriptions: true
     });
     const { isSuppressed } = useNotification();
     const [blockSize, setBlockSize] = useState(12);

@@ -42,7 +42,8 @@ export function SettingsPage() {
         calendar: true,
         drawing: true,
         stats: true,
-        github: true
+        github: true,
+        aiDescriptions: true
     });
 
     // Update State
@@ -78,6 +79,14 @@ export function SettingsPage() {
         setupUpdateListeners();
         fetchRoadmap();
 
+        // Listen for feature toggle changes from other components (e.g., Quick Note modal)
+        const handleFeatureToggleChange = (event: CustomEvent) => {
+            const features = event.detail;
+            setEnabledFeatures(features);
+        };
+
+        window.addEventListener('feature-toggles-changed', handleFeatureToggleChange as EventListener);
+
         return () => {
             // Cleanup update listeners
             // @ts-ignore
@@ -86,6 +95,9 @@ export function SettingsPage() {
             window.ipcRenderer.off('update-available', handleUpdateAvailable);
             // @ts-ignore
             window.ipcRenderer.off('update-not-available', handleUpdateNotAvailable);
+
+            // Cleanup feature toggle listener
+            window.removeEventListener('feature-toggles-changed', handleFeatureToggleChange as EventListener);
         };
     }, []);
 
@@ -718,6 +730,28 @@ export function SettingsPage() {
                                 <p className="text-[10px] text-gray-400 dark:text-gray-500 leading-relaxed">
                                     Note: Ensure "All models" are enabled in your <button onClick={() => openExternalLink('https://aistudio.google.com/usage')} className="underline hover:text-purple-500">Google AI Studio settings</button> if you encounter issues.
                                 </p>
+                            </div>
+
+                            {/* AI Descriptions Toggle */}
+                            <div className="flex items-center justify-between p-4 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/30 mt-4">
+                                <div className="flex flex-col">
+                                    <span className="font-medium text-gray-800 dark:text-gray-200">AI Note Descriptions</span>
+                                    <span className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Generate detailed descriptions when creating notes with AI</span>
+                                </div>
+                                <button
+                                    onClick={() => toggleFeature('aiDescriptions')}
+                                    className={clsx(
+                                        "w-10 h-6 rounded-full p-1 transition-colors duration-300 focus:outline-none",
+                                        enabledFeatures.aiDescriptions ? "bg-purple-500" : "bg-gray-300 dark:bg-gray-600"
+                                    )}
+                                >
+                                    <motion.div
+                                        layout
+                                        className="w-4 h-4 rounded-full bg-white shadow-md"
+                                        animate={{ x: enabledFeatures.aiDescriptions ? 16 : 0 }}
+                                        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                                    />
+                                </button>
                             </div>
                         </div>
                     </motion.div>
