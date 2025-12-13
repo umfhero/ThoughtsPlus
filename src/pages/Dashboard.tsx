@@ -1609,8 +1609,10 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                                                             setCombiningWidget(visibleWidgets[0] === combiningWidget ? null : visibleWidgets[0]);
                                                         }}
                                                         className={clsx(
-                                                            "p-2 rounded-full shadow-lg transition-colors",
-                                                            combiningWidget === visibleWidgets[0] ? "bg-green-600 text-white" : "bg-green-500 text-white hover:bg-green-600"
+                                                            "p-2 rounded-full shadow-sm border transition-all duration-200",
+                                                            combiningWidget === visibleWidgets[0]
+                                                                ? "bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-500 text-gray-900 dark:text-white"
+                                                                : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400 hover:border-green-200 dark:hover:border-green-800"
                                                         )}
                                                         title="Combine with another widget"
                                                     >
@@ -1622,7 +1624,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                                                             console.log(`🗑️ Hiding widget: ${visibleWidgets[0]}`);
                                                             toggleWidgetVisibility(visibleWidgets[0]);
                                                         }}
-                                                        className="p-2 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600 transition-colors"
+                                                        className="p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 rounded-full shadow-sm hover:text-red-600 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-800 transition-all duration-200"
                                                         title="Hide widget"
                                                     >
                                                         <Trash2 className="w-4 h-4" />
@@ -1677,21 +1679,21 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                                             <>
                                                 <button
                                                     onClick={() => separateWidget(visibleWidgets[0], row.id)}
-                                                    className="absolute -top-3 left-[48%] z-50 p-2 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600 transition-colors"
+                                                    className="absolute -top-3 left-[48%] z-50 p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 rounded-full shadow-sm hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-200 dark:hover:border-blue-800 transition-all duration-200"
                                                     title="Separate widgets"
                                                 >
                                                     <X className="w-4 h-4" />
                                                 </button>
                                                 <button
                                                     onClick={() => toggleWidgetVisibility(visibleWidgets[1])}
-                                                    className="absolute -top-3 -right-3 z-50 p-2 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600 transition-colors"
+                                                    className="absolute -top-3 -right-3 z-50 p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 rounded-full shadow-sm hover:text-red-600 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-800 transition-all duration-200"
                                                     title="Hide right widget"
                                                 >
                                                     <Trash2 className="w-4 h-4" />
                                                 </button>
                                                 <button
                                                     onClick={() => toggleWidgetVisibility(visibleWidgets[0])}
-                                                    className="absolute -top-3 -left-3 z-50 p-2 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600 transition-colors"
+                                                    className="absolute -top-3 -left-3 z-50 p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 rounded-full shadow-sm hover:text-red-600 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-800 transition-all duration-200"
                                                     title="Hide left widget"
                                                 >
                                                     <Trash2 className="w-4 h-4" />
