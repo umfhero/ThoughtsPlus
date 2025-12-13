@@ -5,7 +5,6 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  Area,
   ComposedChart,
 } from 'recharts';
 import clsx from 'clsx';
@@ -164,9 +163,7 @@ const TaskTrendChart: React.FC<TaskTrendChartProps> = ({ notes }) => {
       segmentColor: null,
       segmentDashed: false,
       dotColor: null,
-      greenScore: null,
-      redScore: null,
-    } as any);
+    });
 
     let lastActualIndex = 0;
     let lastActualScore = 0;
@@ -225,21 +222,16 @@ const TaskTrendChart: React.FC<TaskTrendChartProps> = ({ notes }) => {
         dotColor = null; // No dot for projections
       }
 
-      // Set projectedScore: for projected tasks, calculate from last actual; for last actual task, set to its score to enable connection
-      const projectedScore = !isActual
-        ? (lastActualScore + (taskNum - lastActualIndex))
-        : (isActual && index < tasks.length - 1 && !tasks[index + 1]?.isPast && !tasks[index + 1]?.completed ? score : null);
+      // Set projectedScore: for projected tasks, assume they will be completed (+1 each)
+      // For the last actual task, set projectedScore to enable connection to projections
+      let projectedScore: number | null = null;
 
-      // Update previous point to include the appropriate color score for segment rendering
-      if (points.length > 0 && isActual) {
-        const prevPoint = points[points.length - 1];
-        if (scoreDiff > 0) {
-          // Upward segment - add green to previous point
-          (prevPoint as any).greenScore = prevScore;
-        } else if (scoreDiff < 0) {
-          // Downward segment - add red to previous point
-          (prevPoint as any).redScore = prevScore;
-        }
+      if (!isActual) {
+        // For upcoming tasks: start from last actual score and add +1 for each task up to this one
+        projectedScore = lastActualScore + (taskNum - lastActualIndex);
+      } else if (index < tasks.length - 1 && !tasks[index + 1]?.isPast && !tasks[index + 1]?.completed) {
+        // This is the last actual task before projections start - set projectedScore to connect
+        projectedScore = score;
       }
 
       const point: TaskPoint = {
@@ -256,10 +248,7 @@ const TaskTrendChart: React.FC<TaskTrendChartProps> = ({ notes }) => {
         segmentColor,
         segmentDashed,
         dotColor,
-        // Add current point's colored scores
-        greenScore: isActual && scoreDiff > 0 ? score : null,
-        redScore: isActual && scoreDiff < 0 ? score : null,
-      } as any;
+      };
 
       points.push(point);
     });
@@ -388,7 +377,7 @@ const TaskTrendChart: React.FC<TaskTrendChartProps> = ({ notes }) => {
             <ComposedChart
               key={animationKey}
               data={chartData}
-              margin={{ top: 10, right: 10, left: -20, bottom: 5 }}
+              margin={{ top: 10, right: 10, left: 5, bottom: 5 }}
             >
               <defs>
                 <linearGradient id={projectedGradientId} x1="0" y1="0" x2="0" y2="1">
@@ -405,37 +394,127 @@ const TaskTrendChart: React.FC<TaskTrendChartProps> = ({ notes }) => {
                 </linearGradient>
               </defs>
 
-              {/* Projected area first (gray) - fills the entire projection */}
-              <Area
+              {/* Custom colored areas under each segment */}
+              <Line
+                type="monotone"
+                dataKey="displayScore"
+                stroke="transparent"
+                strokeWidth={0}
+                dot={false}
+                isAnimationActive={false}
+                shape={(props: any) => {
+                  const { points, yAxis } = props;
+                  if (!points || points.length < 2 || !yAxis) return <></>;
+
+                  // Get the bottom of the chart (y-axis maximum y coordinate)
+                  const chartBottom = yAxis.y + yAxis.height;
+
+                  // Generate smooth curved path
+                  const generateSmoothPath = (p1: any, p2: any) => {
+                    const dx = p2.x - p1.x;
+                    const smoothness = Math.min(Math.abs(dx) * 0.2, 20);
+                    return `M ${p1.x},${p1.y} C ${p1.x + smoothness},${p1.y} ${p2.x - smoothness},${p2.y} ${p2.x},${p2.y}`;
+                  };
+
+                  return (
+                    <g>
+                      {points.map((point: any, index: number) => {
+                        if (index === 0) return null;
+
+                        const prevPoint = points[index - 1];
+                        const currentData = chartData[index];
+
+                        // Only render colored areas for actual (non-projection) segments
+                        if (!currentData || currentData.isProjection) return null;
+
+                        const scoreDiff = (currentData.score ?? 0) - (chartData[index - 1]?.score ?? 0);
+
+                        // Determine fill color based on score change
+                        let fillColor = 'none';
+                        if (scoreDiff > 0) {
+                          fillColor = `url(#${gradientId}-green)`;
+                        } else if (scoreDiff < 0) {
+                          fillColor = `url(#${gradientId}-red)`;
+                        } else {
+                          return null; // No fill for flat segments
+                        }
+
+                        // Create path: curve from prev to current, then down to bottom, then back to prev bottom
+                        const curvePath = generateSmoothPath(prevPoint, point);
+                        const fullPath = `${curvePath} L ${point.x},${chartBottom} L ${prevPoint.x},${chartBottom} Z`;
+
+                        return (
+                          <path
+                            key={`area-${index}`}
+                            d={fullPath}
+                            fill={fillColor}
+                            opacity={1}
+                          />
+                        );
+                      })}
+                    </g>
+                  );
+                }}
+              />
+
+              {/* Projected area (gray dashed) */}
+              <Line
                 type="monotone"
                 dataKey="projectedScore"
-                stroke="none"
-                fill={`url(#${projectedGradientId})`}
+                stroke="transparent"
+                strokeWidth={0}
+                dot={false}
                 isAnimationActive={false}
-                connectNulls={true}
-                baseValue="dataMin"
-              />
+                shape={(props: any) => {
+                  const { points, yAxis } = props;
+                  if (!points || points.length < 2 || !yAxis) return <></>;
 
-              {/* Green area - upward movements */}
-              <Area
-                type="monotone"
-                dataKey="greenScore"
-                stroke="none"
-                fill={`url(#${gradientId}-green)`}
-                isAnimationActive={false}
-                connectNulls={true}
-                baseValue="dataMin"
-              />
+                  const chartBottom = yAxis.y + yAxis.height;
 
-              {/* Red area - downward movements */}
-              <Area
-                type="monotone"
-                dataKey="redScore"
-                stroke="none"
-                fill={`url(#${gradientId}-red)`}
-                isAnimationActive={false}
-                connectNulls={true}
-                baseValue="dataMin"
+                  // Find continuous projection segments
+                  const projectionSegments: any[] = [];
+                  let currentSegment: any[] = [];
+
+                  points.forEach((point: any) => {
+                    if (point.payload?.isProjection) {
+                      currentSegment.push(point);
+                    } else if (currentSegment.length > 0) {
+                      projectionSegments.push([...currentSegment]);
+                      currentSegment = [];
+                    }
+                  });
+                  if (currentSegment.length > 0) {
+                    projectionSegments.push(currentSegment);
+                  }
+
+                  return (
+                    <g>
+                      {projectionSegments.map((segment, segIndex) => {
+                        if (segment.length < 2) return null;
+
+                        // Build path for this projection segment
+                        let pathData = `M ${segment[0].x},${segment[0].y}`;
+                        for (let i = 1; i < segment.length; i++) {
+                          const dx = segment[i].x - segment[i - 1].x;
+                          const smoothness = Math.min(Math.abs(dx) * 0.2, 20);
+                          pathData += ` C ${segment[i - 1].x + smoothness},${segment[i - 1].y} ${segment[i].x - smoothness},${segment[i].y} ${segment[i].x},${segment[i].y}`;
+                        }
+
+                        // Close the path to bottom
+                        pathData += ` L ${segment[segment.length - 1].x},${chartBottom} L ${segment[0].x},${chartBottom} Z`;
+
+                        return (
+                          <path
+                            key={`projection-area-${segIndex}`}
+                            d={pathData}
+                            fill={`url(#${projectedGradientId})`}
+                            opacity={1}
+                          />
+                        );
+                      })}
+                    </g>
+                  );
+                }}
               />
 
               {/* Main line with custom segment rendering */}
@@ -518,30 +597,42 @@ const TaskTrendChart: React.FC<TaskTrendChartProps> = ({ notes }) => {
 
               <XAxis
                 dataKey="taskIndex"
+                domain={[0, 'auto']}
                 stroke="transparent"
                 tick={{ fill: '#9ca3af', fontSize: 10 }}
                 tickLine={false}
                 axisLine={false}
-                interval="preserveStartEnd"
+                allowDecimals={false}
                 label={{ value: 'Tasks', position: 'insideBottom', offset: -5, fill: '#9ca3af', fontSize: 10 }}
               />
               <YAxis
                 domain={[
-                  (dataMin: number) => {
-                    // Ensure we always include 0 in the domain for proper gradient rendering
-                    const min = Math.floor(dataMin);
-                    return min >= 0 ? 0 : min - 1;
-                  },
                   (dataMax: number) => {
-                    // Pad the top slightly for better visuals
-                    return Math.ceil(dataMax) + 1;
+                    // This is actually the MAX for display (top of axis)
+                    // Extend above the maximum, but always include 0
+                    const max = Math.ceil(dataMax);
+                    // If data is all negative, end at 0
+                    if (max <= 0) return 0;
+                    // If data goes positive, extend a bit above the max
+                    return max + 1;
+                  },
+                  (dataMin: number) => {
+                    // This is actually the MIN for display (bottom of axis)
+                    // Extend below the minimum, but always include 0
+                    const min = Math.floor(dataMin);
+                    // If data is all positive, start at 0
+                    if (min >= 0) return 0;
+                    // If data goes negative, extend a bit below the min
+                    return min - 1;
                   }
                 ]}
                 stroke="transparent"
                 tick={{ fill: '#9ca3af', fontSize: 10 }}
                 tickLine={false}
                 axisLine={false}
-                width={35}
+                width={45}
+                allowDecimals={false}
+                tickCount={5}
                 label={{ value: 'Score', angle: -90, position: 'insideLeft', fill: '#9ca3af', fontSize: 10 }}
               />
               <Tooltip
