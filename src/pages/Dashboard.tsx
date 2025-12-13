@@ -695,18 +695,20 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
 
             const frame = () => {
                 confetti({
-                    particleCount: 3,
+                    particleCount: 2,
                     angle: 60,
                     spread: 55,
                     origin: { x: 0, y: 0.8 },
-                    colors: colors
+                    colors: colors,
+                    scalar: 0.7
                 });
                 confetti({
-                    particleCount: 3,
+                    particleCount: 2,
                     angle: 120,
                     spread: 55,
                     origin: { x: 1, y: 0.8 },
-                    colors: colors
+                    colors: colors,
+                    scalar: 0.7
                 });
 
                 if (Date.now() < animationEnd) {
@@ -754,18 +756,20 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
 
                 const frame = () => {
                     confetti({
-                        particleCount: 3,
+                        particleCount: 2,
                         angle: 60,
                         spread: 55,
                         origin: { x: 0, y: 0.8 },
-                        colors: colors
+                        colors: colors,
+                        scalar: 0.7
                     });
                     confetti({
-                        particleCount: 3,
+                        particleCount: 2,
                         angle: 120,
                         spread: 55,
                         origin: { x: 1, y: 0.8 },
-                        colors: colors
+                        colors: colors,
+                        scalar: 0.7
                     });
 
                     if (Date.now() < animationEnd) {

@@ -132,11 +132,36 @@ const TaskTrendChart: React.FC<TaskTrendChartProps> = ({ notes }) => {
       });
     });
 
-    // Sort by date and time
+    // Sort tasks: Past tasks first (chronological), then future completed, then future uncompleted
+    // This ensures the graph shows all "actual" results before projections
     tasks.sort((a, b) => {
-      const dateCompare = a.date.localeCompare(b.date);
-      if (dateCompare !== 0) return dateCompare;
-      return a.time.localeCompare(b.time);
+      const aDateTime = new Date(parseISO(a.date));
+      const [aHours, aMinutes] = a.time.split(':').map(Number);
+      aDateTime.setHours(aHours, aMinutes, 0, 0);
+
+      const bDateTime = new Date(parseISO(b.date));
+      const [bHours, bMinutes] = b.time.split(':').map(Number);
+      bDateTime.setHours(bHours, bMinutes, 0, 0);
+
+      const aIsPast = aDateTime.getTime() < now.getTime();
+      const bIsPast = bDateTime.getTime() < now.getTime();
+
+      // Group 1: Past tasks (chronological order)
+      if (aIsPast && bIsPast) {
+        return aDateTime.getTime() - bDateTime.getTime();
+      }
+
+      // Group 2: Future tasks - completed before uncompleted
+      if (!aIsPast && !bIsPast) {
+        // Both future - completed tasks come first
+        if (a.completed && !b.completed) return -1;
+        if (!a.completed && b.completed) return 1;
+        // Same completion status - chronological order
+        return aDateTime.getTime() - bDateTime.getTime();
+      }
+
+      // Past tasks always come before future tasks
+      return aIsPast ? -1 : 1;
     });
 
     // Build points - one per task
@@ -191,6 +216,7 @@ const TaskTrendChart: React.FC<TaskTrendChartProps> = ({ notes }) => {
         missedTasks++;
       }
 
+      // Actual = past tasks OR completed tasks (even if future, since we sorted them before projections)
       const isActual = task.isPast || task.completed;
       if (isActual) {
         lastActualIndex = taskNum;
@@ -198,13 +224,13 @@ const TaskTrendChart: React.FC<TaskTrendChartProps> = ({ notes }) => {
       }
 
       // Determine segment color based on movement
-      const scoreDiff = score - prevScore;
       let segmentColor: string | null = null;
       let segmentDashed = false;
       let dotColor: string | null = null;
 
       if (isActual) {
         // Actual task - green if up, red if down
+        const scoreDiff = score - prevScore;
         if (scoreDiff > 0) {
           segmentColor = '#10b981'; // Green
           dotColor = '#10b981';
@@ -216,7 +242,7 @@ const TaskTrendChart: React.FC<TaskTrendChartProps> = ({ notes }) => {
           dotColor = '#9ca3af';
         }
       } else {
-        // Projection - gray dashed
+        // Projection - gray dashed (only uncompleted future tasks)
         segmentColor = '#d1d5db';
         segmentDashed = true;
         dotColor = null; // No dot for projections
@@ -229,7 +255,7 @@ const TaskTrendChart: React.FC<TaskTrendChartProps> = ({ notes }) => {
       if (!isActual) {
         // For upcoming tasks: start from last actual score and add +1 for each task up to this one
         projectedScore = lastActualScore + (taskNum - lastActualIndex);
-      } else if (index < tasks.length - 1 && !tasks[index + 1]?.isPast && !tasks[index + 1]?.completed) {
+      } else if (index < tasks.length - 1 && !tasks[index + 1]?.isPast) {
         // This is the last actual task before projections start - set projectedScore to connect
         projectedScore = score;
       }
