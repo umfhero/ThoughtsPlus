@@ -639,7 +639,6 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
         Object.entries(notes).forEach(([dateStr, dayNotes]) => {
             const date = parseISO(dateStr);
             dayNotes.forEach(note => {
-                // Parse the note's time and create full datetime
                 const [hours, minutes] = note.time.split(':').map(Number);
                 const eventDateTime = new Date(date);
                 eventDateTime.setHours(hours, minutes, 0, 0);
@@ -648,21 +647,50 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                 const isToday = eventDate.getTime() === todayStart.getTime();
                 const isOverdue = eventDateTime.getTime() < now.getTime();
 
-                // Create a copy to avoid mutation
                 const effectiveNote = { ...note };
-
-                // Auto-upgrade to high priority if due today
                 if (isToday && effectiveNote.importance !== 'high') {
                     effectiveNote.importance = 'high';
                 }
 
-                // Include all future events and overdue events
                 allEvents.push({ date: eventDateTime, note: effectiveNote, isOverdue, dateKey: dateStr });
             });
         });
 
-        // Stable sort
-        return allEvents.sort((a, b) => {
+        // Group by seriesId
+        const seriesMap = new Map();
+        const singleEvents: typeof allEvents = [];
+
+        allEvents.forEach(event => {
+            if (event.note.seriesId) {
+                if (!seriesMap.has(event.note.seriesId)) {
+                    seriesMap.set(event.note.seriesId, []);
+                }
+                seriesMap.get(event.note.seriesId).push(event);
+            } else {
+                singleEvents.push(event);
+            }
+        });
+
+        const displayEvents: any[] = [];
+
+        // Add grouped recurring events
+        seriesMap.forEach((instances: typeof allEvents) => {
+            const sorted = instances.sort((a, b) => a.date.getTime() - b.date.getTime());
+            const first = sorted[0];
+            const completed = instances.filter(i => i.note.completed).length;
+
+            displayEvents.push({
+                ...first,
+                isRecurringSeries: true,
+                seriesInstances: sorted,
+                completedCount: completed,
+                totalCount: instances.length
+            });
+        });
+
+        displayEvents.push(...singleEvents);
+
+        return displayEvents.sort((a, b) => {
             const timeDiff = a.date.getTime() - b.date.getTime();
             if (timeDiff !== 0) return timeDiff;
             return a.note.title.localeCompare(b.note.title);
