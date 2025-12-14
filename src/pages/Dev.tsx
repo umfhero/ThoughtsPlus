@@ -128,34 +128,75 @@ export function DevPage({ isMockMode, toggleMockMode, onForceSetup }: DevPagePro
         <div className="h-full p-8 overflow-y-auto">
             <h1 className="text-3xl font-bold mb-8">Developer Tools</h1>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full max-w-7xl mx-auto">
-                {/* Mock Mode Toggle */}
-                <div className="bg-white/50 dark:bg-gray-800/50 rounded-xl p-6 border border-white/20 dark:border-gray-700/30 shadow-sm">
-                    <div className="flex items-center justify-between mb-4">
-                        <div>
-                            <h2 className="text-xl font-semibold">Mock Dashboard</h2>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                                Replace real data with mock tasks for screenshots/demos.
-                            </p>
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8 w-full max-w-7xl mx-auto">
+                <div className="space-y-8">
+                    {/* Mock Mode Toggle */}
+                    <div className="bg-white/50 dark:bg-gray-800/50 rounded-xl p-4 md:p-6 border border-white/20 dark:border-gray-700/30 shadow-sm">
+                        <div className="flex items-center justify-between mb-4">
+                            <div>
+                                <h2 className="text-xl font-semibold">Mock Dashboard</h2>
+                                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                    Replace real data with mock tasks for screenshots/demos.
+                                </p>
+                            </div>
+                            <button
+                                onClick={toggleMockMode}
+                                className="transition-colors hover:opacity-80"
+                                style={{ color: isMockMode ? accentColor : 'inherit' }}
+                            >
+                                {isMockMode ? <ToggleRight size={40} /> : <ToggleLeft size={40} className="text-gray-400" />}
+                            </button>
                         </div>
-                        <button
-                            onClick={toggleMockMode}
-                            className="transition-colors hover:opacity-80"
-                            style={{ color: isMockMode ? accentColor : 'inherit' }}
-                        >
-                            {isMockMode ? <ToggleRight size={40} /> : <ToggleLeft size={40} className="text-gray-400" />}
-                        </button>
+                        {isMockMode && (
+                            <div className="p-3 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 rounded-lg text-sm flex items-center gap-2">
+                                <AlertTriangle size={16} />
+                                Mock mode is active. Real data is hidden but safe.
+                            </div>
+                        )}
                     </div>
-                    {isMockMode && (
-                        <div className="p-3 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 rounded-lg text-sm flex items-center gap-2">
-                            <AlertTriangle size={16} />
-                            Mock mode is active. Real data is hidden but safe.
+
+                    {/* Danger Zone */}
+                    <div className="bg-red-50 dark:bg-red-900/10 rounded-xl p-4 md:p-6 border border-red-200 dark:border-red-800/30 shadow-sm">
+                        <h2 className="text-xl font-semibold mb-4 text-red-600 dark:text-red-400">Danger Zone</h2>
+                        <div className="space-y-4">
+                            <button
+                                onClick={onForceSetup}
+                                className="w-full flex items-center gap-3 p-4 rounded-lg border border-red-200 dark:border-red-800/30 bg-white/50 dark:bg-gray-800/50 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-red-600 dark:text-red-400"
+                            >
+                                <Rocket size={20} className="flex-shrink-0" />
+                                <div className="text-left flex-1 min-w-0">
+                                    <div className="font-medium truncate">Force Onboarding (Demo Mode)</div>
+                                    <div className="text-xs opacity-80 truncate">Launch the setup wizard safely without overwriting your settings</div>
+                                </div>
+                            </button>
+
+                            <button
+                                onClick={clearLocalStorage}
+                                className="w-full flex items-center gap-3 p-4 rounded-lg border border-red-200 dark:border-red-800/30 bg-white/50 dark:bg-gray-800/50 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-red-600 dark:text-red-400"
+                            >
+                                <Trash2 size={20} className="flex-shrink-0" />
+                                <div className="text-left flex-1 min-w-0">
+                                    <div className="font-medium truncate">Clear All Local Storage</div>
+                                    <div className="text-xs opacity-80 truncate">Resets EVERYTHING: features, settings, dashboard, etc.</div>
+                                </div>
+                            </button>
+
+                            <button
+                                onClick={resetSetup}
+                                className="w-full flex items-center gap-3 p-4 rounded-lg border border-red-200 dark:border-red-800/30 bg-white/50 dark:bg-gray-800/50 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-red-600 dark:text-red-400"
+                            >
+                                <RefreshCw size={20} className="flex-shrink-0" />
+                                <div className="text-left flex-1 min-w-0">
+                                    <div className="font-medium truncate">Reset Setup Wizard</div>
+                                    <div className="text-xs opacity-80 truncate">Forces the setup wizard to run again on next launch</div>
+                                </div>
+                            </button>
                         </div>
-                    )}
+                    </div>
                 </div>
 
                 {/* Notification Tester */}
-                <div className="bg-white/50 dark:bg-gray-800/50 rounded-xl p-6 border border-white/20 dark:border-gray-700/30 shadow-sm">
+                <div className="bg-white/50 dark:bg-gray-800/50 rounded-xl p-4 md:p-6 border border-white/20 dark:border-gray-700/30 shadow-sm h-fit">
                     <h2 className="text-xl font-semibold mb-4">Test Notifications</h2>
 
                     <div className="mb-6">
@@ -171,8 +212,8 @@ export function DevPage({ isMockMode, toggleMockMode, onForceSetup }: DevPagePro
                                         backgroundColor: 'rgba(255,255,255,0.5)'
                                     }}
                                 >
-                                    <notif.icon size={20} className={notif.color} />
-                                    <span className="font-medium capitalize">{notif.type}</span>
+                                    <notif.icon size={20} className={clsx(notif.color, "flex-shrink-0")} />
+                                    <span className="font-medium capitalize truncate">{notif.type}</span>
                                 </button>
                             ))}
                         </div>
@@ -187,9 +228,9 @@ export function DevPage({ isMockMode, toggleMockMode, onForceSetup }: DevPagePro
                                     onClick={() => triggerAppNotification(notif)}
                                     className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white/30 dark:bg-gray-800/30 hover:bg-white/50 dark:hover:bg-gray-700/50 transition-colors text-left"
                                 >
-                                    <Bell size={16} className="text-gray-500" />
-                                    <div className="flex-1">
-                                        <div className="font-medium text-sm">{notif.title}</div>
+                                    <Bell size={16} className="text-gray-500 flex-shrink-0" />
+                                    <div className="flex-1 min-w-0">
+                                        <div className="font-medium text-sm truncate">{notif.title}</div>
                                         <div className="text-xs opacity-70 truncate">{notif.message}</div>
                                     </div>
                                 </button>
@@ -199,14 +240,14 @@ export function DevPage({ isMockMode, toggleMockMode, onForceSetup }: DevPagePro
                 </div>
 
                 {/* Dashboard Tools */}
-                <div className="bg-blue-50 dark:bg-blue-900/10 rounded-xl p-6 border border-blue-200 dark:border-blue-800/30 shadow-sm">
+                <div className="bg-blue-50 dark:bg-blue-900/10 rounded-xl p-4 md:p-6 border border-blue-200 dark:border-blue-800/30 shadow-sm h-fit">
                     <h2 className="text-xl font-semibold mb-4 text-blue-600 dark:text-blue-400">Dashboard Tools</h2>
                     <div className="space-y-4">
                         {/* Add this in the Dev Tools settings section */}
                         <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-                            <div className="flex flex-col">
-                                <span className="font-medium text-gray-800 dark:text-gray-200">Auto-Generate Briefing</span>
-                                <span className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                            <div className="flex flex-col min-w-0 pr-2">
+                                <span className="font-medium text-gray-800 dark:text-gray-200 truncate">Auto-Generate Briefing</span>
+                                <span className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
                                     Automatically generate AI briefing on Dashboard load
                                 </span>
                             </div>
@@ -225,7 +266,7 @@ export function DevPage({ isMockMode, toggleMockMode, onForceSetup }: DevPagePro
                                     window.dispatchEvent(new Event('storage'));
                                 }}
                                 className={clsx(
-                                    "w-10 h-6 rounded-full p-1 transition-colors duration-300",
+                                    "w-10 h-6 rounded-full p-1 transition-colors duration-300 flex-shrink-0",
                                     localStorage.getItem('disable_auto_briefing') === 'true'
                                         ? "bg-gray-300 dark:bg-gray-600"
                                         : "bg-blue-500"
@@ -251,10 +292,10 @@ export function DevPage({ isMockMode, toggleMockMode, onForceSetup }: DevPagePro
                             }}
                             className="w-full flex items-center gap-3 p-4 rounded-lg border border-blue-200 dark:border-blue-800/30 bg-white/50 dark:bg-gray-800/50 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-blue-600 dark:text-blue-400"
                         >
-                            <RefreshCw size={20} />
-                            <div className="text-left">
-                                <div className="font-medium">Reset Layout</div>
-                                <div className="text-xs opacity-80">Restores default widget order and visibility</div>
+                            <RefreshCw size={20} className="flex-shrink-0" />
+                            <div className="text-left flex-1 min-w-0">
+                                <div className="font-medium truncate">Reset Layout</div>
+                                <div className="text-xs opacity-80 truncate">Restores default widget order and visibility</div>
                             </div>
                         </button>
 
@@ -270,49 +311,10 @@ export function DevPage({ isMockMode, toggleMockMode, onForceSetup }: DevPagePro
                             }}
                             className="w-full flex items-center gap-3 p-4 rounded-lg border border-blue-200 dark:border-blue-800/30 bg-white/50 dark:bg-gray-800/50 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-blue-600 dark:text-blue-400"
                         >
-                            <MousePointerClick size={20} />
-                            <div className="text-left">
-                                <div className="font-medium">Reset "Edit Tip" History</div>
-                                <div className="text-xs opacity-80">Forces the "Press & Hold" helper to show again</div>
-                            </div>
-                        </button>
-                    </div>
-                </div>
-
-                {/* Danger Zone */}
-                <div className="bg-red-50 dark:bg-red-900/10 rounded-xl p-6 border border-red-200 dark:border-red-800/30 shadow-sm">
-                    <h2 className="text-xl font-semibold mb-4 text-red-600 dark:text-red-400">Danger Zone</h2>
-                    <div className="space-y-4">
-                        <button
-                            onClick={onForceSetup}
-                            className="w-full flex items-center gap-3 p-4 rounded-lg border border-red-200 dark:border-red-800/30 bg-white/50 dark:bg-gray-800/50 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-red-600 dark:text-red-400"
-                        >
-                            <Rocket size={20} />
-                            <div className="text-left">
-                                <div className="font-medium">Force Onboarding (Demo Mode)</div>
-                                <div className="text-xs opacity-80">Launch the setup wizard safely without overwriting your settings</div>
-                            </div>
-                        </button>
-
-                        <button
-                            onClick={clearLocalStorage}
-                            className="w-full flex items-center gap-3 p-4 rounded-lg border border-red-200 dark:border-red-800/30 bg-white/50 dark:bg-gray-800/50 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-red-600 dark:text-red-400"
-                        >
-                            <Trash2 size={20} />
-                            <div className="text-left">
-                                <div className="font-medium">Clear All Local Storage</div>
-                                <div className="text-xs opacity-80">Resets EVERYTHING: features, settings, dashboard, etc.</div>
-                            </div>
-                        </button>
-
-                        <button
-                            onClick={resetSetup}
-                            className="w-full flex items-center gap-3 p-4 rounded-lg border border-red-200 dark:border-red-800/30 bg-white/50 dark:bg-gray-800/50 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-red-600 dark:text-red-400"
-                        >
-                            <RefreshCw size={20} />
-                            <div className="text-left">
-                                <div className="font-medium">Reset Setup Wizard</div>
-                                <div className="text-xs opacity-80">Forces the setup wizard to run again on next launch</div>
+                            <MousePointerClick size={20} className="flex-shrink-0" />
+                            <div className="text-left flex-1 min-w-0">
+                                <div className="font-medium truncate">Reset "Edit Tip" History</div>
+                                <div className="text-xs opacity-80 truncate">Forces the "Press & Hold" helper to show again</div>
                             </div>
                         </button>
                     </div>
