@@ -197,10 +197,12 @@ export function SetupWizard({ onComplete, isDemoMode = false }: SetupWizardProps
                                 What's New in V5
                             </h3>
                             <ul className="text-xs text-gray-600 space-y-0.5 text-left max-w-lg mx-auto grid grid-cols-2 gap-x-4">
-                                <li>✓ User-configurable integrations</li>
-                                <li>✓ Multi-device cloud sync support</li>
-                                <li>✓ Privacy-focused - all data stays yours</li>
-                                <li>✓ Bring your own API keys</li>
+                                <li>✓ Seamless Auto-Updates</li>
+                                <li>✓ AI Quick Add & Dynamic Briefing</li>
+                                <li>✓ Multi-device Cloud Sync</li>
+                                <li>✓ Creator & GitHub Stats</li>
+                                <li>✓ Advanced Drawing/Whiteboard</li>
+                                <li>✓ Privacy-focused & BYO Keys</li>
                             </ul>
                         </div>
 
@@ -213,7 +215,7 @@ export function SetupWizard({ onComplete, isDemoMode = false }: SetupWizardProps
                         </button>
 
                         <p className="text-xs text-gray-400 mt-4">
-                            Created by @umfhero • Version 4.5.0
+                            Created by @umfhero • Version 5.0.0
                         </p>
                     </motion.div>
                 ) : (
