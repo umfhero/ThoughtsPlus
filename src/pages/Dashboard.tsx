@@ -293,13 +293,6 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
             const scrollToCurrentMonth = () => {
                 if (githubContributionsRef.current) {
                     const container = githubContributionsRef.current;
-                    console.log('Container details:', {
-                        scrollWidth: container.scrollWidth,
-                        clientWidth: container.clientWidth,
-                        scrollLeft: container.scrollLeft,
-                        currentMonth: new Date().getMonth(),
-                        hasOverflow: container.scrollWidth > container.clientWidth
-                    });
 
                     if (container.scrollWidth > container.clientWidth) {
                         // For December (last month), scroll to the very end
@@ -1561,7 +1554,6 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                 axis="y"
                 values={dashboardLayout}
                 onReorder={(newLayout) => {
-                    console.log('📊 Dashboard reordered:', newLayout);
                     setDashboardLayout(newLayout);
                 }}
                 className="space-y-6 md:space-y-8"
@@ -1572,12 +1564,9 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                 }}
             >
                 {dashboardLayout.map((row) => {
-                    console.log(`🔄 Rendering row ${row.id}:`, row.widgets);
-
                     // Filter out hidden widgets from this row
                     const visibleWidgets = row.widgets.filter(w => !hiddenWidgets.includes(w));
                     if (visibleWidgets.length === 0) {
-                        console.log(`⚠️ Row ${row.id} has no visible widgets, skipping`);
                         return null;
                     }
 
@@ -1711,7 +1700,6 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                                             className="w-4 cursor-col-resize flex items-center justify-center hover:bg-blue-500/20 rounded z-40 transition-colors"
                                             onMouseDown={(e) => {
                                                 e.preventDefault();
-                                                console.log(`📏 Starting width resize for row ${row.id}`);
                                                 const startX = e.clientX;
                                                 const startRatio = row.widthRatio || 50;
                                                 const container = e.currentTarget.parentElement;
@@ -1730,7 +1718,6 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                                                 };
 
                                                 const handleMouseUp = () => {
-                                                    console.log(`✅ Width resize complete for row ${row.id}`);
                                                     document.removeEventListener('mousemove', handleMouseMove);
                                                     document.removeEventListener('mouseup', handleMouseUp);
                                                 };

@@ -268,7 +268,14 @@ function App() {
         setCurrentPage('calendar');
     };
 
-    const handleAddNote = (note: Note, date: Date) => {
+    const handleAddNote = async (note: Note, date: Date) => {
+        console.log('🟢 handleAddNote called:', {
+            title: note.title,
+            hasRecurrence: !!note.recurrence,
+            recurrenceType: note.recurrence?.type,
+            recurrenceCount: note.recurrence?.count
+        });
+
         const dateKey = date.toISOString().split('T')[0];
 
         if (isMockMode) {
@@ -276,18 +283,75 @@ function App() {
             const newNotes = { ...mockNotesState, [dateKey]: [...existingNotes, note] };
             setMockNotesState(newNotes);
         } else {
-            const existingNotes = notes[dateKey] || [];
-            const newNotes = { ...notes, [dateKey]: [...existingNotes, note] };
-            setNotes(newNotes);
-            saveNotesToBackend(newNotes);
+            console.log('🟢 Creating notes map...');
+            let newNotesMap = { ...notes };
+
+            // Generate a seriesId if this is a recurring note
+            const seriesId = note.recurrence ? crypto.randomUUID() : undefined;
+            console.log('🟢 SeriesId:', seriesId);
+
+            // Add the first instance with seriesId
+            const firstNote = { ...note, seriesId };
+            if (!newNotesMap[dateKey]) newNotesMap[dateKey] = [];
+            newNotesMap[dateKey].push(firstNote);
+            console.log('🟢 First note added to', dateKey);
+
+            // Handle recurring notes
+            if (note.recurrence) {
+                console.log('🟢 Processing recurring notes...');
+                let currentDate = date;
+                let count = 0;
+                const r = note.recurrence;
+                const limit = r.count || 10;
+                const endDate = r.endDate ? new Date(r.endDate) : null;
+
+                // Create additional instances
+                while (count < limit - 1) { // -1 because we already added the first one
+                    // Calculate next date based on recurrence type
+                    if (r.type === 'daily') {
+                        currentDate = new Date(currentDate);
+                        currentDate.setDate(currentDate.getDate() + 1);
+                    } else if (r.type === 'weekly') {
+                        currentDate = new Date(currentDate);
+                        currentDate.setDate(currentDate.getDate() + 7);
+                    } else if (r.type === 'fortnightly') {
+                        currentDate = new Date(currentDate);
+                        currentDate.setDate(currentDate.getDate() + 14);
+                    } else if (r.type === 'monthly') {
+                        currentDate = new Date(currentDate);
+                        currentDate.setMonth(currentDate.getMonth() + 1);
+                    }
+
+                    if (endDate && currentDate > endDate) break;
+
+                    const dk = currentDate.toISOString().split('T')[0];
+                    if (!newNotesMap[dk]) newNotesMap[dk] = [];
+                    newNotesMap[dk].push({ ...note, id: crypto.randomUUID(), seriesId });
+                    count++;
+                }
+                console.log(`🟢 Created ${count + 1} recurring instances`);
+            }
+
+            console.log('🟢 Setting notes state...');
+            setNotes(newNotesMap);
+
+            console.log('🟢 Saving to backend...');
+            try {
+                await saveNotesToBackend(newNotesMap);
+                console.log('✅ Backend save completed');
+            } catch (error) {
+                console.error('❌ Backend save failed:', error);
+            }
         }
 
+        console.log('🟢 Showing notification...');
         addNotification({
             title: 'Note Added',
             message: `"${note.title}" has been added to your calendar.`,
             type: 'success',
             duration: 3000
         });
+        console.log('✅ handleAddNote completed');
     };
 
     const handleUpdateNote = (note: Note, date: Date) => {

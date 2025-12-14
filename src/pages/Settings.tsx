@@ -651,9 +651,20 @@ export function SettingsPage() {
                                     <input
                                         type="password"
                                         value={apiKey}
-                                        onChange={(e) => {
-                                            setApiKey(e.target.value);
+                                        onChange={async (e) => {
+                                            const newValue = e.target.value;
+                                            setApiKey(newValue);
                                             setKeyStatus('idle');
+
+                                            // If user clears the field, immediately delete from backend
+                                            if (!newValue.trim()) {
+                                                // @ts-ignore
+                                                await window.ipcRenderer.invoke('set-api-key', '');
+                                                localStorage.removeItem('api_key_validated');
+                                                localStorage.removeItem('api_key_hash');
+                                                setKeyStatus('idle');
+                                                setValidationMsg('');
+                                            }
                                         }}
                                         placeholder="Paste your API Key here"
                                         className={clsx(
