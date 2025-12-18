@@ -1043,7 +1043,7 @@ function StickyNoteComponent({ note, isSelected, onMouseDown, onResizeStart, onD
                     ? 'linear-gradient(#ccc 1px, transparent 1px), linear-gradient(90deg, #ccc 1px, transparent 1px)'
                     : 'none',
             backgroundSize: isGrid ? '20px 20px' : 'auto',
-            backgroundPosition: isLined ? '0 0' : '0 0',
+            backgroundPosition: isLined ? '0 4px' : '0 0',
         };
     };
 
@@ -1072,7 +1072,6 @@ function StickyNoteComponent({ note, isSelected, onMouseDown, onResizeStart, onD
                 isSelected && "ring-4 ring-[var(--accent-primary)] shadow-2xl"
             )}
             onMouseDown={onMouseDown}
-            onContextMenu={onContextMenu}
         >
             {/* Attachment (tape/pin) - needs to be above the note content */}
             <div className="absolute top-0 left-0 w-full pointer-events-none" style={{ zIndex: 10 }}>
@@ -1081,7 +1080,7 @@ function StickyNoteComponent({ note, isSelected, onMouseDown, onResizeStart, onD
 
             {/* Menu Settings Button */}
             <button
-                className="absolute top-2 right-2 p-1 rounded-full text-black/30 hover:text-black/70 hover:bg-black/5 opacity-0 group-hover:opacity-100 transition-all z-20"
+                className="absolute top-2 left-2 p-1 rounded-full text-black/30 hover:text-black/70 hover:bg-black/5 opacity-0 group-hover:opacity-100 transition-all z-20"
                 onClick={(e) => {
                     e.stopPropagation();
                     onContextMenu(e);
@@ -1248,7 +1247,7 @@ function StickyNoteComponent({ note, isSelected, onMouseDown, onResizeStart, onD
                             lineHeight: note.paperStyle === 'lined' ? '24px' : '1.5',
                             ...getPaperCSS(),
                             paddingLeft: note.paperStyle === 'lined' ? '45px' : '16px',
-                            paddingTop: note.paperStyle === 'lined' ? '32px' : '16px',
+                            paddingTop: note.paperStyle === 'lined' ? '28px' : '16px',
                             backgroundAttachment: 'local'
                         }}
                         placeholder="Type here..."
