@@ -1,6 +1,6 @@
 # Project Overview: Calendar Plus
 
-**Version:** 5.2.0  
+**Version:** 5.2.1  
 **Last Updated:** December 18, 2025  
 **Author:** Majid (umfhero)
 
