@@ -472,8 +472,8 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
                                 key={note.id}
                                 note={note}
                                 isSelected={selectedNoteId === note.id}
-                                onMouseDown={(e) => handleNoteMouseDown(e, note.id)}
-                                onResizeStart={(e) => handleResizeStart(e, note.id)}
+                                onMouseDown={(e: any) => handleNoteMouseDown(e, note.id)}
+                                onResizeStart={(e: any) => handleResizeStart(e, note.id)}
                                 onDelete={() => deleteNote(note.id)}
                             />
                         ) : (
@@ -481,13 +481,13 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
                                 key={note.id}
                                 note={note}
                                 isSelected={selectedNoteId === note.id}
-                                onMouseDown={(e) => handleNoteMouseDown(e, note.id)}
-                                onResizeStart={(e) => handleResizeStart(e, note.id)}
+                                onMouseDown={(e: any) => handleNoteMouseDown(e, note.id)}
+                                onResizeStart={(e: any) => handleResizeStart(e, note.id)}
                                 onDelete={() => deleteNote(note.id)}
-                                onChange={(updates) => setNotes(prev => prev.map(n =>
+                                onChange={(updates: any) => setNotes(prev => prev.map(n =>
                                     n.id === note.id ? { ...n, ...updates } : n
                                 ))}
-                                onContextMenu={(e) => {
+                                onContextMenu={(e: any) => {
                                     e.preventDefault();
                                     e.stopPropagation();
                                     setContextMenu({ x: e.clientX, y: e.clientY, noteId: note.id });
@@ -585,10 +585,10 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
                                                     setNotes(board.notes);
                                                     setShowBoardSidebar(false);
                                                 }}
-                                                onColorChange={(color) => setBoards(prev => prev.map(b =>
+                                                onColorChange={(color: any) => setBoards(prev => prev.map(b =>
                                                     b.id === board.id ? { ...b, color } : b
                                                 ))}
-                                                onNameChange={(name) => setBoards(prev => prev.map(b =>
+                                                onNameChange={(name: any) => setBoards(prev => prev.map(b =>
                                                     b.id === board.id ? { ...b, name } : b
                                                 ))}
                                                 onDelete={() => deleteBoard(board.id)}
@@ -615,7 +615,7 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
                 <SearchModal
                     onClose={() => setShowSearchModal(false)}
                     notes={notes}
-                    onSelectNote={(id) => {
+                    onSelectNote={(id: any) => {
                         setSelectedNoteId(id);
                         setShowSearchModal(false);
                     }}
