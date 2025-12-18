@@ -1,6 +1,6 @@
 {
   "name": "calendar-plus",
-  "version": "5.1.4",
+  "version": "5.2.0",
   "main": "dist-electron/main.js",
   "description": "Calendar Plus App",
   "scripts": {

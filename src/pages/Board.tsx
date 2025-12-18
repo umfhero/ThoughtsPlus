@@ -564,9 +564,9 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
 
                                 <button
                                     onClick={addNewBoard}
-                                    className="w-full py-3 mb-4 bg-[var(--accent-primary)] text-white rounded-lg font-medium hover:opacity-90 transition-opacity"
+                                    className="w-12 h-12 mb-4 bg-[var(--accent-primary)]/80 text-gray-800 dark:text-white rounded-full font-medium hover:bg-[var(--accent-primary)] hover:scale-105 transition-all shadow-md flex items-center justify-center text-2xl"
                                 >
-                                    + New Board
+                                    +
                                 </button>
 
                                 <div className="space-y-3">
