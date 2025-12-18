@@ -31,7 +31,7 @@ const PRESETS = [
     },
     {
         name: 'International Space Station Location',
-        url: 'http://api.open-notify.org/iss-now.json',
+        url: 'https://api.open-notify.org/iss-now.json',
         dataKey: '',
         xKey: 'timestamp',
         yKey: 'iss_position.latitude', 

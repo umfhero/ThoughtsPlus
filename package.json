@@ -1,6 +1,6 @@
 {
   "name": "calendar-plus",
-  "version": "5.2.0",
+  "version": "5.2.1",
   "main": "dist-electron/main.js",
   "description": "Calendar Plus App",
   "scripts": {
@@ -85,7 +85,8 @@
       "allowToChangeInstallationDirectory": true,
       "perMachine": false,
       "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
+      "createStartMenuShortcut": true,
+      "artifactName": "${productName}-Setup-${version}.${ext}"
     },
     "directories": {
       "output": "release"

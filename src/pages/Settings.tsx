@@ -6,12 +6,6 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { formatICSDate } from '../utils/icsHelper';
 
-interface RoadmapItem {
-    task: string;
-    status: 'pending' | 'in-progress' | 'completed';
-    plannedRelease: string;
-}
-
 export function SettingsPage() {
     const [dataPath, setDataPath] = useState<string>('Loading...');
     const [autoLaunch, setAutoLaunch] = useState(false);
@@ -48,12 +42,6 @@ export function SettingsPage() {
 
     // Update State
     const [currentVersion, setCurrentVersion] = useState('Loading...');
-    const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'downloading' | 'downloaded' | 'not-available' | 'error'>('idle');
-
-    // Roadmap State
-    const [roadmap, setRoadmap] = useState<RoadmapItem[]>([]);
-    const [roadmapLoading, setRoadmapLoading] = useState(true);
-    const [roadmapError, setRoadmapError] = useState('');
 
     // Font State
     const [currentFont, setCurrentFont] = useState('Outfit');
@@ -76,8 +64,6 @@ export function SettingsPage() {
         loadCreatorCodes();
         loadUserName();
         loadCurrentVersion();
-        setupUpdateListeners();
-        fetchRoadmap();
 
         // Listen for feature toggle changes from other components (e.g., Quick Note modal)
         const handleFeatureToggleChange = (event: CustomEvent) => {
@@ -88,61 +74,10 @@ export function SettingsPage() {
         window.addEventListener('feature-toggles-changed', handleFeatureToggleChange as EventListener);
 
         return () => {
-            // Cleanup update listeners
-            // @ts-ignore
-            window.ipcRenderer.off('update-checking', handleUpdateChecking);
-            // @ts-ignore
-            window.ipcRenderer.off('update-available', handleUpdateAvailable);
-            // @ts-ignore
-            window.ipcRenderer.off('update-not-available', handleUpdateNotAvailable);
-
             // Cleanup feature toggle listener
             window.removeEventListener('feature-toggles-changed', handleFeatureToggleChange as EventListener);
         };
     }, []);
-
-    const fetchRoadmap = async () => {
-        if (import.meta.env.DEV) {
-            try {
-                const localResponse = await fetch('/ROADMAP.json');
-                if (localResponse.ok) {
-                    const localData = await localResponse.json();
-                    setRoadmap(localData.roadmap);
-                    setRoadmapError('');
-                    setRoadmapLoading(false);
-                    return;
-                }
-            } catch (e) {
-                console.warn('Local fetch failed in dev, falling back to remote...');
-            }
-        }
-
-        try {
-            // Try fetching from GitHub first (Source of Truth)
-            const response = await fetch('https://raw.githubusercontent.com/umfhero/CalendarPlus/main/public/ROADMAP.json');
-            if (!response.ok) throw new Error('Failed to fetch remote roadmap');
-            const data = await response.json();
-            setRoadmap(data.roadmap);
-            setRoadmapError('');
-        } catch (err) {
-            console.warn('Failed to load remote roadmap, trying local fallback:', err);
-            try {
-                // Fallback to local file (for development or if remote is down)
-                // In production Electron, this might need adjustment depending on how files are served,
-                // but for Vite dev it works perfectly.
-                const localResponse = await fetch('/ROADMAP.json');
-                if (!localResponse.ok) throw new Error('Failed to fetch local roadmap');
-                const localData = await localResponse.json();
-                setRoadmap(localData.roadmap);
-                setRoadmapError('');
-            } catch (localErr) {
-                console.error('Failed to load local roadmap:', localErr);
-                setRoadmapError('Could not load roadmap from GitHub (and local fallback failed). Please ensure you are connected to the internet.');
-            }
-        } finally {
-            setRoadmapLoading(false);
-        }
-    };
 
     useEffect(() => {
         // Load persist font
@@ -154,7 +89,6 @@ export function SettingsPage() {
         }
 
         checkAutoLaunch();
-        fetchRoadmap();
     }, []);
 
 
@@ -374,40 +308,6 @@ export function SettingsPage() {
         }
     };
 
-    const setupUpdateListeners = () => {
-        // @ts-ignore
-        window.ipcRenderer.on('update-checking', handleUpdateChecking);
-        // @ts-ignore
-        window.ipcRenderer.on('update-available', handleUpdateAvailable);
-        // @ts-ignore
-        window.ipcRenderer.on('update-not-available', handleUpdateNotAvailable);
-    };
-
-    const handleUpdateChecking = () => {
-        setUpdateStatus('checking');
-    };
-
-    const handleUpdateAvailable = () => {
-        setUpdateStatus('available');
-    };
-
-    const handleUpdateNotAvailable = () => {
-        setUpdateStatus('not-available');
-    };
-
-    const checkForUpdates = async () => {
-        setUpdateStatus('checking');
-        try {
-            // @ts-ignore
-            const result = await window.ipcRenderer.invoke('check-for-updates');
-            if (!result.success) {
-                setUpdateStatus('error');
-            }
-        } catch (err: any) {
-            setUpdateStatus('error');
-        }
-    };
-
     // Updated Mini App Preview Component
     const AppPreview = ({ mode, accent, font }: { mode: 'light' | 'dark', accent: string, font: string }) => {
         const isDark = mode === 'dark';
@@ -615,21 +515,24 @@ export function SettingsPage() {
                                     <ExternalLink className="w-3 h-3" />
                                 </button>
                             </p>
+                            <div className="flex items-center gap-3 mt-2">
+                                <button
+                                    onClick={() => openExternalLink('https://officialcalendarplus.netlify.app/')}
+                                    className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
+                                >
+                                    <ExternalLink className="w-3 h-3" />
+                                    Website
+                                </button>
+                                <span className="text-gray-300 dark:text-gray-600">•</span>
+                                <button
+                                    onClick={() => openExternalLink('https://officialcalendarplus.netlify.app/roadmap')}
+                                    className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
+                                >
+                                    <Map className="w-3 h-3" />
+                                    Roadmap
+                                </button>
+                            </div>
                         </div>
-                        <button
-                            onClick={checkForUpdates}
-                            disabled={updateStatus === 'checking' || updateStatus === 'downloading'}
-                            className={clsx(
-                                'px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200',
-                                'flex items-center gap-2',
-                                updateStatus === 'checking' || updateStatus === 'downloading'
-                                    ? 'bg-gray-200 dark:bg-gray-600 text-gray-400 dark:text-gray-500 cursor-not-allowed'
-                                    : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50'
-                            )}
-                        >
-                            <RefreshCw className={clsx('w-4 h-4', updateStatus === 'checking' && 'animate-spin')} />
-                            Check for Updates
-                        </button>
                     </div>
                 </motion.div>
 
@@ -1354,106 +1257,6 @@ export function SettingsPage() {
                     </p>
                 </motion.div>
 
-
-
-                {/* Roadmap Section */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.5 }}
-                    className="mt-6 p-6 rounded-3xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50"
-                >
-                    <div className="flex items-center gap-3 mb-4">
-                        <div className="p-2.5 rounded-xl bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400">
-                            <Map className="w-5 h-5" />
-                        </div>
-                        <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Project Roadmap</h2>
-                    </div>
-
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-                        Live roadmap fetched from GitHub. See what's coming next for CalendarPlus.
-                    </p>
-
-                    {roadmapLoading ? (
-                        <div className="flex items-center justify-center py-8">
-                            <RefreshCw className="w-6 h-6 text-gray-400 animate-spin" />
-                            <span className="ml-2 text-gray-500">Loading roadmap...</span>
-                        </div>
-                    ) : roadmapError ? (
-                        <div className="p-4 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm text-center">
-                            {roadmapError}
-                        </div>
-                    ) : (
-                        <div className="space-y-6">
-                            {/* V5 Release Section */}
-                            <div>
-                                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
-                                    V5 Release (Dec 11)
-                                </h3>
-                                <div className="space-y-3">
-                                    {roadmap.filter(item => item.plannedRelease.includes('v5.0.0') || item.plannedRelease.includes('11 Dec')).map((item, index) => (
-                                        <div
-                                            key={index}
-                                            className={clsx(
-                                                "flex items-center justify-between p-3 rounded-xl border transition-colors",
-                                                item.status === 'completed'
-                                                    ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
-                                                    : "bg-gray-50 dark:bg-gray-700/30 border-gray-100 dark:border-gray-700"
-                                            )}
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <div className={clsx(
-                                                    "w-2 h-2 rounded-full",
-                                                    item.status === 'completed' ? "bg-green-500" : "bg-blue-500"
-                                                )} />
-                                                <span className={clsx(
-                                                    "font-medium text-sm",
-                                                    item.status === 'completed' ? "text-green-800 dark:text-green-200" : "text-gray-800 dark:text-gray-200"
-                                                )}>
-                                                    {item.task}
-                                                </span>
-                                            </div>
-                                            <div className="flex items-center gap-3">
-                                                {item.status === 'completed' && (
-                                                    <span className="text-xs font-bold text-green-600 dark:text-green-400 bg-white dark:bg-green-900/40 px-2 py-1 rounded-md border border-green-100 dark:border-green-800">
-                                                        COMPLETED
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Pending Section */}
-                            <div>
-                                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
-                                    Future / Pending
-                                </h3>
-                                <div className="space-y-3">
-                                    {roadmap.filter(item => !item.plannedRelease.includes('v5.0.0') && !item.plannedRelease.includes('11 Dec')).map((item, index) => (
-                                        <div
-                                            key={index}
-                                            className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-700/30 border border-gray-100 dark:border-gray-700 opacity-75"
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600" />
-                                                <span className="font-medium text-sm text-gray-600 dark:text-gray-400">
-                                                    {item.task}
-                                                </span>
-                                            </div>
-                                            <div className="flex items-center gap-3">
-                                                <span className="text-xs font-mono text-gray-400 dark:text-gray-500 bg-white dark:bg-gray-800 px-2 py-1 rounded-md border border-gray-100 dark:border-gray-700">
-                                                    Pending
-                                                </span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </motion.div>
                 <ImportModal
                     isOpen={showImportModal}
                     onClose={() => {

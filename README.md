@@ -1,7 +1,7 @@
 <div align="center">
   <img src="git/newpics/Banner.png" alt="CalendarPlus Banner" width="90%" style="border-radius: 15px;" />
 
-  <h3>Latest Release 5.1.4</h3>
+  <h3>Latest Release 5.2.0</h3>
 
 ![GitHub Release](https://img.shields.io/github/v/release/umfhero/CalendarPlus)
 ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/umfhero/CalendarPlus/total)
@@ -10,7 +10,7 @@
 
 [![Website](https://img.shields.io/badge/Website-officialcalendarplus.netlify.app-blue?style=for-the-badge&logo=netlify)](https://officialcalendarplus.netlify.app/)
 
-> **New in v5.1.4:** Fully customizable dashboard with drag-and-drop widgets, advanced task analytics with trend visualization, and recurring events support!
+> **New in v5.2.0:** Improved AI model fallback system with Gemini 2.5 Flash, enhanced performance, and refined user experience!
 
 </div>
 
@@ -178,6 +178,7 @@ If you're forking this project, you can preserve your personal baseline data:
 **The productivity powerhouse update:** Complete dashboard overhaul with customizable layouts, advanced task trend analytics, recurring events, and refined user experience controls.
 
 #### 🎨 Dashboard Customization
+
 - **Drag-and-Drop Widget System** - Rearrange dashboard widgets to match your workflow
 - **Combine Widgets** - Place two widgets side-by-side for efficient space usage
 - **Resizable Panels** - Adjust widget heights and widths to your preference
@@ -187,6 +188,7 @@ If you're forking this project, you can preserve your personal baseline data:
 - **Persistent Layouts** - Your dashboard configuration syncs across devices
 
 #### 📊 Advanced Task Analytics
+
 - **Task Trend Chart** - Visual graph showing completion score over time
 - **Smart Projections** - See projected scores for upcoming tasks
 - **Performance Metrics** - Track completion rate, missed tasks, early/late completions
@@ -196,6 +198,7 @@ If you're forking this project, you can preserve your personal baseline data:
 - **Motivational Feedback** - "On fire!", "Perfect!", and encouraging messages
 
 #### 🔁 Recurring Events
+
 - **AI-Powered Detection** - Natural language parsing for recurring patterns
 - **Flexible Recurrence** - Daily, weekly, fortnightly, monthly options
 - **Series Management** - Group recurring events with completion tracking
@@ -203,8 +206,8 @@ If you're forking this project, you can preserve your personal baseline data:
 - **Visual Indicators** - Repeat icon and "X/Y completed" counters
 - **Delete Options** - Choose to delete single instance or entire series
 
-
 #### 🐛 Critical Bug Fixes
+
 - **AI Modal Backdrop Fix** - Resolved freeze issue when adding recurring events
 - **API Key Deletion** - Fixed persistence bug when removing API keys
 - **Delete Confirmation Modal** - Replaced browser confirm with themed modal
@@ -212,6 +215,7 @@ If you're forking this project, you can preserve your personal baseline data:
 - **Series Grouping** - Corrected dashboard display for recurring event series
 
 #### 🎯 UI/UX Improvements
+
 - **Themed Delete Modals** - Beautiful, consistent modals for all confirmations
 - **Improved Event Cards** - Better visual hierarchy and information density
 - **Search & Filter** - Enhanced event filtering by importance and search terms

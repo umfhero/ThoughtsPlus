@@ -7,7 +7,6 @@ import os from 'node:os'
 import { randomUUID } from 'node:crypto'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import dotenv from 'dotenv'
-import { autoUpdater } from 'electron-updater'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -983,18 +982,9 @@ function setupIpcHandlers() {
         return { success: true };
     });
 
-    // Auto-Updater IPC Handlers
+    // Version IPC Handler
     ipcMain.handle('get-current-version', () => {
         return app.getVersion();
-    });
-
-    ipcMain.handle('check-for-updates', async () => {
-        try {
-            const result = await autoUpdater.checkForUpdates();
-            return { success: true, updateInfo: result?.updateInfo };
-        } catch (err: any) {
-            return { success: false, error: err.message };
-        }
     });
 
     ipcMain.handle('open-devtools', () => {
@@ -1005,27 +995,6 @@ function setupIpcHandlers() {
                 win.webContents.openDevTools();
             }
         }
-    });
-
-    ipcMain.handle('download-update', async () => {
-        try {
-            await autoUpdater.downloadUpdate();
-            return { success: true };
-        } catch (err: any) {
-            return { success: false, error: err.message };
-        }
-    });
-
-    ipcMain.handle('quit-and-install', () => {
-        autoUpdater.quitAndInstall(false, true);
-    });
-
-    ipcMain.handle('get-update-status', () => {
-        return {
-            isChecking: false,
-            updateAvailable: false,
-            downloaded: false
-        };
     });
 }
 
@@ -1085,49 +1054,9 @@ async function generateWithFallback(genAI: GoogleGenerativeAI, prompt: string): 
     throw new Error(`AI service unavailable. Errors:\n${details}`);
 }
 
-// Setup auto-updater events
-function setupAutoUpdater() {
-    // Configure auto-updater
-    autoUpdater.autoDownload = false; // Don't auto-download, let user control
-    autoUpdater.autoInstallOnAppQuit = false; // Manual install only
-
-    // Auto-updater event handlers
-    autoUpdater.on('checking-for-update', () => {
-        win?.webContents.send('update-checking');
-    });
-
-    autoUpdater.on('update-available', (info) => {
-        win?.webContents.send('update-available', info);
-    });
-
-    autoUpdater.on('update-not-available', (info) => {
-        win?.webContents.send('update-not-available', info);
-    });
-
-    autoUpdater.on('error', (err) => {
-        win?.webContents.send('update-error', err.message);
-    });
-
-    autoUpdater.on('download-progress', (progressObj) => {
-        win?.webContents.send('update-download-progress', progressObj);
-    });
-
-    autoUpdater.on('update-downloaded', (info) => {
-        win?.webContents.send('update-downloaded', info);
-    });
-}
-
 // Initialize app when ready
 app.whenReady().then(async () => {
     await loadSettings();
     setupIpcHandlers(); // Register handlers BEFORE creating window
-    setupAutoUpdater();
     createWindow();
-
-    // Check for updates on startup (silently)
-    try {
-        await autoUpdater.checkForUpdates();
-    } catch (err) {
-        console.error('Failed to check for updates on startup:', err);
-    }
 });
