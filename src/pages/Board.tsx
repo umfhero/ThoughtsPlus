@@ -233,6 +233,7 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
     }, [handleWheel]);
 
     const handleCanvasMouseDown = (e: React.MouseEvent) => {
+        setContextMenu(null);
         if (e.button === 1 || (e.button === 0 && e.target === canvasRef.current)) {
             setIsPanning(true);
             setPanStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
@@ -498,7 +499,13 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
                                 onChange={(updates) => setNotes(prev => prev.map(n =>
                                     n.id === note.id ? { ...n, ...updates } : n
                                 ))}
+                                onContextMenu={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setContextMenu({ x: e.clientX, y: e.clientY, noteId: note.id });
+                                }}
                             />
+
                         )
                     ))}
                 </div>
@@ -618,6 +625,81 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
                 />
             )}
 
+            {contextMenu && (
+                <div
+                    className="fixed z-50 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-3 w-56"
+                    style={{ left: contextMenu.x, top: contextMenu.y }}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <div className="mb-3">
+                        <p className="text-xs font-semibold text-gray-500 mb-2 px-1">Color</p>
+                        <div className="grid grid-cols-4 gap-2">
+                            {COLORS.map(c => (
+                                <button
+                                    key={c.value}
+                                    onClick={() => {
+                                        setNotes(prev => prev.map(n => n.id === contextMenu.noteId ? { ...n, color: c.value } : n));
+                                    }}
+                                    className="w-full aspect-square rounded-full hover:scale-110 transition-transform border border-black/5"
+                                    style={{ backgroundColor: c.value }}
+                                    title={c.name}
+                                />
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="mb-3">
+                        <p className="text-xs font-semibold text-gray-500 mb-2 px-1">Paper Style</p>
+                        <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-900 rounded-lg">
+                            {['smooth', 'lined', 'grid'].map(style => (
+                                <button
+                                    key={style}
+                                    onClick={() => {
+                                        setNotes(prev => prev.map(n => n.id === contextMenu.noteId ? { ...n, paperStyle: style as any } : n));
+                                    }}
+                                    className="flex-1 text-xs py-1.5 rounded-md hover:bg-white dark:hover:bg-gray-700 shadow-sm transition-all capitalize"
+                                >
+                                    {style}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="mb-3">
+                        <p className="text-xs font-semibold text-gray-500 mb-2 px-1">Attachment</p>
+                        <select
+                            className="w-full text-xs p-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 outline-none focus:ring-2 ring-[var(--accent-primary)]"
+                            onChange={(e) => {
+                                setNotes(prev => prev.map(n => n.id === contextMenu.noteId ? { ...n, attachmentStyle: e.target.value as any } : n));
+                            }}
+                            defaultValue={notes.find(n => n.id === contextMenu.noteId)?.attachmentStyle || 'none'}
+                        >
+                            <option value="none">None</option>
+                            <option value="tape-orange">Orange Tape</option>
+                            <option value="tape-blue">Blue Tape</option>
+                            <option value="tape-green">Green Tape</option>
+                            <option value="tape-purple">Purple Tape</option>
+                            <option value="pin-red">Red Pin</option>
+                            <option value="pin-blue">Blue Pin</option>
+                            <option value="pin-green">Green Pin</option>
+                        </select>
+                    </div>
+
+                    <div className="h-px bg-gray-100 dark:bg-gray-700 my-2" />
+
+                    <button
+                        onClick={() => {
+                            deleteNote(contextMenu.noteId);
+                            setContextMenu(null);
+                        }}
+                        className="w-full px-2 py-1.5 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors font-medium flex items-center gap-2"
+                    >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Delete Note
+                    </button>
+                </div>
+            )}
+
             {showDictionary && <DictionaryModal onClose={() => setShowDictionary(false)} />}
             {showAIDraft && <AIDraftModal onClose={() => setShowAIDraft(false)} />}
         </div>
@@ -639,6 +721,148 @@ function ToolbarButton({ icon: Icon, onClick, title }: any) {
 }
 
 function BoardCard({ board, isActive, onClick, onColorChange, onNameChange, onDelete }: any) {
+    const [isHovered, setIsHovered] = useState(false);
+    const [showMenu, setShowMenu] = useState(false);
+
+    return (
+        <div
+            className={clsx(
+                "relative w-full h-48 cursor-pointer group transition-all mb-6",
+                isActive && "scale-105"
+            )}
+            onClick={onClick}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+        >
+            {/* Back Layer (Folder Body + Tab) */}
+            <div
+                className="absolute inset-0 top-3 rounded-2xl transition-colors shadow-sm"
+                style={{ backgroundColor: board.color }}
+            >
+                {/* Folder Tab */}
+                <div
+                    className="absolute -top-3 left-0 w-1/3 h-5 rounded-t-xl"
+                    style={{ backgroundColor: board.color }}
+                />
+
+                {/* Menu Button (Top Right of Back Layer) */}
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        setShowMenu(!showMenu);
+                    }}
+                    className="absolute top-2 right-2 p-1.5 hover:bg-black/10 rounded-full transition-colors z-30 opacity-60 hover:opacity-100"
+                >
+                    <MoreVertical className="w-4 h-4 text-gray-700" />
+                </button>
+            </div>
+
+            {/* Middle Layer (Paper Preview) */}
+            <motion.div
+                className="absolute inset-x-3 bg-white rounded-lg shadow-sm p-4 overflow-hidden z-10"
+                initial={{ top: '1.5rem', bottom: '1rem', scale: 0.95 }}
+                animate={{
+                    top: isHovered ? '0.5rem' : '1.5rem',
+                    bottom: '1rem',
+                    scale: 1
+                }}
+                transition={{ duration: 0.3 }}
+            >
+                {board.notes.length > 0 ? (
+                    <>
+                        <p className="text-xs font-semibold text-gray-400 mb-1 uppercase tracking-wider">
+                            {board.notes.length} note{board.notes.length !== 1 ? 's' : ''} inside
+                        </p>
+                        <p className="text-sm text-gray-600 line-clamp-4 font-medium">
+                            {board.notes[0].content || (board.notes[0].imageUrl ? '[Image Note]' : 'Empty note')}
+                        </p>
+                    </>
+                ) : (
+                    <div className="h-full flex items-center justify-center text-gray-400 text-sm italic">
+                        No notes yet
+                    </div>
+                )}
+            </motion.div>
+
+            {/* Front Layer (Cover Pocket) */}
+            <motion.div
+                className="absolute inset-x-0 bottom-0 z-20 rounded-2xl shadow-[0_-5px_15px_-5px_rgba(0,0,0,0.1)] flex flex-col justify-end p-5"
+                style={{ backgroundColor: board.color }}
+                initial={{ height: '75%' }}
+                animate={{ height: isHovered ? '45%' : '75%' }}
+                transition={{ duration: 0.3 }}
+            >
+                <div className="w-full">
+                    <input
+                        value={board.name}
+                        onChange={(e) => {
+                            e.stopPropagation();
+                            onNameChange(e.target.value);
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="font-bold text-xl bg-transparent border-none focus:outline-none text-gray-900 w-full mb-1 placeholder-gray-500/50"
+                        placeholder="Board Name"
+                    />
+                    <motion.p
+                        className="text-sm text-gray-700 font-medium opacity-80"
+                        animate={{ opacity: isHovered ? 0 : 0.8 }}
+                    >
+                        {board.notes.length} notes
+                    </motion.p>
+                </div>
+            </motion.div>
+
+            {/* Active Indicator Ring */}
+            {isActive && (
+                <div className="absolute -inset-1 rounded-3xl border-2 border-[var(--accent-primary)] pointer-events-none z-30" />
+            )}
+
+            {/* Context Menu */}
+            <AnimatePresence>
+                {showMenu && (
+                    <motion.div
+                        className="absolute top-10 right-[-10px] bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-3 z-40 border border-gray-200 dark:border-gray-700 w-48"
+                        onClick={(e) => e.stopPropagation()}
+                        initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                    >
+                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 px-1">Folder Color</p>
+                        <div className="grid grid-cols-4 gap-2 mb-3">
+                            {BOARD_COLORS.map(color => (
+                                <button
+                                    key={color}
+                                    onClick={() => {
+                                        onColorChange(color);
+                                        setShowMenu(false);
+                                    }}
+                                    className={clsx(
+                                        "w-6 h-6 rounded-full transition-transform hover:scale-110 border border-black/5",
+                                        board.color === color && "ring-2 ring-offset-1 ring-gray-400"
+                                    )}
+                                    style={{ backgroundColor: color }}
+                                />
+                            ))}
+                        </div>
+                        <div className="h-px bg-gray-100 dark:bg-gray-700 my-2" />
+                        <button
+                            onClick={() => {
+                                onDelete();
+                                setShowMenu(false);
+                            }}
+                            className="w-full px-2 py-1.5 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors font-medium flex items-center gap-2"
+                        >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            Delete Board
+                        </button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+}
+
+function BoardCardOld({ board, isActive, onClick, onColorChange, onNameChange, onDelete }: any) {
     const [isHovered, setIsHovered] = useState(false);
     const [showMenu, setShowMenu] = useState(false);
 
@@ -749,7 +973,7 @@ function BoardCard({ board, isActive, onClick, onColorChange, onNameChange, onDe
     );
 }
 
-function StickyNoteComponent({ note, isSelected, onMouseDown, onResizeStart, onDelete, onChange }: any) {
+function StickyNoteComponent({ note, isSelected, onMouseDown, onResizeStart, onDelete, onChange, onContextMenu }: any) {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const getAttachmentStyle = () => {
@@ -834,6 +1058,7 @@ function StickyNoteComponent({ note, isSelected, onMouseDown, onResizeStart, onD
                 isSelected && "ring-4 ring-purple-400 shadow-2xl"
             )}
             onMouseDown={onMouseDown}
+            onContextMenu={onContextMenu}
         >
             {/* Attachment (tape/pin) - needs to be above the note content */}
             <div className="absolute top-0 left-0 w-full pointer-events-none" style={{ zIndex: 10 }}>
@@ -1157,26 +1382,26 @@ function AddNoteModal({ onClose, config, setConfig, onAdd }: any) {
                 <div className="mb-6">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Type</label>
                     <div className="grid grid-cols-2 gap-2">
-                        <button onClick={() => setConfig({ ...config, type: 'text' })} className={clsx("flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium", config.type === 'text' ? "bg-purple-500 text-white" : "bg-gray-100 dark:bg-gray-700")}>
+                        <button onClick={() => setConfig({ ...config, type: 'text' })} className={clsx("flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium", config.type === 'text' ? "bg-[var(--accent-primary)] text-white" : "bg-gray-100 dark:bg-gray-700")}>
                             <MessageSquare className="w-4 h-4" />
                             Text
                         </button>
-                        <button onClick={() => setConfig({ ...config, type: 'list' })} className={clsx("flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium", config.type === 'list' ? "bg-purple-500 text-white" : "bg-gray-100 dark:bg-gray-700")}>
+                        <button onClick={() => setConfig({ ...config, type: 'list' })} className={clsx("flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium", config.type === 'list' ? "bg-[var(--accent-primary)] text-white" : "bg-gray-100 dark:bg-gray-700")}>
                             <List className="w-4 h-4" />
                             List
                         </button>
-                        <button onClick={() => setConfig({ ...config, type: 'image' })} className={clsx("flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium", config.type === 'image' ? "bg-purple-500 text-white" : "bg-gray-100 dark:bg-gray-700")}>
+                        <button onClick={() => setConfig({ ...config, type: 'image' })} className={clsx("flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium", config.type === 'image' ? "bg-[var(--accent-primary)] text-white" : "bg-gray-100 dark:bg-gray-700")}>
                             <ImageIcon className="w-4 h-4" />
                             Image
                         </button>
-                        <button onClick={() => setConfig({ ...config, type: 'link' })} className={clsx("flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium", config.type === 'link' ? "bg-purple-500 text-white" : "bg-gray-100 dark:bg-gray-700")}>
+                        <button onClick={() => setConfig({ ...config, type: 'link' })} className={clsx("flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium", config.type === 'link' ? "bg-[var(--accent-primary)] text-white" : "bg-gray-100 dark:bg-gray-700")}>
                             <LinkIcon className="w-4 h-4" />
                             Link
                         </button>
                     </div>
                 </div>
 
-                <button onClick={onAdd} className="w-full py-3 bg-purple-500 text-white rounded-lg font-medium hover:bg-purple-600">Create Note</button>
+                <button onClick={onAdd} className="w-full py-3 bg-[var(--accent-primary)] text-white rounded-lg font-medium hover:opacity-90">Create Note</button>
             </motion.div>
         </motion.div>
     );
@@ -1201,7 +1426,7 @@ function SearchModal({ onClose, notes, onSelectNote }: any) {
                         <div className="space-y-2">
                             {filtered.map((note: StickyNote) => (
                                 <button key={note.id} onClick={() => onSelectNote(note.id)} className="w-full text-left p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 transition-colors">
-                                    <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded">{note.type}</span>
+                                    <span className="px-2 py-1 bg-[var(--accent-light)] text-[var(--accent-secondary)] text-xs rounded">{note.type}</span>
                                     <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 line-clamp-2">{note.content}</p>
                                 </button>
                             ))}
@@ -1238,7 +1463,7 @@ function AIDraftModal({ onClose }: any) {
                     <button onClick={onClose}><X className="w-5 h-5" /></button>
                 </div>
                 <input type="text" value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="What do you want to create?" className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 mb-4" />
-                <button className="w-full py-3 bg-purple-500 text-white rounded-lg font-medium hover:bg-purple-600">Generate</button>
+                <button className="w-full py-3 bg-[var(--accent-primary)] text-white rounded-lg font-medium hover:opacity-90">Generate</button>
             </motion.div>
         </motion.div>
     );
