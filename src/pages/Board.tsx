@@ -1038,7 +1038,7 @@ function StickyNoteComponent({ note, isSelected, onMouseDown, onResizeStart, onD
         return {
             backgroundImage: isLined
                 ? `linear-gradient(to right, transparent 0, transparent 29px, rgba(231, 76, 60, 0.4) 29px, rgba(231, 76, 60, 0.4) 31px, transparent 31px),
-                   repeating-linear-gradient(to bottom, transparent 0, transparent 23px, #d1d5db 23px, #d1d5db 24px)`
+                   repeating-linear-gradient(to bottom, transparent 0, transparent 22px, #d1d5db 22px, #d1d5db 24px)`
                 : isGrid
                     ? 'linear-gradient(#ccc 1px, transparent 1px), linear-gradient(90deg, #ccc 1px, transparent 1px)'
                     : 'none',
