@@ -355,6 +355,7 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
 
     const handleNoteMouseDown = (e: React.MouseEvent, noteId: string) => {
         e.stopPropagation();
+        if (e.button !== 0) return;
         const note = notes.find(n => n.id === noteId);
         if (note) {
             const rect = canvasRef.current?.getBoundingClientRect();
@@ -451,7 +452,7 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
 
                 <motion.button
                     onClick={() => setShowBoardSidebar(true)}
-                    className="bg-purple-500 text-white p-3 rounded-full shadow-lg hover:bg-purple-600"
+                    className="bg-[var(--accent-primary)] text-white p-3 rounded-full shadow-lg hover:opacity-90 transition-opacity"
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
                 >
@@ -572,7 +573,7 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
 
                                 <button
                                     onClick={addNewBoard}
-                                    className="w-full py-3 mb-4 bg-purple-500 text-white rounded-lg font-medium hover:bg-purple-600 transition-colors"
+                                    className="w-full py-3 mb-4 bg-[var(--accent-primary)] text-white rounded-lg font-medium hover:opacity-90 transition-opacity"
                                 >
                                     + New Board
                                 </button>
@@ -728,7 +729,8 @@ function BoardCard({ board, isActive, onClick, onColorChange, onNameChange, onDe
         <div
             className={clsx(
                 "relative w-full h-48 cursor-pointer group transition-all mb-6",
-                isActive && "scale-105"
+                isActive && "scale-105",
+                !isActive && "opacity-70"
             )}
             onClick={onClick}
             onMouseEnter={() => setIsHovered(true)}
@@ -736,7 +738,7 @@ function BoardCard({ board, isActive, onClick, onColorChange, onNameChange, onDe
         >
             {/* Back Layer (Folder Body + Tab) */}
             <div
-                className="absolute inset-0 top-3 rounded-2xl transition-colors shadow-sm"
+                className="absolute inset-0 top-3 rounded-2xl rounded-tl-none transition-colors shadow-sm border-0"
                 style={{ backgroundColor: board.color }}
             >
                 {/* Folder Tab */}
@@ -760,11 +762,12 @@ function BoardCard({ board, isActive, onClick, onColorChange, onNameChange, onDe
             {/* Middle Layer (Paper Preview) */}
             <motion.div
                 className="absolute inset-x-3 bg-white rounded-lg shadow-sm p-4 overflow-hidden z-10"
-                initial={{ top: '1.5rem', bottom: '1rem', scale: 0.95 }}
+                initial={{ top: '1.5rem', bottom: '1rem', scale: 0.95, opacity: 0 }}
                 animate={{
                     top: isHovered ? '0.5rem' : '1.5rem',
                     bottom: '1rem',
-                    scale: 1
+                    scale: isHovered ? 1 : 0.95,
+                    opacity: isHovered ? 1 : 0
                 }}
                 transition={{ duration: 0.3 }}
             >
@@ -812,10 +815,6 @@ function BoardCard({ board, isActive, onClick, onColorChange, onNameChange, onDe
                 </div>
             </motion.div>
 
-            {/* Active Indicator Ring */}
-            {isActive && (
-                <div className="absolute -inset-1 rounded-3xl border-2 border-[var(--accent-primary)] pointer-events-none z-30" />
-            )}
 
             {/* Context Menu */}
             <AnimatePresence>
@@ -1033,6 +1032,21 @@ function StickyNoteComponent({ note, isSelected, onMouseDown, onResizeStart, onD
         }
     };
 
+    const getPaperCSS = () => {
+        const isLined = note.paperStyle === 'lined';
+        const isGrid = note.paperStyle === 'grid';
+        return {
+            backgroundImage: isLined
+                ? `linear-gradient(to right, transparent 0, transparent 29px, rgba(231, 76, 60, 0.4) 29px, rgba(231, 76, 60, 0.4) 31px, transparent 31px),
+                   repeating-linear-gradient(to bottom, transparent 0, transparent 23px, #d1d5db 23px, #d1d5db 24px)`
+                : isGrid
+                    ? 'linear-gradient(#ccc 1px, transparent 1px), linear-gradient(90deg, #ccc 1px, transparent 1px)'
+                    : 'none',
+            backgroundSize: isGrid ? '20px 20px' : 'auto',
+            backgroundPosition: isLined ? '0 0' : '0 0',
+        };
+    };
+
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
@@ -1055,7 +1069,7 @@ function StickyNoteComponent({ note, isSelected, onMouseDown, onResizeStart, onD
             }}
             className={clsx(
                 "rounded-lg shadow-lg transition-shadow duration-150 cursor-move group",
-                isSelected && "ring-4 ring-purple-400 shadow-2xl"
+                isSelected && "ring-4 ring-[var(--accent-primary)] shadow-2xl"
             )}
             onMouseDown={onMouseDown}
             onContextMenu={onContextMenu}
@@ -1065,28 +1079,31 @@ function StickyNoteComponent({ note, isSelected, onMouseDown, onResizeStart, onD
                 {getAttachmentStyle()}
             </div>
 
+            {/* Menu Settings Button */}
+            <button
+                className="absolute top-2 right-2 p-1 rounded-full text-black/30 hover:text-black/70 hover:bg-black/5 opacity-0 group-hover:opacity-100 transition-all z-20"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onContextMenu(e);
+                }}
+                onMouseDown={(e) => e.stopPropagation()}
+                title="Note Settings"
+            >
+                <MoreVertical className="w-4 h-4" />
+            </button>
+
             <div
-                className="w-full h-full p-4 rounded-lg overflow-auto custom-scrollbar relative"
+                className={clsx(
+                    "w-full h-full rounded-lg relative",
+                    note.type === 'text' ? 'p-0 overflow-hidden' : 'p-4 overflow-auto custom-scrollbar'
+                )}
                 style={{
                     backgroundColor: note.color,
-                    backgroundImage: note.paperStyle === 'lined'
-                        ? `
-                            linear-gradient(to right, transparent 0, transparent 29px, rgba(231, 76, 60, 0.4) 29px, rgba(231, 76, 60, 0.4) 31px, transparent 31px),
-                            repeating-linear-gradient(
-                                to bottom,
-                                transparent 0,
-                                transparent 23px,
-                                #d1d5db 23px,
-                                #d1d5db 24px
-                            )
-                        `
-                        : note.paperStyle === 'grid'
-                            ? 'linear-gradient(#ccc 1px, transparent 1px), linear-gradient(90deg, #ccc 1px, transparent 1px)'
-                            : 'none',
-                    backgroundSize: note.paperStyle === 'grid' ? '20px 20px' : 'auto',
-                    backgroundPosition: note.paperStyle === 'lined' ? '0 8px' : '0 0',
-                    paddingLeft: note.paperStyle === 'lined' ? '45px' : '16px',
-                    paddingTop: note.paperStyle === 'lined' ? '32px' : '16px'
+                    ...(note.type !== 'text' ? getPaperCSS() : {}),
+                    ...(note.type !== 'text' ? {
+                        paddingLeft: note.paperStyle === 'lined' ? '45px' : '16px',
+                        paddingTop: note.paperStyle === 'lined' ? '32px' : '16px'
+                    } : {})
                 }}
             >
                 {note.type === 'list' ? (
@@ -1228,7 +1245,11 @@ function StickyNoteComponent({ note, isSelected, onMouseDown, onResizeStart, onD
                         style={{
                             fontFamily: getFontFamily(),
                             fontSize: `${note.fontSize}px`,
-                            lineHeight: note.paperStyle === 'lined' ? '24px' : '1.5'
+                            lineHeight: note.paperStyle === 'lined' ? '24px' : '1.5',
+                            ...getPaperCSS(),
+                            paddingLeft: note.paperStyle === 'lined' ? '45px' : '16px',
+                            paddingTop: note.paperStyle === 'lined' ? '32px' : '16px',
+                            backgroundAttachment: 'local'
                         }}
                         placeholder="Type here..."
                         onClick={(e) => e.stopPropagation()}
@@ -1240,7 +1261,7 @@ function StickyNoteComponent({ note, isSelected, onMouseDown, onResizeStart, onD
                 <>
                     <motion.button
                         onClick={onDelete}
-                        className="absolute -top-3 -right-3 bg-red-500 text-white rounded-full p-2 shadow-lg hover:bg-red-600"
+                        className="absolute -top-3 -right-3 bg-red-400/80 text-white rounded-full p-2 shadow-md hover:bg-red-500/90 transition-colors"
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
                     >
@@ -1249,7 +1270,7 @@ function StickyNoteComponent({ note, isSelected, onMouseDown, onResizeStart, onD
 
                     <motion.div
                         onMouseDown={onResizeStart}
-                        className="absolute -bottom-3 -right-3 bg-purple-500 text-white rounded-full p-2 shadow-lg cursor-nwse-resize hover:bg-purple-600"
+                        className="absolute -bottom-3 -right-3 bg-[var(--accent-primary)] text-white rounded-full p-2 shadow-lg cursor-nwse-resize hover:opacity-90 transition-opacity"
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
                     >
