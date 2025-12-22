@@ -74,11 +74,27 @@
           "arch": [
             "x64"
           ]
+        },
+        {
+          "target": "appx",
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "src/assets/calendar_icon_181520.png",
       "sign": null,
-      "signingHashAlgorithms": []
+      "signingHashAlgorithms": [],
+      "publisherName": "CN=umfhero"
+    },
+    "appx": {
+      "displayName": "Calendar Plus",
+      "publisherDisplayName": "umfhero",
+      "identityName": "CalendarPlus",
+      "publisher": "CN=umfhero",
+      "backgroundColor": "#F3F4F6",
+      "showNameOnTiles": true,
+      "addAutoLaunchExtension": false
     },
     "nsis": {
       "oneClick": false,

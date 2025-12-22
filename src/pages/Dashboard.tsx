@@ -474,7 +474,6 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
     const [trendsHeight, setTrendsHeight] = useState(384);
 
     const [isDragging, setIsDragging] = useState(false);
-    const [isHeightDragging, setIsHeightDragging] = useState(false); // For desktop shared height
     const [isEventsHeightDragging, setIsEventsHeightDragging] = useState(false); // For mobile events height
     const [isTrendsHeightDragging, setIsTrendsHeightDragging] = useState(false); // For mobile trends height
 
@@ -579,18 +578,6 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                 }
             }
 
-            if (isHeightDragging && containerRef.current) {
-                const containerRect = containerRef.current.getBoundingClientRect();
-                const newHeight = e.clientY - containerRect.top;
-
-                // Limit height between 250px and 600px
-                if (newHeight >= 250 && newHeight <= 600) {
-                    setPanelHeight(newHeight);
-                    setEventsHeight(newHeight);
-                    setTrendsHeight(newHeight);
-                }
-            }
-
             if (isEventsHeightDragging) {
                 setEventsHeight(prev => {
                     const newH = prev + e.movementY;
@@ -637,11 +624,6 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                 // @ts-ignore
                 window.ipcRenderer.invoke('save-device-setting', 'dashboardLeftWidth', leftWidth.toString());
             }
-            if (isHeightDragging) {
-                setIsHeightDragging(false);
-                // @ts-ignore
-                window.ipcRenderer.invoke('save-device-setting', 'dashboardPanelHeight', panelHeight.toString());
-            }
             setIsEventsHeightDragging(false);
             setIsTrendsHeightDragging(false);
             setIsBriefingHeightDragging(false);
@@ -649,7 +631,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
             setIsStatsHeightDragging(false);
         };
 
-        if (isDragging || isHeightDragging || isEventsHeightDragging || isTrendsHeightDragging || isBriefingHeightDragging || isGithubHeightDragging || isStatsHeightDragging) {
+        if (isDragging || isEventsHeightDragging || isTrendsHeightDragging || isBriefingHeightDragging || isGithubHeightDragging || isStatsHeightDragging) {
             document.addEventListener('mousemove', handleMouseMove);
             document.addEventListener('mouseup', handleMouseUp);
         }
@@ -658,7 +640,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
             document.removeEventListener('mousemove', handleMouseMove);
             document.removeEventListener('mouseup', handleMouseUp);
         };
-    }, [isDragging, isHeightDragging, isEventsHeightDragging, isTrendsHeightDragging, isBriefingHeightDragging, isGithubHeightDragging, isStatsHeightDragging, leftWidth, panelHeight]);
+    }, [isDragging, isEventsHeightDragging, isTrendsHeightDragging, isBriefingHeightDragging, isGithubHeightDragging, isStatsHeightDragging, leftWidth, panelHeight]);
 
     useEffect(() => {
         const timer = setInterval(() => setTime(new Date()), 1000);
@@ -1160,7 +1142,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                                 className="absolute bottom-0 left-0 right-0 h-4 flex items-center justify-center cursor-row-resize hover:bg-gray-50/50 dark:hover:bg-gray-700/50 rounded-b-[2rem] transition-colors group/handle z-20"
                                 onMouseDown={handleBriefingHeightMouseDown}
                             >
-                                <div className="w-12 h-1 bg-gray-200 dark:bg-gray-600 rounded-full group-hover/handle:bg-blue-400 transition-colors shadow-sm" />
+                                <div className="w-12 h-1 bg-gray-200 dark:bg-gray-600 rounded-full transition-colors shadow-sm" style={{ '--tw-bg-opacity': 1 } as any} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = accentColor} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ''} />
                             </div>
                         )}
                     </motion.div>
@@ -1173,7 +1155,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                             <motion.div
                                 style={{
                                     width: isMobile ? '100%' : `${leftWidth}%`,
-                                    height: isMobile ? `${eventsHeight}px` : '100%'
+                                    height: isMobile ? `${eventsHeight}px` : `${panelHeight}px`
                                 }}
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
@@ -1386,21 +1368,63 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                                 </div>
 
                                 {/* Resize Handle for Events */}
-                                <div
-                                    className="absolute bottom-0 left-0 right-0 h-4 flex items-center justify-center cursor-row-resize hover:bg-gray-50/50 dark:hover:bg-gray-700/50 rounded-b-[2rem] transition-colors group/handle z-20"
-                                    onMouseDown={handleEventsHeightMouseDown}
-                                >
-                                    <div className="w-12 h-1 bg-gray-200 dark:bg-gray-600 rounded-full group-hover/handle:bg-blue-400 transition-colors shadow-sm" />
-                                </div>
+                                {isMobile && (
+                                    <div
+                                        className="absolute bottom-0 left-0 right-0 h-4 flex items-center justify-center cursor-row-resize hover:bg-gray-50/50 dark:hover:bg-gray-700/50 rounded-b-[2rem] transition-colors group/handle z-20"
+                                        onMouseDown={handleEventsHeightMouseDown}
+                                    >
+                                        <div className="w-12 h-1 bg-gray-200 dark:bg-gray-600 rounded-full transition-colors shadow-sm" style={{ '--tw-bg-opacity': 1 } as any} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = accentColor} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ''} />
+                                    </div>
+                                )}
                             </motion.div>
 
                             {/* Resizable Handle */}
                             {!isMobile && (
-                                <div
-                                    className="hidden md:flex w-4 items-center justify-center cursor-col-resize hover:bg-gray-50/50 dark:hover:bg-gray-700/50 rounded-full transition-colors group mx-1"
-                                    onMouseDown={handleMouseDown}
-                                >
-                                    <div className="h-12 w-1 bg-gray-200 dark:bg-gray-600 rounded-full group-hover:bg-blue-400 transition-colors shadow-sm" />
+                                <div className="relative flex items-center" style={{ height: `${panelHeight}px` }}>
+                                    {/* WIDTH Slider (Vertical) */}
+                                    <div
+                                        className="hidden md:flex w-4 h-full items-center justify-center cursor-col-resize hover:bg-gray-50/50 dark:hover:bg-gray-700/50 rounded-full transition-colors group mx-1"
+                                        onMouseDown={handleMouseDown}
+                                    >
+                                        <div className="h-12 w-1 bg-gray-200 dark:bg-gray-600 rounded-full transition-colors shadow-sm" style={{ '--tw-bg-opacity': 1 } as any} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = accentColor} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ''} />
+                                    </div>
+                                    
+                                    {/* HEIGHT Slider (Horizontal at bottom) */}
+                                    <div
+                                        className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-2 h-4 w-16 flex items-center justify-center cursor-row-resize hover:bg-gray-50/50 dark:hover:bg-gray-700/50 rounded-full transition-colors group/height z-30"
+                                        onMouseDown={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            const startY = e.clientY;
+                                            const startHeight = panelHeight;
+                                            let currentHeight = startHeight;
+
+                                            const handleMouseMove = (moveEvent: MouseEvent) => {
+                                                const deltaY = moveEvent.clientY - startY;
+                                                currentHeight = Math.max(250, Math.min(800, startHeight + deltaY));
+                                                setPanelHeight(currentHeight);
+                                                setEventsHeight(currentHeight);
+                                                setTrendsHeight(currentHeight);
+                                                // Update the main_content row height in dashboard layout so other widgets move
+                                                setDashboardLayout(prev => prev.map(r => 
+                                                    r.widgets.includes('main_content') ? { ...r, height: currentHeight } : r
+                                                ));
+                                            };
+
+                                            const handleMouseUp = () => {
+                                                document.removeEventListener('mousemove', handleMouseMove);
+                                                document.removeEventListener('mouseup', handleMouseUp);
+                                                // Save the height
+                                                // @ts-ignore
+                                                window.ipcRenderer.invoke('save-device-setting', 'dashboardPanelHeight', currentHeight.toString());
+                                            };
+
+                                            document.addEventListener('mousemove', handleMouseMove);
+                                            document.addEventListener('mouseup', handleMouseUp);
+                                        }}
+                                    >
+                                        <div className="w-8 h-1 bg-gray-200 dark:bg-gray-600 rounded-full transition-colors shadow-sm" style={{ '--tw-bg-opacity': 1 } as any} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = accentColor} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ''} />
+                                    </div>
                                 </div>
                             )}
 
@@ -1409,7 +1433,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                             <motion.div
                                 style={{
                                     width: isMobile ? '100%' : `calc(${100 - leftWidth}% - 1.5rem)`,
-                                    height: isMobile ? `${trendsHeight}px` : '100%'
+                                    height: isMobile ? `${trendsHeight}px` : `${panelHeight}px`
                                 }}
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
@@ -1442,17 +1466,19 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                                 </div>
 
                                 {/* Resize Handle for Trends */}
-                                <div
-                                    className="absolute bottom-0 left-0 right-0 h-4 flex items-center justify-center cursor-row-resize rounded-b-[2rem] transition-colors group/handle z-20"
-                                    style={{ backgroundColor: 'transparent' }}
-                                    onMouseDown={handleTrendsHeightMouseDown}
-                                >
-                                    <div className="w-12 h-1 rounded-full transition-colors shadow-sm" style={{ backgroundColor: `${accentColor}40` }} />
-                                </div>
+                                {isMobile && (
+                                    <div
+                                        className="absolute bottom-0 left-0 right-0 h-4 flex items-center justify-center cursor-row-resize rounded-b-[2rem] transition-colors group/handle z-20"
+                                        style={{ backgroundColor: 'transparent' }}
+                                        onMouseDown={handleTrendsHeightMouseDown}
+                                    >
+                                        <div className="w-12 h-1 bg-gray-200 dark:bg-gray-600 rounded-full transition-colors shadow-sm" style={{ '--tw-bg-opacity': 1 } as any} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = accentColor} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ''} />
+                                    </div>
+                                )}
                             </motion.div>
                         </div>
 
-                        {/* Redundant Height Resize Handle Removed */}
+                        {/* Shared Height Resize Handle Removed */}
                     </>
                 );
             case 'github':
@@ -1552,7 +1578,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                                 className="absolute bottom-0 left-0 right-0 h-4 flex items-center justify-center cursor-row-resize hover:bg-gray-50/50 dark:hover:bg-gray-700/50 rounded-b-[2rem] transition-colors group/handle z-20"
                                 onMouseDown={handleGithubHeightMouseDown}
                             >
-                                <div className="w-12 h-1 bg-gray-200 dark:bg-gray-600 rounded-full group-hover/handle:bg-gray-400 transition-colors shadow-sm" />
+                                <div className="w-12 h-1 bg-gray-200 dark:bg-gray-600 rounded-full transition-colors shadow-sm" style={{ '--tw-bg-opacity': 1 } as any} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = accentColor} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ''} />
                             </div>
                         )}
                     </motion.div>
@@ -1654,7 +1680,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                                 className="absolute bottom-0 left-0 right-0 h-4 flex items-center justify-center cursor-row-resize rounded-b-[2rem] transition-colors group/handle z-20"
                                 onMouseDown={handleStatsHeightMouseDown}
                             >
-                                <div className="w-12 h-1 rounded-full transition-colors shadow-sm" style={{ backgroundColor: `${accentColor}40` }} />
+                                <div className="w-12 h-1 bg-gray-200 dark:bg-gray-600 rounded-full transition-colors shadow-sm" style={{ '--tw-bg-opacity': 1 } as any} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = accentColor} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ''} />
                             </div>
                         )}
                     </motion.div>
@@ -1752,7 +1778,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                                 {/* Row Container */}
                                 {visibleWidgets.length === 1 ? (
                                     // Single widget row
-                                    <div className="relative">
+                                    <div className="relative" style={{ height: row.height ? `${row.height}px` : 'auto' }}>
                                         {isEditMode && (
                                             <>
                                                 <div className="absolute -top-3 -right-3 z-50 flex gap-2">
@@ -1812,18 +1838,15 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                                         )}
                                         {renderWidget(visibleWidgets[0], row.height)}
 
-                                        {/* Row Resize Handle - Only in Edit Mode or if row.height is set (to allow user adjustment) */}
-                                        {/* Actually always allow resize if it's the row controller? No, only in Edit Mode? 
-                                            The user wants sliders visible. Let's make it always visible if logic supports it. 
-                                            But default behavior is per-widget. Row height overrides. 
-                                            If we use row height, we should show row slider.
-                                        */}
-                                        <div
-                                            className="absolute bottom-0 left-0 right-0 h-4 flex items-center justify-center cursor-row-resize hover:bg-gray-50/50 dark:hover:bg-gray-700/50 rounded-b-[2rem] transition-colors group/handle z-30"
-                                            onMouseDown={(e) => handleRowHeightMouseDown(e, row)}
-                                        >
-                                            <div className="w-12 h-1 bg-gray-300 dark:bg-gray-500 rounded-full group-hover/handle:bg-blue-400 transition-colors shadow-sm" />
-                                        </div>
+                                        {/* Row Resize Handle - Hidden for main_content */}
+                                        {visibleWidgets[0] !== 'main_content' && (
+                                            <div
+                                                className="absolute bottom-0 left-0 right-0 h-4 flex items-center justify-center cursor-row-resize hover:bg-gray-50/50 dark:hover:bg-gray-700/50 rounded-b-[2rem] transition-colors group/handle z-30"
+                                                onMouseDown={(e) => handleRowHeightMouseDown(e, row)}
+                                            >
+                                                <div className="w-12 h-1 bg-gray-200 dark:bg-gray-600 rounded-full transition-colors shadow-sm" style={{ '--tw-bg-opacity': 1 } as any} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = accentColor} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ''} />
+                                            </div>
+                                        )}
                                     </div>
                                 ) : (
                                     // 2-Widget Row (Side by Side)
@@ -1903,7 +1926,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                                             className="absolute bottom-0 left-0 right-0 h-4 flex items-center justify-center cursor-row-resize hover:bg-gray-50/50 dark:hover:bg-gray-700/50 rounded-b-[2rem] transition-colors group/handle z-30"
                                             onMouseDown={(e) => handleRowHeightMouseDown(e, row)}
                                         >
-                                            <div className="w-12 h-1 bg-gray-300 dark:bg-gray-500 rounded-full group-hover/handle:bg-blue-400 transition-colors shadow-sm" />
+                                            <div className="w-12 h-1 bg-gray-200 dark:bg-gray-600 rounded-full transition-colors shadow-sm" style={{ '--tw-bg-opacity': 1 } as any} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = accentColor} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ''} />
                                         </div>
                                     </div>
                                 )}

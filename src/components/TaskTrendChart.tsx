@@ -35,7 +35,11 @@ interface TaskPoint {
 }
 
 const TaskTrendChart: React.FC<TaskTrendChartProps> = ({ notes }) => {
-  const [range, setRange] = useState<TimeRange>('1W');
+  // Load saved time range preference from localStorage, default to '1W' if not found
+  const [range, setRange] = useState<TimeRange>(() => {
+    const saved = localStorage.getItem('taskTrendChart-timeRange');
+    return (saved as TimeRange) || '1W';
+  });
   const [containerWidth, setContainerWidth] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const [animationKey, setAnimationKey] = useState(0);
@@ -53,6 +57,8 @@ const TaskTrendChart: React.FC<TaskTrendChartProps> = ({ notes }) => {
 
   const handleRangeChange = (newRange: TimeRange) => {
     setRange(newRange);
+    // Save the user's preference to localStorage
+    localStorage.setItem('taskTrendChart-timeRange', newRange);
   };
 
   // Build chart data - task by task points
