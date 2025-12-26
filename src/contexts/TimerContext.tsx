@@ -74,6 +74,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     const [isAlertVisible, setIsAlertVisible] = useState(false);
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
     const flashIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const completedTimerIdRef = useRef<string | null>(null); // Track completed timer to prevent duplicates
 
     // Load history from localStorage
     useEffect(() => {
@@ -123,8 +124,14 @@ export function TimerProvider({ children }: { children: ReactNode }) {
         }
     }, []);
 
-    // Timer completion handler
+    // Timer completion handler - add to history with duplicate prevention
     const handleTimerComplete = useCallback((timer: ActiveTimer) => {
+        // Prevent duplicate entries by checking if we already completed this timer
+        if (completedTimerIdRef.current === timer.id) {
+            return;
+        }
+        completedTimerIdRef.current = timer.id;
+
         // Add to history
         const historyItem: TimerHistoryItem = {
             id: crypto.randomUUID(),
@@ -161,35 +168,42 @@ export function TimerProvider({ children }: { children: ReactNode }) {
         }
     }, [startFlashing]);
 
-    // Timer tick
-    useEffect(() => {
-        if (activeTimer?.isRunning) {
-            intervalRef.current = setInterval(() => {
-                setActiveTimer(prev => {
-                    if (!prev) return null;
+    // Use ref for handleTimerComplete to avoid dependency in interval
+    const handleTimerCompleteRef = useRef(handleTimerComplete);
+    handleTimerCompleteRef.current = handleTimerComplete;
 
-                    if (prev.type === 'timer') {
-                        const newRemaining = prev.remaining - 1;
-                        if (newRemaining <= 0) {
-                            // Timer complete
-                            handleTimerComplete(prev);
-                            return null;
-                        }
-                        return { ...prev, remaining: newRemaining };
-                    } else {
-                        // Stopwatch - count up
-                        return { ...prev, remaining: prev.remaining + 1 };
-                    }
-                });
-            }, 1000);
+    // Timer tick effect
+    useEffect(() => {
+        if (!activeTimer?.isRunning) {
+            return;
         }
+
+        intervalRef.current = setInterval(() => {
+            setActiveTimer(prev => {
+                if (!prev || !prev.isRunning) return prev;
+
+                if (prev.type === 'timer') {
+                    const newRemaining = prev.remaining - 1;
+                    if (newRemaining <= 0) {
+                        // Timer complete - use ref to call handler
+                        handleTimerCompleteRef.current(prev);
+                        return null;
+                    }
+                    return { ...prev, remaining: newRemaining };
+                } else {
+                    // Stopwatch - count up
+                    return { ...prev, remaining: prev.remaining + 1 };
+                }
+            });
+        }, 1000);
 
         return () => {
             if (intervalRef.current) {
                 clearInterval(intervalRef.current);
+                intervalRef.current = null;
             }
         };
-    }, [activeTimer?.isRunning, handleTimerComplete]);
+    }, [activeTimer?.isRunning, activeTimer?.id]);
 
     // Request notification permission
     useEffect(() => {
@@ -199,6 +213,8 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     }, []);
 
     const startTimer = useCallback((seconds: number, label?: string) => {
+        // Reset completed timer tracker
+        completedTimerIdRef.current = null;
         setActiveTimer({
             id: crypto.randomUUID(),
             type: 'timer',
@@ -213,6 +229,8 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     }, [stopFlashing]);
 
     const startStopwatch = useCallback((label?: string) => {
+        // Reset completed timer tracker
+        completedTimerIdRef.current = null;
         setActiveTimer({
             id: crypto.randomUUID(),
             type: 'stopwatch',
@@ -235,16 +253,22 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     }, []);
 
     const stopTimer = useCallback(() => {
-        if (activeTimer && activeTimer.type === 'stopwatch' && activeTimer.remaining > 0) {
-            // Save stopwatch to history
-            const historyItem: TimerHistoryItem = {
-                id: crypto.randomUUID(),
-                duration: activeTimer.remaining,
-                label: activeTimer.label,
-                completedAt: new Date(),
-                type: 'stopwatch'
-            };
-            setHistory(prev => [historyItem, ...prev].slice(0, 50));
+        if (activeTimer) {
+            // Save to history when manually stopped (both timer and stopwatch)
+            const elapsed = activeTimer.type === 'stopwatch'
+                ? activeTimer.remaining
+                : (activeTimer.duration - activeTimer.remaining);
+
+            if (elapsed > 0) {
+                const historyItem: TimerHistoryItem = {
+                    id: crypto.randomUUID(),
+                    duration: elapsed,
+                    label: activeTimer.label,
+                    completedAt: new Date(),
+                    type: activeTimer.type
+                };
+                setHistory(prev => [historyItem, ...prev].slice(0, 50));
+            }
         }
         setActiveTimer(null);
         setIsAlertVisible(false);

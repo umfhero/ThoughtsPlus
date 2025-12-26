@@ -114,6 +114,38 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
         }
     }, [currentFont]);
 
+    // Auto-center view on notes when board loads
+    useEffect(() => {
+        if (!isLoading && notes.length > 0 && canvasRef.current) {
+            // Small delay to ensure DOM is ready
+            const timer = setTimeout(() => {
+                if (!canvasRef.current) return;
+
+                // Calculate bounding box of all notes
+                const minX = Math.min(...notes.map(n => n.x));
+                const maxX = Math.max(...notes.map(n => n.x + n.width));
+                const minY = Math.min(...notes.map(n => n.y));
+                const maxY = Math.max(...notes.map(n => n.y + n.height));
+
+                // Get center of notes
+                const centerX = (minX + maxX) / 2;
+                const centerY = (minY + maxY) / 2;
+
+                // Get canvas dimensions
+                const canvasRect = canvasRef.current.getBoundingClientRect();
+                const canvasCenterX = canvasRect.width / 2;
+                const canvasCenterY = canvasRect.height / 2;
+
+                // Calculate pan offset to center the notes
+                setPanOffset({
+                    x: canvasCenterX - centerX * zoom,
+                    y: canvasCenterY - centerY * zoom
+                });
+            }, 100);
+
+            return () => clearTimeout(timer);
+        }
+    }, [isLoading, activeBoardId, notes.length]); // Run when loading completes, board changes, or notes are loaded
 
 
     const loadData = async () => {

@@ -63,7 +63,14 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
     const githubContributionsRef = useRef<HTMLDivElement>(null);
 
     // Board Preview State
-    const [lastBoard, setLastBoard] = useState<{ id: string; name: string; color: string; noteCount: number; lastAccessed: number } | null>(null);
+    const [lastBoard, setLastBoard] = useState<{
+        id: string;
+        name: string;
+        color: string;
+        noteCount: number;
+        lastAccessed: number;
+        previewNotes: { color: string; x: number; y: number }[];
+    } | null>(null);
 
     // Edit Mode State
     const [customConfigs, setCustomConfigs] = useState<CustomWidgetConfig[]>([]);
@@ -360,12 +367,21 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                         (b.lastAccessed || 0) - (a.lastAccessed || 0)
                     );
                     const mostRecent = sortedBoards[0];
+
+                    // Create preview notes (simplified positions for visual)
+                    const previewNotes = (mostRecent.notes || []).slice(0, 6).map((note: any) => ({
+                        color: note.color || '#FFF8DC',
+                        x: note.x || 0,
+                        y: note.y || 0
+                    }));
+
                     setLastBoard({
                         id: mostRecent.id,
                         name: mostRecent.name,
                         color: mostRecent.color,
                         noteCount: mostRecent.notes?.length || 0,
-                        lastAccessed: mostRecent.lastAccessed || Date.now()
+                        lastAccessed: mostRecent.lastAccessed || Date.now(),
+                        previewNotes
                     });
                 }
             } catch (e) {
@@ -1771,58 +1787,87 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                                 <div className="w-1 h-4 rounded-full" style={{ backgroundColor: accentColor }}></div>
                                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Board</p>
                             </div>
-                            <div className="p-2.5 rounded-xl" style={{ backgroundColor: `${accentColor}15`, color: accentColor }}>
-                                <Folder className="w-4 h-4" />
+                            <div className="flex items-center gap-2">
+                                {/* New Board icon button */}
+                                <button
+                                    onClick={() => {
+                                        window.dispatchEvent(new CustomEvent('navigate-to-page', { detail: 'board' }));
+                                        setTimeout(() => {
+                                            window.dispatchEvent(new CustomEvent('create-new-board'));
+                                        }, 300);
+                                    }}
+                                    className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                                    title="Create New Board"
+                                >
+                                    <Plus className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                                </button>
+                                <div className="p-2.5 rounded-xl" style={{ backgroundColor: `${accentColor}15`, color: accentColor }}>
+                                    <Folder className="w-4 h-4" />
+                                </div>
                             </div>
                         </div>
 
                         {lastBoard ? (
                             <div className="flex-1">
-                                {/* Board Preview Card */}
+                                {/* Board Visual Preview - Canvas style */}
                                 <div
-                                    className="p-5 rounded-2xl cursor-pointer transition-all hover:scale-[1.02] hover:shadow-lg group"
-                                    style={{ backgroundColor: lastBoard.color }}
+                                    className="relative rounded-2xl cursor-pointer transition-all hover:scale-[1.01] hover:shadow-lg overflow-hidden group"
+                                    style={{
+                                        backgroundColor: lastBoard.color,
+                                        height: '140px'
+                                    }}
                                     onClick={() => {
-                                        // Navigate to board page - dispatch custom event
                                         window.dispatchEvent(new CustomEvent('navigate-to-page', { detail: 'board' }));
                                     }}
                                 >
-                                    <div className="flex items-start justify-between mb-3">
-                                        <h3 className="text-lg font-bold text-gray-800 truncate max-w-[180px]">
-                                            {lastBoard.name}
-                                        </h3>
-                                        <ArrowUpRight className="w-4 h-4 text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                    </div>
+                                    {/* Preview notes as mini sticky notes */}
+                                    {lastBoard.previewNotes.length > 0 ? (
+                                        <div className="absolute inset-0 p-3">
+                                            {lastBoard.previewNotes.map((note, idx) => (
+                                                <div
+                                                    key={idx}
+                                                    className="absolute shadow-sm rounded transition-transform group-hover:scale-105"
+                                                    style={{
+                                                        backgroundColor: note.color,
+                                                        width: '40px',
+                                                        height: '35px',
+                                                        left: `${15 + (idx % 3) * 30}%`,
+                                                        top: `${15 + Math.floor(idx / 3) * 45}%`,
+                                                        transform: `rotate(${(idx % 2 === 0 ? -3 : 3) + idx}deg)`,
+                                                    }}
+                                                />
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="absolute inset-0 flex items-center justify-center">
+                                            <p className="text-gray-700/50 text-sm italic">Empty board</p>
+                                        </div>
+                                    )}
 
-                                    <div className="flex items-center gap-4 text-sm text-gray-700">
-                                        <span className="flex items-center gap-1.5">
-                                            <div className="w-5 h-5 rounded-md bg-white/50 flex items-center justify-center">
-                                                <span className="text-xs font-bold">{lastBoard.noteCount}</span>
-                                            </div>
-                                            note{lastBoard.noteCount !== 1 ? 's' : ''}
-                                        </span>
-                                        <span className="flex items-center gap-1.5 text-gray-600">
-                                            <Clock className="w-3.5 h-3.5" />
-                                            {getTimeAgo(lastBoard.lastAccessed)}
-                                        </span>
+                                    {/* Hover overlay */}
+                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors flex items-center justify-center">
+                                        <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 dark:bg-gray-800/90 px-3 py-1.5 rounded-full shadow-lg">
+                                            <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Open Board</span>
+                                        </div>
                                     </div>
                                 </div>
 
-                                {/* Quick action */}
-                                <button
-                                    onClick={() => {
-                                        // Navigate to board page with new board intent
-                                        window.dispatchEvent(new CustomEvent('navigate-to-page', { detail: 'board' }));
-                                        // Small delay then trigger new board creation
-                                        setTimeout(() => {
-                                            window.dispatchEvent(new CustomEvent('create-new-board'));
-                                        }, 300);
-                                    }}
-                                    className="mt-3 w-full py-2.5 px-4 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 font-medium text-sm flex items-center justify-center gap-2 transition-colors"
-                                >
-                                    <Plus className="w-4 h-4" />
-                                    New Board
-                                </button>
+                                {/* Board info */}
+                                <div className="flex items-center justify-between mt-3 px-1">
+                                    <div>
+                                        <h3 className="font-bold text-gray-800 dark:text-gray-100 truncate max-w-[150px]">
+                                            {lastBoard.name}
+                                        </h3>
+                                        <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                            <span>{lastBoard.noteCount} note{lastBoard.noteCount !== 1 ? 's' : ''}</span>
+                                            <span className="flex items-center gap-1">
+                                                <Clock className="w-3 h-3" />
+                                                {getTimeAgo(lastBoard.lastAccessed)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <ArrowUpRight className="w-4 h-4 text-gray-400" />
+                                </div>
                             </div>
                         ) : (
                             <div className="flex-1 flex flex-col items-center justify-center text-center py-6">
