@@ -52,7 +52,7 @@ export function ShortcutsOverlay({ currentPage }: ShortcutsOverlayProps) {
 
     const shortcuts = [
         { icon: Sparkles, key: 'Ctrl + M', description: 'AI Quick Note', color: 'text-pink-400 drop-shadow-[0_0_8px_rgba(244,114,182,0.8)]', prominent: true },
-        { icon: Timer, key: 'Ctrl + Enter', description: 'Quick Timer', color: 'text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]', prominent: true },
+        { icon: Timer, key: 'Ctrl + Enter', description: 'Quick Timer', color: 'text-emerald-400 drop-shadow-[0_0_6px_rgba(52,211,153,0.6)]' },
         { icon: Home, key: 'Ctrl + D', description: 'Go to Dashboard', color: 'text-blue-300 drop-shadow-[0_0_6px_rgba(147,197,253,0.6)]' },
         { icon: Calendar, key: 'Ctrl + E', description: 'Go to Calendar', color: 'text-green-400 drop-shadow-[0_0_6px_rgba(74,222,128,0.6)]' },
         { icon: PenTool, key: 'Ctrl + W', description: 'Go to Board', color: 'text-orange-400 drop-shadow-[0_0_6px_rgba(251,146,60,0.6)]' },

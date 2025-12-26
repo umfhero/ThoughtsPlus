@@ -271,6 +271,18 @@ function App() {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [isAiModalOpen, isQuickTimerOpen, currentPage, showDev]);
 
+    // Handle custom navigation events from widgets
+    useEffect(() => {
+        const handleNavigateEvent = (e: CustomEvent) => {
+            const page = e.detail as Page;
+            if (page) {
+                setCurrentPage(page);
+            }
+        };
+        window.addEventListener('navigate-to-page', handleNavigateEvent as EventListener);
+        return () => window.removeEventListener('navigate-to-page', handleNavigateEvent as EventListener);
+    }, []);
+
     const loadNotes = async () => {
         try {
             // @ts-ignore

@@ -3,7 +3,7 @@ import { AddCustomWidgetModal } from '../components/AddCustomWidgetModal';
 import { getWidgetConfigs, deleteWidgetConfig } from '../utils/customWidgetManager';
 import { CustomWidgetConfig } from '../types';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
-import { ArrowUpRight, Loader, Circle, Search, Filter, Activity as ActivityIcon, CheckCircle2, Sparkles, X, Plus, MousePointerClick, Merge, Trash2, Repeat } from 'lucide-react';
+import { ArrowUpRight, Loader, Circle, Search, Filter, Activity as ActivityIcon, CheckCircle2, Sparkles, X, Plus, MousePointerClick, Merge, Trash2, Repeat, Folder, Clock } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { format, parseISO } from 'date-fns';
 import { NotesData, Note } from '../types';
@@ -62,6 +62,9 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
     const [blockSize, setBlockSize] = useState(12);
     const githubContributionsRef = useRef<HTMLDivElement>(null);
 
+    // Board Preview State
+    const [lastBoard, setLastBoard] = useState<{ id: string; name: string; color: string; noteCount: number; lastAccessed: number } | null>(null);
+
     // Edit Mode State
     const [customConfigs, setCustomConfigs] = useState<CustomWidgetConfig[]>([]);
     const [isAddWidgetModalOpen, setIsAddWidgetModalOpen] = useState(false);
@@ -96,7 +99,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
         // we can just find the new one.
         const configs = getWidgetConfigs();
         const allWidgetIds = new Set([...dashboardLayout.flatMap(r => r.widgets), ...hiddenWidgets]);
-        
+
         configs.forEach(c => {
             if (!allWidgetIds.has(c.id)) {
                 // New widget found, add to layout
@@ -127,7 +130,8 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
             { id: 'row-1', widgets: ['briefing'] },
             { id: 'row-2', widgets: ['main_content'] },
             { id: 'row-3', widgets: ['github'] },
-            { id: 'row-4', widgets: ['fortnite'] }
+            { id: 'row-4', widgets: ['fortnite'] },
+            { id: 'row-5', widgets: ['board'] }
         ];
     });
 
@@ -342,6 +346,33 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
         return () => {
             window.removeEventListener('feature-toggles-changed', handleFeatureToggleChange as EventListener);
         };
+    }, []);
+
+    // Load board data for preview widget
+    useEffect(() => {
+        const loadBoardData = async () => {
+            try {
+                // @ts-ignore
+                const data = await window.ipcRenderer.invoke('get-boards');
+                if (data && data.boards && data.boards.length > 0) {
+                    // Find the most recently accessed board
+                    const sortedBoards = [...data.boards].sort((a: any, b: any) =>
+                        (b.lastAccessed || 0) - (a.lastAccessed || 0)
+                    );
+                    const mostRecent = sortedBoards[0];
+                    setLastBoard({
+                        id: mostRecent.id,
+                        name: mostRecent.name,
+                        color: mostRecent.color,
+                        noteCount: mostRecent.notes?.length || 0,
+                        lastAccessed: mostRecent.lastAccessed || Date.now()
+                    });
+                }
+            } catch (e) {
+                console.error('Failed to load board data for preview:', e);
+            }
+        };
+        loadBoardData();
     }, []);
 
     useEffect(() => {
@@ -1088,8 +1119,8 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
             if (config) {
                 return (
                     <div style={{ height: overrideHeight ? `${overrideHeight}px` : '350px' }}>
-                        <CustomWidgetContainer 
-                            config={config} 
+                        <CustomWidgetContainer
+                            config={config}
                             onDelete={() => handleDeleteCustomWidget(id)}
                             isEditMode={isEditMode}
                         />
@@ -1188,8 +1219,8 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                                                     rangeStart.setDate(rangeStart.getDate() - 30);
                                                     rangeEnd.setDate(rangeEnd.getDate() + 30);
                                                 }
-                                                const filteredEvents = trendTimeRange === 'ALL' 
-                                                    ? upcomingEvents 
+                                                const filteredEvents = trendTimeRange === 'ALL'
+                                                    ? upcomingEvents
                                                     : upcomingEvents.filter(e => {
                                                         const eventDate = new Date(e.date);
                                                         return eventDate >= rangeStart && eventDate <= rangeEnd;
@@ -1284,110 +1315,110 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                                             {filteredEventsForTab.slice(0, 10).map((event) => {
                                                 const { date, note, dateKey } = event;
                                                 return (
-                                                <motion.div
-                                                    key={note.id}
-                                                    layout
-                                                    initial={{ opacity: 0, scale: 0.8, y: -10 }}
-                                                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                                                    exit={{ opacity: 0, scale: 0.8, x: 50 }}
-                                                    transition={{
-                                                        duration: 0.3,
-                                                        layout: { duration: 0.3 }
-                                                    }}
-                                                    whileHover={{ scale: 1.02 }}
-                                                    className={clsx(
-                                                        "p-3 rounded-xl border transition-colors",
-                                                        note.completed ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-900/50" : importanceColors[note.importance as keyof typeof importanceColors]
-                                                    )}
-                                                >
-                                                    <div className="flex items-start gap-3">
-                                                        {/* Completion Checkbox */}
-                                                        <motion.button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleToggleComplete(note.id, dateKey, note.completed || false, event);
-                                                            }}
-                                                            whileTap={{ scale: 0.8 }}
-                                                            className={clsx(
-                                                                "mt-0.5 flex-shrink-0 transition-all",
-                                                                note.completed
-                                                                    ? "text-green-500 hover:text-green-600"
-                                                                    : "text-gray-300 hover:text-gray-400 dark:text-gray-600 dark:hover:text-gray-500"
-                                                            )}
-                                                        >
-                                                            <motion.div
-                                                                initial={false}
-                                                                animate={note.completed ? { scale: [1, 1.3, 1], rotate: [0, 10, 0] } : { scale: 1 }}
-                                                                transition={{ duration: 0.3 }}
+                                                    <motion.div
+                                                        key={note.id}
+                                                        layout
+                                                        initial={{ opacity: 0, scale: 0.8, y: -10 }}
+                                                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                                                        exit={{ opacity: 0, scale: 0.8, x: 50 }}
+                                                        transition={{
+                                                            duration: 0.3,
+                                                            layout: { duration: 0.3 }
+                                                        }}
+                                                        whileHover={{ scale: 1.02 }}
+                                                        className={clsx(
+                                                            "p-3 rounded-xl border transition-colors",
+                                                            note.completed ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-900/50" : importanceColors[note.importance as keyof typeof importanceColors]
+                                                        )}
+                                                    >
+                                                        <div className="flex items-start gap-3">
+                                                            {/* Completion Checkbox */}
+                                                            <motion.button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleToggleComplete(note.id, dateKey, note.completed || false, event);
+                                                                }}
+                                                                whileTap={{ scale: 0.8 }}
+                                                                className={clsx(
+                                                                    "mt-0.5 flex-shrink-0 transition-all",
+                                                                    note.completed
+                                                                        ? "text-green-500 hover:text-green-600"
+                                                                        : "text-gray-300 hover:text-gray-400 dark:text-gray-600 dark:hover:text-gray-500"
+                                                                )}
                                                             >
-                                                                {note.completed ? (
-                                                                    <CheckCircle2 className="w-5 h-5" />
-                                                                ) : (
-                                                                    <Circle className="w-5 h-5" />
-                                                                )}
-                                                            </motion.div>
-                                                        </motion.button>
-
-                                                        <div
-                                                            className="flex-1 cursor-pointer"
-                                                            onClick={() => onNavigateToNote(date, note.id)}
-                                                        >
-                                                            <div className="flex justify-between items-start mb-1">
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className={clsx(
-                                                                        "font-bold text-sm",
-                                                                        note.completed && "line-through text-gray-500 dark:text-gray-400"
-                                                                    )}>
-                                                                        {note.title}
-                                                                    </span>
-                                                                    {/* @ts-ignore */}
-                                                                    {event.isRecurringSeries && (
-                                                                        <div className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-md bg-gray-100 dark:bg-gray-700" style={{ color: accentColor }}>
-                                                                            <Repeat className="w-3 h-3" />
-                                                                            {/* @ts-ignore */}
-                                                                            <span className="font-semibold">{event.completedCount}/{event.totalCount}</span>
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                                <div className="text-right flex flex-col items-end gap-1">
-                                                                    <div className="text-xs opacity-70">{format(date, 'MMM d')} {convertTo12Hour(note.time)}</div>
-
+                                                                <motion.div
+                                                                    initial={false}
+                                                                    animate={note.completed ? { scale: [1, 1.3, 1], rotate: [0, 10, 0] } : { scale: 1 }}
+                                                                    transition={{ duration: 0.3 }}
+                                                                >
                                                                     {note.completed ? (
-                                                                        <button
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                handleToggleLate(note.id, dateKey, note.completedLate || false);
-                                                                            }}
-                                                                            className={clsx(
-                                                                                "text-[10px] font-semibold px-2 py-0.5 rounded-full transition-colors",
-                                                                                note.completedLate
-                                                                                    ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50"
-                                                                                    : "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50"
-                                                                            )}
-                                                                        >
-                                                                            {note.completedLate ? 'Late' : 'On Time'}
-                                                                        </button>
+                                                                        <CheckCircle2 className="w-5 h-5" />
                                                                     ) : (
-                                                                        <div className="text-[10px] opacity-60 font-semibold">
-                                                                            {getCountdown(date, note.time)}
-                                                                        </div>
+                                                                        <Circle className="w-5 h-5" />
                                                                     )}
+                                                                </motion.div>
+                                                            </motion.button>
+
+                                                            <div
+                                                                className="flex-1 cursor-pointer"
+                                                                onClick={() => onNavigateToNote(date, note.id)}
+                                                            >
+                                                                <div className="flex justify-between items-start mb-1">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className={clsx(
+                                                                            "font-bold text-sm",
+                                                                            note.completed && "line-through text-gray-500 dark:text-gray-400"
+                                                                        )}>
+                                                                            {note.title}
+                                                                        </span>
+                                                                        {/* @ts-ignore */}
+                                                                        {event.isRecurringSeries && (
+                                                                            <div className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-md bg-gray-100 dark:bg-gray-700" style={{ color: accentColor }}>
+                                                                                <Repeat className="w-3 h-3" />
+                                                                                {/* @ts-ignore */}
+                                                                                <span className="font-semibold">{event.completedCount}/{event.totalCount}</span>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                    <div className="text-right flex flex-col items-end gap-1">
+                                                                        <div className="text-xs opacity-70">{format(date, 'MMM d')} {convertTo12Hour(note.time)}</div>
+
+                                                                        {note.completed ? (
+                                                                            <button
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    handleToggleLate(note.id, dateKey, note.completedLate || false);
+                                                                                }}
+                                                                                className={clsx(
+                                                                                    "text-[10px] font-semibold px-2 py-0.5 rounded-full transition-colors",
+                                                                                    note.completedLate
+                                                                                        ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50"
+                                                                                        : "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50"
+                                                                                )}
+                                                                            >
+                                                                                {note.completedLate ? 'Late' : 'On Time'}
+                                                                            </button>
+                                                                        ) : (
+                                                                            <div className="text-[10px] opacity-60 font-semibold">
+                                                                                {getCountdown(date, note.time)}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
                                                                 </div>
-                                                            </div>
-                                                            <div className="flex items-start gap-2 text-xs opacity-80">
-                                                                {!note.completed && (
-                                                                    <Circle className={clsx("w-2 h-2 mt-[3px] flex-shrink-0 fill-current", importanceIconColors[note.importance as keyof typeof importanceIconColors])} />
-                                                                )}
-                                                                <span className={clsx(
-                                                                    "break-words",
-                                                                    note.completed && "text-gray-500 dark:text-gray-400"
-                                                                )}>
-                                                                    {note.description || 'No description'}
-                                                                </span>
+                                                                <div className="flex items-start gap-2 text-xs opacity-80">
+                                                                    {!note.completed && (
+                                                                        <Circle className={clsx("w-2 h-2 mt-[3px] flex-shrink-0 fill-current", importanceIconColors[note.importance as keyof typeof importanceIconColors])} />
+                                                                    )}
+                                                                    <span className={clsx(
+                                                                        "break-words",
+                                                                        note.completed && "text-gray-500 dark:text-gray-400"
+                                                                    )}>
+                                                                        {note.description || 'No description'}
+                                                                    </span>
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                    </div>
-                                                </motion.div>
+                                                    </motion.div>
                                                 );
                                             })}
                                         </AnimatePresence>
@@ -1415,7 +1446,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                                     >
                                         <div className="h-12 w-1 bg-gray-200 dark:bg-gray-600 rounded-full transition-colors shadow-sm" style={{ '--tw-bg-opacity': 1 } as any} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = accentColor} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ''} />
                                     </div>
-                                    
+
                                     {/* HEIGHT Slider (Horizontal at bottom) */}
                                     <div
                                         className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-2 h-4 w-16 flex items-center justify-center cursor-row-resize hover:bg-gray-50/50 dark:hover:bg-gray-700/50 rounded-full transition-colors group/height z-30"
@@ -1434,7 +1465,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                                                 setEventsHeight(currentHeight);
                                                 setTrendsHeight(currentHeight);
                                                 // Update the main_content row height in dashboard layout so other widgets move
-                                                setDashboardLayout(prev => prev.map(r => 
+                                                setDashboardLayout(prev => prev.map(r =>
                                                     r.widgets.includes('main_content') ? { ...r, height: currentHeight } : r
                                                 ));
                                             };
@@ -1489,8 +1520,8 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                                             </div>
                                         </div>
                                     ) : (
-                                        <TaskTrendChart 
-                                            notes={notes} 
+                                        <TaskTrendChart
+                                            notes={notes}
                                             timeRange={trendTimeRange}
                                             onTimeRangeChange={(newRange) => setTrendTimeRange(newRange)}
                                         />
@@ -1712,6 +1743,110 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                         )}
                     </motion.div>
                 );
+            case 'board':
+                // Format time ago
+                const getTimeAgo = (timestamp: number) => {
+                    const now = Date.now();
+                    const diff = now - timestamp;
+                    const minutes = Math.floor(diff / 60000);
+                    const hours = Math.floor(diff / 3600000);
+                    const days = Math.floor(diff / 86400000);
+
+                    if (days > 0) return `${days} day${days !== 1 ? 's' : ''} ago`;
+                    if (hours > 0) return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
+                    if (minutes > 0) return `${minutes} min${minutes !== 1 ? 's' : ''} ago`;
+                    return 'Just now';
+                };
+
+                return (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.25 }}
+                        className="p-6 md:p-8 rounded-[2rem] bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50 relative flex flex-col overflow-hidden"
+                        style={{ height: overrideHeight ? `${overrideHeight}px` : 'auto' }}
+                    >
+                        <div className="flex items-center justify-between mb-4 flex-shrink-0">
+                            <div className="flex items-center gap-2">
+                                <div className="w-1 h-4 rounded-full" style={{ backgroundColor: accentColor }}></div>
+                                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Board</p>
+                            </div>
+                            <div className="p-2.5 rounded-xl" style={{ backgroundColor: `${accentColor}15`, color: accentColor }}>
+                                <Folder className="w-4 h-4" />
+                            </div>
+                        </div>
+
+                        {lastBoard ? (
+                            <div className="flex-1">
+                                {/* Board Preview Card */}
+                                <div
+                                    className="p-5 rounded-2xl cursor-pointer transition-all hover:scale-[1.02] hover:shadow-lg group"
+                                    style={{ backgroundColor: lastBoard.color }}
+                                    onClick={() => {
+                                        // Navigate to board page - dispatch custom event
+                                        window.dispatchEvent(new CustomEvent('navigate-to-page', { detail: 'board' }));
+                                    }}
+                                >
+                                    <div className="flex items-start justify-between mb-3">
+                                        <h3 className="text-lg font-bold text-gray-800 truncate max-w-[180px]">
+                                            {lastBoard.name}
+                                        </h3>
+                                        <ArrowUpRight className="w-4 h-4 text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    </div>
+
+                                    <div className="flex items-center gap-4 text-sm text-gray-700">
+                                        <span className="flex items-center gap-1.5">
+                                            <div className="w-5 h-5 rounded-md bg-white/50 flex items-center justify-center">
+                                                <span className="text-xs font-bold">{lastBoard.noteCount}</span>
+                                            </div>
+                                            note{lastBoard.noteCount !== 1 ? 's' : ''}
+                                        </span>
+                                        <span className="flex items-center gap-1.5 text-gray-600">
+                                            <Clock className="w-3.5 h-3.5" />
+                                            {getTimeAgo(lastBoard.lastAccessed)}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Quick action */}
+                                <button
+                                    onClick={() => {
+                                        // Navigate to board page with new board intent
+                                        window.dispatchEvent(new CustomEvent('navigate-to-page', { detail: 'board' }));
+                                        // Small delay then trigger new board creation
+                                        setTimeout(() => {
+                                            window.dispatchEvent(new CustomEvent('create-new-board'));
+                                        }, 300);
+                                    }}
+                                    className="mt-3 w-full py-2.5 px-4 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 font-medium text-sm flex items-center justify-center gap-2 transition-colors"
+                                >
+                                    <Plus className="w-4 h-4" />
+                                    New Board
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="flex-1 flex flex-col items-center justify-center text-center py-6">
+                                <div
+                                    className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
+                                    style={{ backgroundColor: `${accentColor}15` }}
+                                >
+                                    <Folder className="w-8 h-8" style={{ color: accentColor }} />
+                                </div>
+                                <p className="text-gray-500 dark:text-gray-400 text-sm mb-3">No boards yet</p>
+                                <button
+                                    onClick={() => {
+                                        window.dispatchEvent(new CustomEvent('navigate-to-page', { detail: 'board' }));
+                                    }}
+                                    className="py-2 px-4 rounded-xl text-white font-medium text-sm flex items-center gap-2 transition-colors"
+                                    style={{ backgroundColor: accentColor }}
+                                >
+                                    <Plus className="w-4 h-4" />
+                                    Create Board
+                                </button>
+                            </div>
+                        )}
+                    </motion.div>
+                );
             default:
                 return null;
         }
@@ -1754,10 +1889,10 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                     >
                         {getGreeting()}
                     </motion.h1>
-      
+
                 </div>
                 <div className="text-left md:text-right">
-                    <h2 
+                    <h2
                         className="text-4xl md:text-6xl font-bold text-gray-900 dark:text-gray-100 tracking-tighter cursor-pointer hover:opacity-80 transition-opacity"
                         onClick={toggleTimeFormat}
                         title={`Click to switch to ${use24Hour ? '12-hour' : '24-hour'} format`}
@@ -2018,7 +2153,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                 )}
             </AnimatePresence>
 
-            <AddCustomWidgetModal 
+            <AddCustomWidgetModal
                 isOpen={isAddWidgetModalOpen}
                 onClose={() => setIsAddWidgetModalOpen(false)}
                 onSave={handleCustomWidgetSaved}
