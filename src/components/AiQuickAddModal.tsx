@@ -26,9 +26,9 @@ export function AiQuickAddModal({ isOpen, onClose, onSave }: AiQuickAddModalProp
         const saved = localStorage.getItem('feature-toggles');
         if (saved) {
             const features = JSON.parse(saved);
-            return features.aiDescriptions ?? true; // Default to true to match Settings
+            return features.aiDescriptions ?? false; // Default to false for faster testing
         }
-        return true; // Default to true to match Settings
+        return false; // Default to false to avoid extra API calls during dev
     });
 
     // Listen for feature toggle changes from Settings

@@ -31,7 +31,6 @@ export function TimerPage({ isSidebarCollapsed: _isSidebarCollapsed = false }: {
     const [customMinutes, setCustomMinutes] = useState(5);
     const [customSeconds, setCustomSeconds] = useState(0);
     const [customLabel, setCustomLabel] = useState('');
-    const [showHistory, setShowHistory] = useState(false);
     const [isCompactMode, setIsCompactMode] = useState(false);
     const [showQuickStart, setShowQuickStart] = useState(true);
     const [showStats, setShowStats] = useState(true);
@@ -232,21 +231,9 @@ export function TimerPage({ isSidebarCollapsed: _isSidebarCollapsed = false }: {
                         <div>
                             <h1 className={clsx(
                                 "font-bold text-gray-800 dark:text-gray-100 mb-1",
-                                isCompactMode ? "text-2xl" : "text-3xl md:text-4xl"
-                            )}>Timer</h1>
+                            )} >Timer</h1>
                             <p className="text-gray-500 dark:text-gray-400 text-sm">Stay focused and track your time</p>
                         </div>
-                        <button
-                            onClick={() => setShowHistory(!showHistory)}
-                            className={clsx(
-                                "p-2.5 rounded-xl transition-colors",
-                                showHistory
-                                    ? "bg-gray-200 dark:bg-gray-700"
-                                    : "hover:bg-gray-100 dark:hover:bg-gray-800"
-                            )}
-                        >
-                            <History className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-                        </button>
                     </div>
                 </motion.div>
 
@@ -547,127 +534,119 @@ export function TimerPage({ isSidebarCollapsed: _isSidebarCollapsed = false }: {
                         {/* Quick Stats Sidebar */}
                         {QuickStatsSidebar}
 
-                        {/* History Panel - In sidebar stack */}
-                        <AnimatePresence>
-                            {showHistory && (
-                                <motion.div
-                                    initial={{ opacity: 0, height: 0 }}
-                                    animate={{ opacity: 1, height: 'auto' }}
-                                    exit={{ opacity: 0, height: 0 }}
-                                    className="overflow-hidden"
-                                >
-                                    <div className="p-5 rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-lg">
-                                        <div className="flex items-center justify-between mb-4">
-                                            <h3 className="font-bold text-gray-800 dark:text-gray-100">History</h3>
-                                            {history.length > 0 && (
-                                                <button
-                                                    onClick={clearHistory}
-                                                    className="text-xs text-gray-400 hover:text-red-500 transition-colors"
+                        {/* History Panel - Always visible in sidebar stack */}
+                        <div className="p-4 rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm">
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2">
+                                    <History className="w-4 h-4" style={{ color: accentColor }} />
+                                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400">History</span>
+                                </div>
+                                {history.length > 0 && (
+                                    <button
+                                        onClick={clearHistory}
+                                        className="text-xs text-gray-400 hover:text-red-500 transition-colors"
+                                    >
+                                        Clear
+                                    </button>
+                                )}
+                            </div>
+
+                            {history.length === 0 ? (
+                                <div className="text-center py-4">
+                                    <Clock className="w-8 h-8 mx-auto text-gray-300 dark:text-gray-600 mb-2" />
+                                    <p className="text-xs text-gray-400">No history yet</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
+                                    {history.map((item, index) => (
+                                        <motion.div
+                                            key={item.id}
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: index * 0.03 }}
+                                            className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50 group"
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                {/* Color-coded type indicator */}
+                                                <div
+                                                    className="p-2 rounded-lg"
+                                                    style={{
+                                                        backgroundColor: item.type === 'timer'
+                                                            ? 'rgba(16, 185, 129, 0.15)'
+                                                            : 'rgba(59, 130, 246, 0.15)',
+                                                        color: item.type === 'timer'
+                                                            ? '#10b981'
+                                                            : '#3b82f6'
+                                                    }}
                                                 >
-                                                    Clear all
-                                                </button>
-                                            )}
-                                        </div>
-
-                                        {history.length === 0 ? (
-                                            <div className="text-center py-8">
-                                                <Clock className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
-                                                <p className="text-sm text-gray-400">No timer history yet</p>
-                                            </div>
-                                        ) : (
-                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-80 overflow-y-auto custom-scrollbar">
-                                                {history.map((item, index) => (
-                                                    <motion.div
-                                                        key={item.id}
-                                                        initial={{ opacity: 0, y: 10 }}
-                                                        animate={{ opacity: 1, y: 0 }}
-                                                        transition={{ delay: index * 0.03 }}
-                                                        className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50 group"
-                                                    >
-                                                        <div className="flex items-center gap-3">
-                                                            {/* Color-coded type indicator */}
-                                                            <div
-                                                                className="p-2 rounded-lg"
-                                                                style={{
-                                                                    backgroundColor: item.type === 'timer'
-                                                                        ? 'rgba(16, 185, 129, 0.15)'
-                                                                        : 'rgba(59, 130, 246, 0.15)',
-                                                                    color: item.type === 'timer'
-                                                                        ? '#10b981'
-                                                                        : '#3b82f6'
-                                                                }}
-                                                            >
-                                                                {item.type === 'timer' ? (
-                                                                    <TimerIcon className="w-4 h-4" />
-                                                                ) : (
-                                                                    <Clock className="w-4 h-4" />
-                                                                )}
-                                                            </div>
-                                                            <div>
-                                                                <div className="flex items-center gap-2">
-                                                                    <p className="font-medium text-gray-800 dark:text-gray-100">
-                                                                        {formatTimeVerbose(item.duration)}
-                                                                    </p>
-                                                                    {/* Type badge */}
-                                                                    <span className={clsx(
-                                                                        "text-[10px] font-semibold px-1.5 py-0.5 rounded-full uppercase",
-                                                                        item.type === 'timer'
-                                                                            ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"
-                                                                            : "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
-                                                                    )}>
-                                                                        {item.type}
-                                                                    </span>
-                                                                </div>
-                                                                <p className="text-xs text-gray-400">
-                                                                    {item.label || new Date(item.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex items-center gap-1">
-                                                            <button
-                                                                onClick={() => startTimer(item.duration, item.label)}
-                                                                className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
-                                                                title="Start again"
-                                                            >
-                                                                <RotateCcw className="w-3.5 h-3.5 text-gray-500" />
-                                                            </button>
-                                                            <button
-                                                                onClick={() => deleteHistoryItem(item.id)}
-                                                                className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-100 dark:hover:bg-red-900/30 transition-all"
-                                                                title="Delete"
-                                                            >
-                                                                <Trash2 className="w-3.5 h-3.5 text-red-500" />
-                                                            </button>
-                                                        </div>
-                                                    </motion.div>
-                                                ))}
-                                            </div>
-                                        )}
-
-                                        {/* Frequently used */}
-                                        {history.length >= 3 && (
-                                            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                                                <p className="text-xs text-gray-400 mb-2">Frequently used</p>
-                                                <div className="flex flex-wrap gap-1">
-                                                    {Array.from(new Set(history.map(h => h.duration)))
-                                                        .slice(0, 4)
-                                                        .map((duration) => (
-                                                            <button
-                                                                key={duration}
-                                                                onClick={() => startTimer(duration)}
-                                                                className="px-2 py-1 text-xs rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 transition-colors"
-                                                            >
-                                                                {formatTimeVerbose(duration)}
-                                                            </button>
-                                                        ))
-                                                    }
+                                                    {item.type === 'timer' ? (
+                                                        <TimerIcon className="w-4 h-4" />
+                                                    ) : (
+                                                        <Clock className="w-4 h-4" />
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <p className="font-medium text-gray-800 dark:text-gray-100">
+                                                            {formatTimeVerbose(item.duration)}
+                                                        </p>
+                                                        {/* Type badge */}
+                                                        <span className={clsx(
+                                                            "text-[10px] font-semibold px-1.5 py-0.5 rounded-full uppercase",
+                                                            item.type === 'timer'
+                                                                ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"
+                                                                : "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
+                                                        )}>
+                                                            {item.type}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-xs text-gray-400">
+                                                        {item.label || new Date(item.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    </p>
                                                 </div>
                                             </div>
-                                        )}
-                                    </div>
-                                </motion.div>
+                                            <div className="flex items-center gap-1">
+                                                <button
+                                                    onClick={() => startTimer(item.duration, item.label)}
+                                                    className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
+                                                    title="Start again"
+                                                >
+                                                    <RotateCcw className="w-3.5 h-3.5 text-gray-500" />
+                                                </button>
+                                                <button
+                                                    onClick={() => deleteHistoryItem(item.id)}
+                                                    className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-100 dark:hover:bg-red-900/30 transition-all"
+                                                    title="Delete"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                                                </button>
+                                            </div>
+                                        </motion.div>
+                                    ))}
+                                </div>
                             )}
-                        </AnimatePresence>
+
+                            {/* Frequently used */}
+                            {history.length >= 3 && (
+                                <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                                    <p className="text-xs text-gray-400 mb-2">Frequently used</p>
+                                    <div className="flex flex-wrap gap-1">
+                                        {Array.from(new Set(history.map(h => h.duration)))
+                                            .slice(0, 4)
+                                            .map((duration) => (
+                                                <button
+                                                    key={duration}
+                                                    onClick={() => startTimer(duration)}
+                                                    className="px-2 py-1 text-xs rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 transition-colors"
+                                                >
+                                                    {formatTimeVerbose(duration)}
+                                                </button>
+                                            ))
+                                        }
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>

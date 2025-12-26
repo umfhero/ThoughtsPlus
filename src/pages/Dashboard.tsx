@@ -69,7 +69,16 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
         color: string;
         noteCount: number;
         lastAccessed: number;
-        previewNotes: { color: string; x: number; y: number }[];
+        previewNotes: {
+            color: string;
+            x: number;
+            y: number;
+            width: number;
+            height: number;
+            content: string;
+            type: string;
+            imageUrl: string | null;
+        }[];
     } | null>(null);
 
     // Edit Mode State
@@ -368,11 +377,31 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                     );
                     const mostRecent = sortedBoards[0];
 
-                    // Create preview notes (simplified positions for visual)
-                    const previewNotes = (mostRecent.notes || []).slice(0, 6).map((note: any) => ({
+                    // Create preview notes with position data for proper rendering
+                    const notes = mostRecent.notes || [];
+
+                    // Calculate bounding box of all notes to scale them to preview
+                    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+                    notes.forEach((note: any) => {
+                        minX = Math.min(minX, note.x || 0);
+                        maxX = Math.max(maxX, (note.x || 0) + (note.width || 200));
+                        minY = Math.min(minY, note.y || 0);
+                        maxY = Math.max(maxY, (note.y || 0) + (note.height || 150));
+                    });
+
+                    const notesWidth = maxX - minX || 1;
+                    const notesHeight = maxY - minY || 1;
+
+                    // Map notes to preview positions with content (scaled to fit 0-100%)
+                    const previewNotes = notes.slice(0, 8).map((note: any) => ({
                         color: note.color || '#FFF8DC',
-                        x: note.x || 0,
-                        y: note.y || 0
+                        x: ((note.x || 0) - minX) / notesWidth,  // 0-1 range
+                        y: ((note.y || 0) - minY) / notesHeight, // 0-1 range
+                        width: (note.width || 200) / notesWidth,
+                        height: (note.height || 150) / notesHeight,
+                        content: note.content?.slice(0, 30) || '', // First 30 chars
+                        type: note.type || 'text',
+                        imageUrl: note.imageUrl || null
                     }));
 
                     setLastBoard({
@@ -1808,34 +1837,75 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                         </div>
 
                         {lastBoard ? (
-                            <div className="flex-1">
-                                {/* Board Visual Preview - Canvas style */}
+                            <div className="flex-1 flex flex-col">
+                                {/* Board info - Now above the preview */}
+                                <div className="flex items-center justify-between mb-3 px-1">
+                                    <div>
+                                        <h3 className="font-bold text-gray-800 dark:text-gray-100 truncate max-w-[180px]">
+                                            {lastBoard.name}
+                                        </h3>
+                                        <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                            <span>{lastBoard.noteCount} note{lastBoard.noteCount !== 1 ? 's' : ''}</span>
+                                            <span className="flex items-center gap-1">
+                                                <Clock className="w-3 h-3" />
+                                                {getTimeAgo(lastBoard.lastAccessed)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <ArrowUpRight className="w-4 h-4 text-gray-400" />
+                                </div>
+
+                                {/* Board Visual Preview - Canvas style (taller) */}
                                 <div
-                                    className="relative rounded-2xl cursor-pointer transition-all hover:scale-[1.01] hover:shadow-lg overflow-hidden group"
+                                    className="relative rounded-2xl cursor-pointer transition-all hover:scale-[1.01] hover:shadow-lg overflow-hidden group flex-1"
                                     style={{
                                         backgroundColor: lastBoard.color,
-                                        height: '140px'
+                                        minHeight: '180px'
                                     }}
                                     onClick={() => {
+                                        // Navigate to board page with specific board ID
                                         window.dispatchEvent(new CustomEvent('navigate-to-page', { detail: 'board' }));
+                                        // Set the active board after a small delay
+                                        setTimeout(() => {
+                                            window.dispatchEvent(new CustomEvent('set-active-board', { detail: lastBoard.id }));
+                                        }, 100);
                                     }}
                                 >
-                                    {/* Preview notes as mini sticky notes */}
+                                    {/* Preview notes as mini sticky notes - with actual content */}
                                     {lastBoard.previewNotes.length > 0 ? (
-                                        <div className="absolute inset-0 p-3">
+                                        <div className="absolute inset-0 p-2 overflow-hidden">
                                             {lastBoard.previewNotes.map((note, idx) => (
                                                 <div
                                                     key={idx}
-                                                    className="absolute shadow-sm rounded transition-transform group-hover:scale-105"
+                                                    className="absolute shadow-md rounded overflow-hidden flex items-start justify-center p-1"
                                                     style={{
                                                         backgroundColor: note.color,
-                                                        width: '40px',
-                                                        height: '35px',
-                                                        left: `${15 + (idx % 3) * 30}%`,
-                                                        top: `${15 + Math.floor(idx / 3) * 45}%`,
-                                                        transform: `rotate(${(idx % 2 === 0 ? -3 : 3) + idx}deg)`,
+                                                        // Use scaled positions (5% padding on each side)
+                                                        left: `${5 + note.x * 90}%`,
+                                                        top: `${5 + note.y * 90}%`,
+                                                        // Scale width/height proportionally
+                                                        width: `${Math.max(15, Math.min(35, note.width * 100))}%`,
+                                                        height: `${Math.max(20, Math.min(45, note.height * 100))}%`,
                                                     }}
-                                                />
+                                                >
+                                                    {/* Show image if it's an image note */}
+                                                    {note.imageUrl ? (
+                                                        <img
+                                                            src={note.imageUrl}
+                                                            alt=""
+                                                            className="w-full h-full object-cover rounded"
+                                                        />
+                                                    ) : note.content ? (
+                                                        <span
+                                                            className="text-[6px] text-gray-700 leading-tight line-clamp-3 overflow-hidden"
+                                                            style={{ fontSize: '6px' }}
+                                                        >
+                                                            {note.content}
+                                                        </span>
+                                                    ) : (
+                                                        <div className="w-full h-1 bg-gray-400/30 rounded mt-1" />
+                                                    )}
+                                                </div>
                                             ))}
                                         </div>
                                     ) : (
@@ -1850,23 +1920,6 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                                             <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Open Board</span>
                                         </div>
                                     </div>
-                                </div>
-
-                                {/* Board info */}
-                                <div className="flex items-center justify-between mt-3 px-1">
-                                    <div>
-                                        <h3 className="font-bold text-gray-800 dark:text-gray-100 truncate max-w-[150px]">
-                                            {lastBoard.name}
-                                        </h3>
-                                        <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                            <span>{lastBoard.noteCount} note{lastBoard.noteCount !== 1 ? 's' : ''}</span>
-                                            <span className="flex items-center gap-1">
-                                                <Clock className="w-3 h-3" />
-                                                {getTimeAgo(lastBoard.lastAccessed)}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <ArrowUpRight className="w-4 h-4 text-gray-400" />
                                 </div>
                             </div>
                         ) : (

@@ -100,6 +100,25 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
         loadData();
     }, [refreshTrigger]);
 
+    // Listen for set-active-board event from dashboard widget
+    useEffect(() => {
+        const handleSetActiveBoard = (event: CustomEvent) => {
+            const boardId = event.detail;
+            if (boardId && boards.length > 0) {
+                const targetBoard = boards.find(b => b.id === boardId);
+                if (targetBoard) {
+                    setActiveBoardId(boardId);
+                    setNotes(targetBoard.notes || []);
+                }
+            }
+        };
+
+        window.addEventListener('set-active-board', handleSetActiveBoard as EventListener);
+        return () => {
+            window.removeEventListener('set-active-board', handleSetActiveBoard as EventListener);
+        };
+    }, [boards]);
+
     useEffect(() => {
         if (boards.length > 0 && activeBoardId) {
             const timeout = setTimeout(saveData, 1000);
@@ -114,38 +133,66 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
         }
     }, [currentFont]);
 
-    // Auto-center view on notes when board loads
-    useEffect(() => {
-        if (!isLoading && notes.length > 0 && canvasRef.current) {
-            // Small delay to ensure DOM is ready
-            const timer = setTimeout(() => {
-                if (!canvasRef.current) return;
+    // Auto-center and zoom to fit notes when board loads (only once per board switch)
+    const hasCenteredRef = useRef<string | null>(null);
 
+    useEffect(() => {
+        // Only center if we haven't centered this board yet and loading is done
+        if (isLoading || hasCenteredRef.current === activeBoardId) return;
+
+        // Small delay to ensure DOM is fully ready after page renders
+        const timer = setTimeout(() => {
+            if (!canvasRef.current) return;
+
+            if (notes.length > 0) {
                 // Calculate bounding box of all notes
                 const minX = Math.min(...notes.map(n => n.x));
                 const maxX = Math.max(...notes.map(n => n.x + n.width));
                 const minY = Math.min(...notes.map(n => n.y));
                 const maxY = Math.max(...notes.map(n => n.y + n.height));
 
+                // Get notes dimensions
+                const notesWidth = maxX - minX;
+                const notesHeight = maxY - minY;
+
+                // Get canvas dimensions
+                const canvasRect = canvasRef.current.getBoundingClientRect();
+                const canvasWidth = canvasRect.width;
+                const canvasHeight = canvasRect.height;
+
+                // Calculate zoom level to fit all notes with padding (70% of canvas for overview)
+                const zoomX = (canvasWidth * 0.7) / notesWidth;
+                const zoomY = (canvasHeight * 0.7) / notesHeight;
+                const optimalZoom = Math.min(zoomX, zoomY, 0.8); // Cap at 80% zoom max
+                const finalZoom = Math.max(optimalZoom, 0.3); // Minimum 30% zoom
+
+                // Set the zoom level
+                setZoom(finalZoom);
+
                 // Get center of notes
                 const centerX = (minX + maxX) / 2;
                 const centerY = (minY + maxY) / 2;
 
-                // Get canvas dimensions
-                const canvasRect = canvasRef.current.getBoundingClientRect();
-                const canvasCenterX = canvasRect.width / 2;
-                const canvasCenterY = canvasRect.height / 2;
-
                 // Calculate pan offset to center the notes
-                setPanOffset({
-                    x: canvasCenterX - centerX * zoom,
-                    y: canvasCenterY - centerY * zoom
-                });
-            }, 100);
+                const canvasCenterX = canvasWidth / 2;
+                const canvasCenterY = canvasHeight / 2;
 
-            return () => clearTimeout(timer);
-        }
-    }, [isLoading, activeBoardId, notes.length]); // Run when loading completes, board changes, or notes are loaded
+                setPanOffset({
+                    x: canvasCenterX - centerX * finalZoom,
+                    y: canvasCenterY - centerY * finalZoom
+                });
+            } else {
+                // No notes - reset to center of canvas
+                setZoom(1);
+                setPanOffset({ x: 0, y: 0 });
+            }
+
+            // Mark this board as centered
+            hasCenteredRef.current = activeBoardId;
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [isLoading, activeBoardId, notes.length]);
 
 
     const loadData = async () => {
