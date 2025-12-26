@@ -100,24 +100,7 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
         loadData();
     }, [refreshTrigger]);
 
-    // Listen for set-active-board event from dashboard widget
-    useEffect(() => {
-        const handleSetActiveBoard = (event: CustomEvent) => {
-            const boardId = event.detail;
-            if (boardId && boards.length > 0) {
-                const targetBoard = boards.find(b => b.id === boardId);
-                if (targetBoard) {
-                    setActiveBoardId(boardId);
-                    setNotes(targetBoard.notes || []);
-                }
-            }
-        };
 
-        window.addEventListener('set-active-board', handleSetActiveBoard as EventListener);
-        return () => {
-            window.removeEventListener('set-active-board', handleSetActiveBoard as EventListener);
-        };
-    }, [boards]);
 
     useEffect(() => {
         if (boards.length > 0 && activeBoardId) {
@@ -140,9 +123,27 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
         // Only center if we haven't centered this board yet and loading is done
         if (isLoading || hasCenteredRef.current === activeBoardId) return;
 
-        // Small delay to ensure DOM is fully ready after page renders
-        const timer = setTimeout(() => {
+        let attempts = 0;
+        const maxAttempts = 10;
+        let timer: NodeJS.Timeout;
+
+        const tryCenter = () => {
             if (!canvasRef.current) return;
+
+            // Get canvas dimensions
+            const canvasRect = canvasRef.current.getBoundingClientRect();
+            const canvasWidth = canvasRect.width;
+            const canvasHeight = canvasRect.height;
+
+            console.log(`📐 [Board AutoCenter] Attempt ${attempts + 1}: Canvas ${canvasWidth}x${canvasHeight}`);
+
+            if (canvasWidth === 0 || canvasHeight === 0) {
+                if (attempts < maxAttempts) {
+                    attempts++;
+                    timer = setTimeout(tryCenter, 100);
+                }
+                return;
+            }
 
             if (notes.length > 0) {
                 // Calculate bounding box of all notes
@@ -155,16 +156,13 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
                 const notesWidth = maxX - minX;
                 const notesHeight = maxY - minY;
 
-                // Get canvas dimensions
-                const canvasRect = canvasRef.current.getBoundingClientRect();
-                const canvasWidth = canvasRect.width;
-                const canvasHeight = canvasRect.height;
-
-                // Calculate zoom level to fit all notes with padding (70% of canvas for overview)
+                // Calculate zoom level to fit all notes with padding (70% of canvas)
                 const zoomX = (canvasWidth * 0.7) / notesWidth;
                 const zoomY = (canvasHeight * 0.7) / notesHeight;
                 const optimalZoom = Math.min(zoomX, zoomY, 0.8); // Cap at 80% zoom max
                 const finalZoom = Math.max(optimalZoom, 0.3); // Minimum 30% zoom
+
+                console.log(`🔎 [Board AutoCenter] Calculated Zoom: ${finalZoom}, Notes Dim: ${notesWidth}x${notesHeight}`);
 
                 // Set the zoom level
                 setZoom(finalZoom);
@@ -183,13 +181,17 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
                 });
             } else {
                 // No notes - reset to center of canvas
+                console.log('🔎 [Board AutoCenter] No notes, resetting zoom/pan');
                 setZoom(1);
                 setPanOffset({ x: 0, y: 0 });
             }
 
             // Mark this board as centered
             hasCenteredRef.current = activeBoardId;
-        }, 300);
+        };
+
+        // Start trying
+        timer = setTimeout(tryCenter, 100);
 
         return () => clearTimeout(timer);
     }, [isLoading, activeBoardId, notes.length]);
@@ -197,20 +199,62 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
 
     const loadData = async () => {
         try {
+            console.log('📥 [Board] loadData started');
             // @ts-ignore
-            const data = await window.ipcRenderer.invoke('get-boards');
-            if (data && data.boards && data.boards.length > 0) {
-                setBoards(data.boards);
-                const targetId = data.activeBoardId || data.boards[0].id;
-                setActiveBoardId(targetId);
-                const current = data.boards.find((b: Board) => b.id === targetId);
-                setNotes(current?.notes || []);
+            const response = await window.ipcRenderer.invoke('get-boards');
+            console.log('📥 [Board] get-boards response type:', Array.isArray(response) ? 'Array' : typeof response);
 
-                // Font and background are now per-board, no need to restore globally
+            // Handle both possible response structures
+            // 1. response is { boards: [...] }
+            // 2. response is [...] (array of boards)
+            let loadedBoards: Board[] = [];
+            let lastActiveId = '';
+
+            if (response) {
+                if (Array.isArray(response)) {
+                    loadedBoards = response;
+                } else if (response.boards && Array.isArray(response.boards)) {
+                    loadedBoards = response.boards;
+                    lastActiveId = response.activeBoardId;
+                }
+            }
+
+            console.log('📥 [Board] Loaded boards:', loadedBoards.length);
+
+            if (loadedBoards.length > 0) {
+                setBoards(loadedBoards);
+
+                // Determine which board to show
+                // 1. Pending board from navigation (localStorage) (highest priority)
+                // 2. Last active board from saved data
+                // 3. First board in list
+
+                const pendingId = localStorage.getItem('pendingBoardNavigation');
+                if (pendingId) {
+                    console.log('✅ [Board] Found pending navigation for:', pendingId);
+                    localStorage.removeItem('pendingBoardNavigation'); // Consume it
+                }
+
+                let targetId = pendingId || lastActiveId || loadedBoards[0].id;
+                console.log('🎯 [Board] targetId determined as:', targetId);
+
+                // Validate targetId exists in loaded boards
+                const targetBoard = loadedBoards.find(b => b.id === targetId);
+                if (!targetBoard) {
+                    console.warn('⚠️ [Board] Target ID not found in loaded boards, falling back to first board');
+                    targetId = loadedBoards[0].id;
+                    lastActiveId = ''; // Reset if invalid
+                }
+
+                setActiveBoardId(targetId);
+                const current = loadedBoards.find((b: Board) => b.id === targetId);
+                console.log('✅ [Board] Setting notes from board:', current?.name, 'Note Count:', current?.notes?.length);
+                setNotes(current?.notes || []);
             } else {
+                console.log('⚠️ [Board] No boards found in data. Creating default.');
                 // Create default board
                 const defaultBoard: Board = {
-                    id: generateId(),
+                    id: 'default-board-' + Date.now(),
                     name: 'My Board',
                     color: BOARD_COLORS[0],
                     notes: []
@@ -220,10 +264,10 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
                 setNotes([]);
             }
         } catch (e) {
-            console.error('Failed to load boards:', e);
+            console.error('❌ [Board] Failed to load boards:', e);
             // Fallback: create default board even on error
             const defaultBoard: Board = {
-                id: generateId(),
+                id: 'error-fallback-' + Date.now(),
                 name: 'My Board',
                 color: BOARD_COLORS[0],
                 notes: []
@@ -235,6 +279,9 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
             setIsLoading(false);
         }
     };
+
+    // DEBUG: Render Log
+    console.log(`🎨 [Board Render] Notes: ${notes.length}, Zoom: ${zoom}, Pan: ${panOffset.x},${panOffset.y}, Canvas: ${canvasRef.current ? 'Mounted' : 'Null'}`);
 
     const saveData = async () => {
         try {

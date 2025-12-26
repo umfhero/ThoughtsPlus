@@ -369,10 +369,18 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
         const loadBoardData = async () => {
             try {
                 // @ts-ignore
-                const data = await window.ipcRenderer.invoke('get-boards');
-                if (data && data.boards && data.boards.length > 0) {
+                const response = await window.ipcRenderer.invoke('get-boards');
+                let boards: any[] = [];
+
+                if (Array.isArray(response)) {
+                    boards = response;
+                } else if (response && response.boards && Array.isArray(response.boards)) {
+                    boards = response.boards;
+                }
+
+                if (boards.length > 0) {
                     // Find the most recently accessed board
-                    const sortedBoards = [...data.boards].sort((a: any, b: any) =>
+                    const sortedBoards = [...boards].sort((a: any, b: any) =>
                         (b.lastAccessed || 0) - (a.lastAccessed || 0)
                     );
                     const mostRecent = sortedBoards[0];
@@ -1860,15 +1868,16 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                                     className="relative rounded-2xl cursor-pointer transition-all hover:scale-[1.01] hover:shadow-lg overflow-hidden group flex-1"
                                     style={{
                                         backgroundColor: lastBoard.color,
-                                        minHeight: '180px'
+                                        minHeight: '250px' // Increased height as requested
                                     }}
                                     onClick={() => {
-                                        // Navigate to board page with specific board ID
+                                        console.log('🔵 [Dashboard] Clicked open board:', lastBoard.id, lastBoard.name);
+
+                                        // Save ID to reliable storage so Board page finds it when it mounts
+                                        localStorage.setItem('pendingBoardNavigation', lastBoard.id);
+
+                                        // Navigate to board page
                                         window.dispatchEvent(new CustomEvent('navigate-to-page', { detail: 'board' }));
-                                        // Set the active board after a small delay
-                                        setTimeout(() => {
-                                            window.dispatchEvent(new CustomEvent('set-active-board', { detail: lastBoard.id }));
-                                        }, 100);
                                     }}
                                 >
                                     {/* Preview notes as mini sticky notes - with actual content */}
