@@ -93,18 +93,19 @@ export function TimerMiniIndicator({ isSidebarCollapsed = false }: { isSidebarCo
 
     return (
         <motion.div
+            layout
             initial={{ opacity: 0, y: -20, left: '50%', x: '-50%' }}
             animate={{
                 opacity: 1,
                 y: 0,
-                left: isSidebarCollapsed ? '50%' : 'calc(50% + 105px)',
-                x: '-50%'
+                x: isSidebarCollapsed ? '-50%' : 'calc(-50% + 105px)'
             }}
             exit={{ opacity: 0, y: -20 }}
             transition={{
                 type: "spring",
-                stiffness: 300,
-                damping: 30
+                stiffness: 180,
+                damping: 24,
+                mass: 1
             }}
             className="fixed top-4 z-[9998]"
         >
