@@ -29,6 +29,7 @@ export interface Note {
     importance: 'low' | 'medium' | 'high' | 'misc';
     completed?: boolean;
     completedLate?: boolean;
+    missed?: boolean; // Explicitly marked as missed by user
     recurrence?: {
         type: 'daily' | 'weekly' | 'fortnightly' | 'monthly';
         endDate?: string; // ISO date string

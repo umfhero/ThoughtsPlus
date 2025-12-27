@@ -880,10 +880,12 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
 
             // Just toggle completion status
             // Default to "On Time" (completedLate: false) when marking as complete
+            // Clear missed flag when uncompleting
             const updatedNote = {
                 ...noteToUpdate,
                 completed: !currentCompleted,
-                completedLate: !currentCompleted ? false : undefined
+                completedLate: !currentCompleted ? false : undefined,
+                missed: !currentCompleted ? false : noteToUpdate.missed
             };
 
             onUpdateNote(updatedNote, parseISO(dateKey));
@@ -934,6 +936,63 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
         };
 
         onUpdateNote(updatedNote, parseISO(dateKey));
+    };
+
+    // Mark task as missed explicitly
+    const handleMarkMissed = (noteId: string, dateKey: string) => {
+        const dayNotes = notes[dateKey] || [];
+        const noteToUpdate = dayNotes.find(n => n.id === noteId);
+
+        if (!noteToUpdate) return;
+
+        const updatedNote = {
+            ...noteToUpdate,
+            missed: true,
+            completed: false,
+            completedLate: undefined
+        };
+
+        onUpdateNote(updatedNote, parseISO(dateKey));
+    };
+
+    // Complete task late (overdue tasks)
+    const handleCompleteLate = (noteId: string, dateKey: string) => {
+        const dayNotes = notes[dateKey] || [];
+        const noteToUpdate = dayNotes.find(n => n.id === noteId);
+
+        if (!noteToUpdate) return;
+
+        const updatedNote = {
+            ...noteToUpdate,
+            completed: true,
+            completedLate: true,
+            missed: false
+        };
+
+        onUpdateNote(updatedNote, parseISO(dateKey));
+
+        // Small confetti for late completion
+        confetti({
+            particleCount: 30,
+            spread: 50,
+            origin: { y: 0.7 },
+            colors: ['#f59e0b', '#fbbf24', '#fcd34d'],
+            scalar: 0.6
+        });
+    };
+
+    // Calculate overdue time
+    const getOverdueTime = (eventDate: Date) => {
+        const now = new Date();
+        const diff = now.getTime() - eventDate.getTime();
+        const minutes = Math.floor(diff / (1000 * 60));
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const days = Math.floor(hours / 24);
+
+        if (days > 0) return `${days}d overdue`;
+        if (hours > 0) return `${hours}h overdue`;
+        if (minutes > 0) return `${minutes}m overdue`;
+        return 'Just now';
     };
 
     const confirmCompletion = (isLate: boolean) => {
@@ -995,12 +1054,13 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
         });
 
         if (eventTab === 'upcoming') {
-            return filtered.filter(e => !e.isOverdue && !e.note.completed);
+            // Tasks tab: all incomplete, non-missed tasks (including overdue)
+            return filtered.filter(e => !e.note.completed && !e.note.missed);
         } else if (eventTab === 'completed') {
             return filtered.filter(e => e.note.completed === true);
         } else {
-            // notCompleted - overdue and not marked completed
-            return filtered.filter(e => e.isOverdue && !e.note.completed);
+            // Missed tab: explicitly marked as missed
+            return filtered.filter(e => e.note.missed === true);
         }
     };
 
@@ -1302,7 +1362,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                                         )}
                                         style={eventTab === 'upcoming' ? { color: 'var(--accent-primary)' } : undefined}
                                     >
-                                        {upcomingEvents.filter(e => !e.isOverdue && !e.note.completed).length} Upcoming
+                                        {upcomingEvents.filter(e => !e.note.completed && !e.note.missed).length} Tasks
                                     </button>
                                     <button
                                         onClick={() => setEventTab('completed')}
@@ -1326,7 +1386,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                                         )}
                                         style={eventTab === 'notCompleted' ? { color: 'var(--accent-primary)' } : undefined}
                                     >
-                                        {upcomingEvents.filter(e => e.isOverdue && !e.note.completed).length} Missed
+                                        {upcomingEvents.filter(e => e.note.missed === true).length} Missed
                                     </button>
                                 </div>
 
@@ -1360,7 +1420,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                                 <div className="space-y-4 flex-1 overflow-y-auto pr-2 custom-scrollbar">
                                     {filteredEventsForTab.length === 0 ? (
                                         <p className="text-gray-400 dark:text-gray-500 text-sm">
-                                            {eventTab === 'upcoming' ? 'No upcoming events.' : eventTab === 'completed' ? 'No completed events.' : 'No missed events.'}
+                                            {eventTab === 'upcoming' ? 'No tasks.' : eventTab === 'completed' ? 'No completed events.' : 'No missed events.'}
                                         </p>
                                     ) : (
                                         <AnimatePresence mode="popLayout">
@@ -1380,7 +1440,15 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                                                         whileHover={{ scale: 1.02 }}
                                                         className={clsx(
                                                             "p-3 rounded-xl border transition-colors",
-                                                            note.completed ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-900/50" : importanceColors[note.importance as keyof typeof importanceColors]
+                                                            note.completed
+                                                                ? note.completedLate
+                                                                    ? "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-900/50"
+                                                                    : "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-900/50"
+                                                                : note.missed
+                                                                    ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-900/50"
+                                                                    : event.isOverdue
+                                                                        ? "bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-800"
+                                                                        : importanceColors[note.importance as keyof typeof importanceColors]
                                                         )}
                                                     >
                                                         <div className="flex items-start gap-3">
@@ -1444,12 +1512,38 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                                                                                 className={clsx(
                                                                                     "text-[10px] font-semibold px-2 py-0.5 rounded-full transition-colors",
                                                                                     note.completedLate
-                                                                                        ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50"
+                                                                                        ? "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-900/50"
                                                                                         : "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50"
                                                                                 )}
                                                                             >
                                                                                 {note.completedLate ? 'Late' : 'On Time'}
                                                                             </button>
+                                                                        ) : event.isOverdue ? (
+                                                                            <div className="flex flex-col items-end gap-1">
+                                                                                <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                                                                                    {getOverdueTime(date)}
+                                                                                </span>
+                                                                                <div className="flex gap-1">
+                                                                                    <button
+                                                                                        onClick={(e) => {
+                                                                                            e.stopPropagation();
+                                                                                            handleCompleteLate(note.id, dateKey);
+                                                                                        }}
+                                                                                        className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors"
+                                                                                    >
+                                                                                        ✓ Done
+                                                                                    </button>
+                                                                                    <button
+                                                                                        onClick={(e) => {
+                                                                                            e.stopPropagation();
+                                                                                            handleMarkMissed(note.id, dateKey);
+                                                                                        }}
+                                                                                        className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
+                                                                                    >
+                                                                                        ✗ Missed
+                                                                                    </button>
+                                                                                </div>
+                                                                            </div>
                                                                         ) : (
                                                                             <div className="text-[10px] opacity-60 font-semibold">
                                                                                 {getCountdown(date, note.time)}

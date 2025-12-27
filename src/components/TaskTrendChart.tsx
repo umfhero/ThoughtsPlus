@@ -29,6 +29,7 @@ interface TaskPoint {
   displayDate: string;
   taskTitle: string;
   wasCompleted: boolean;
+  wasCompletedLate: boolean;
   wasMissed: boolean;
   isProjection: boolean;
   segmentColor: string | null; // Color of line from previous point to this point
@@ -42,7 +43,7 @@ const TaskTrendChart: React.FC<TaskTrendChartProps> = ({ notes, timeRange: exter
     const saved = localStorage.getItem('taskTrendChart-timeRange');
     return (saved as TimeRange) || '1W';
   });
-  
+
   // Use external time range if provided, otherwise use internal state
   const range = externalTimeRange ?? internalRange;
   const [containerWidth, setContainerWidth] = useState(0);
@@ -198,6 +199,7 @@ const TaskTrendChart: React.FC<TaskTrendChartProps> = ({ notes, timeRange: exter
       displayDate: 'Start',
       taskTitle: 'Start',
       wasCompleted: false,
+      wasCompletedLate: false,
       wasMissed: false,
       isProjection: false,
       segmentColor: null,
@@ -211,7 +213,6 @@ const TaskTrendChart: React.FC<TaskTrendChartProps> = ({ notes, timeRange: exter
     tasks.forEach((task, index) => {
       const taskNum = index + 1;
       const isMissed = task.isPast && !task.completed;
-      const prevScore = score;
 
       // Update score: +1 for completed, -1 for missed, 0 for upcoming
       if (task.completed) {
@@ -244,12 +245,19 @@ const TaskTrendChart: React.FC<TaskTrendChartProps> = ({ notes, timeRange: exter
       let dotColor: string | null = null;
 
       if (isActual) {
-        // Actual task - green if up, red if down
-        const scoreDiff = score - prevScore;
-        if (scoreDiff > 0) {
-          segmentColor = '#10b981'; // Green
-          dotColor = '#10b981';
-        } else if (scoreDiff < 0) {
+        // Actual task - color based on completion status
+        if (task.completed) {
+          if (task.completedLate) {
+            // Completed late - orange
+            segmentColor = '#f59e0b'; // Amber
+            dotColor = '#f59e0b';
+          } else {
+            // Completed on time - green
+            segmentColor = '#10b981'; // Green
+            dotColor = '#10b981';
+          }
+        } else if (isMissed) {
+          // Missed - red
           segmentColor = '#f43f5e'; // Red
           dotColor = '#f43f5e';
         } else {
@@ -284,6 +292,7 @@ const TaskTrendChart: React.FC<TaskTrendChartProps> = ({ notes, timeRange: exter
         displayDate: task.displayDate,
         taskTitle: task.title,
         wasCompleted: task.completed,
+        wasCompletedLate: task.completedLate || false,
         wasMissed: isMissed,
         isProjection: !isActual,
         segmentColor,
@@ -429,6 +438,10 @@ const TaskTrendChart: React.FC<TaskTrendChartProps> = ({ notes, timeRange: exter
                   <stop offset="0%" stopColor="#10b981" stopOpacity={0.3} />
                   <stop offset="100%" stopColor="#10b981" stopOpacity={0.02} />
                 </linearGradient>
+                <linearGradient id={`${gradientId}-amber`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.3} />
+                  <stop offset="100%" stopColor="#f59e0b" stopOpacity={0.02} />
+                </linearGradient>
                 <linearGradient id={`${gradientId}-red`} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#f43f5e" stopOpacity={0.3} />
                   <stop offset="100%" stopColor="#f43f5e" stopOpacity={0.02} />
@@ -468,16 +481,18 @@ const TaskTrendChart: React.FC<TaskTrendChartProps> = ({ notes, timeRange: exter
                         // Only render colored areas for actual (non-projection) segments
                         if (!currentData || currentData.isProjection) return null;
 
-                        const scoreDiff = (currentData.score ?? 0) - (chartData[index - 1]?.score ?? 0);
-
-                        // Determine fill color based on score change
+                        // Determine fill color based on completion status
                         let fillColor = 'none';
-                        if (scoreDiff > 0) {
-                          fillColor = `url(#${gradientId}-green)`;
-                        } else if (scoreDiff < 0) {
+                        if (currentData.wasCompleted) {
+                          if (currentData.wasCompletedLate) {
+                            fillColor = `url(#${gradientId}-amber)`;
+                          } else {
+                            fillColor = `url(#${gradientId}-green)`;
+                          }
+                        } else if (currentData.wasMissed) {
                           fillColor = `url(#${gradientId}-red)`;
                         } else {
-                          return null; // No fill for flat segments
+                          return null; // No fill for other segments
                         }
 
                         // Create path: curve from prev to current, then down to bottom, then back to prev bottom
@@ -762,6 +777,10 @@ const TaskTrendChart: React.FC<TaskTrendChartProps> = ({ notes, timeRange: exter
           <div className="flex items-center gap-1">
             <div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
             <span className="text-[9px] text-gray-400">Completed</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-2.5 h-2.5 rounded-full bg-amber-500"></div>
+            <span className="text-[9px] text-gray-400">Late</span>
           </div>
           <div className="flex items-center gap-1">
             <div className="w-2.5 h-2.5 rounded-full bg-rose-500"></div>
