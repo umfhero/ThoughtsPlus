@@ -1897,6 +1897,8 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                             <div className="flex items-center gap-2">
                                 <button
                                     onClick={() => {
+                                        // Set a flag so Board.tsx knows to skip loading the previous board
+                                        localStorage.setItem('pendingNewBoardCreation', 'true');
                                         window.dispatchEvent(new CustomEvent('navigate-to-page', { detail: 'drawing' }));
                                         setTimeout(() => {
                                             window.dispatchEvent(new CustomEvent('create-new-board'));

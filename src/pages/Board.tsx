@@ -76,6 +76,10 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
     // Track current active board ID for async callbacks (prevents stale closure issues)
     const activeBoardIdRef = useRef<string>('');
 
+    // Track if we're in the middle of creating a new board (prevents double creation from StrictMode)
+    const isCreatingBoardRef = useRef<boolean>(false);
+    const pendingNewBoardRef = useRef<string | null>(null);
+
     const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
     const [zoom, setZoom] = useState(1);
     const [isPanning, setIsPanning] = useState(false);
@@ -350,6 +354,14 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
             if (loadedBoards.length > 0) {
                 setBoards(loadedBoards);
 
+                // If we're in the middle of creating a new board, skip setting active board
+                // Check both the ref and localStorage (set by Dashboard before navigate-to-page)
+                const pendingNewBoardFromStorage = localStorage.getItem('pendingNewBoardCreation') === 'true';
+                if (pendingNewBoardRef.current || pendingNewBoardFromStorage) {
+                    console.log('📥 [Board] Pending new board creation, skipping board selection');
+                    return;
+                }
+
                 // Determine which board to show
                 // Priority:
                 // 1. Already navigated board (from ref, set by previous call) - prevents override
@@ -577,14 +589,37 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
     };
 
     const addNewBoard = () => {
+        // Prevent double creation from React StrictMode
+        if (isCreatingBoardRef.current) {
+            console.log('📝 [Board] Already creating a board, skipping...');
+            return;
+        }
+
         console.log('📝 [Board] Creating new board...');
+        isCreatingBoardRef.current = true;
+
+        // Generate the new board ID upfront so we can track it
+        const newBoardId = generateId();
+        pendingNewBoardRef.current = newBoardId;
+
+        // Clear the localStorage flag (set by Dashboard)
+        localStorage.removeItem('pendingNewBoardCreation');
+
         // Clear any pending navigation ref
         navigatedBoardIdRef.current = null;
         // Reset centering for new board
         hasCenteredRef.current = null;
+        // Clear notes immediately to prevent flash
+        setNotes([]);
 
         // Use functional update to ensure we have the latest boards state
         setBoards(prevBoards => {
+            // Check if this board was already added (StrictMode double call)
+            if (prevBoards.some(b => b.id === newBoardId)) {
+                console.log('📝 [Board] Board already exists, skipping duplicate:', newBoardId);
+                return prevBoards;
+            }
+
             // Find the next available board number by checking existing names
             let nextNumber = 1;
             const existingNumbers = prevBoards
@@ -599,7 +634,7 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
             }
 
             const newBoard: Board = {
-                id: generateId(),
+                id: newBoardId,
                 name: `Board ${nextNumber}`,
                 color: BOARD_COLORS[prevBoards.length % BOARD_COLORS.length],
                 notes: []
@@ -607,14 +642,17 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
 
             console.log('📝 [Board] Created board:', newBoard.name, newBoard.id, '(existing:', existingNumbers, ')');
 
-            // Set the new board as active (defer to after state update)
-            setTimeout(() => {
-                setActiveBoardId(newBoard.id);
-                setNotes([]);
-            }, 0);
-
             return [...prevBoards, newBoard];
         });
+
+        // Set the new board as active
+        setActiveBoardId(newBoardId);
+
+        // Reset the creating flag after a short delay
+        setTimeout(() => {
+            isCreatingBoardRef.current = false;
+            pendingNewBoardRef.current = null;
+        }, 100);
     };
 
     const deleteBoard = (id: string) => {
