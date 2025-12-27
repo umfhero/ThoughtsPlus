@@ -577,20 +577,44 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
     };
 
     const addNewBoard = () => {
-        const newBoard: Board = {
-            id: generateId(),
-            name: `Board ${boards.length + 1}`,
-            color: BOARD_COLORS[boards.length % BOARD_COLORS.length],
-            notes: []
-        };
-        console.log('📝 [Board] Creating new board:', newBoard.name, newBoard.id);
+        console.log('📝 [Board] Creating new board...');
         // Clear any pending navigation ref
         navigatedBoardIdRef.current = null;
         // Reset centering for new board
         hasCenteredRef.current = null;
-        setBoards(prev => [...prev, newBoard]);
-        setActiveBoardId(newBoard.id);
-        setNotes([]);
+
+        // Use functional update to ensure we have the latest boards state
+        setBoards(prevBoards => {
+            // Find the next available board number by checking existing names
+            let nextNumber = 1;
+            const existingNumbers = prevBoards
+                .map(b => {
+                    const match = b.name.match(/^Board (\d+)$/);
+                    return match ? parseInt(match[1], 10) : 0;
+                })
+                .filter(n => n > 0);
+
+            while (existingNumbers.includes(nextNumber)) {
+                nextNumber++;
+            }
+
+            const newBoard: Board = {
+                id: generateId(),
+                name: `Board ${nextNumber}`,
+                color: BOARD_COLORS[prevBoards.length % BOARD_COLORS.length],
+                notes: []
+            };
+
+            console.log('📝 [Board] Created board:', newBoard.name, newBoard.id, '(existing:', existingNumbers, ')');
+
+            // Set the new board as active (defer to after state update)
+            setTimeout(() => {
+                setActiveBoardId(newBoard.id);
+                setNotes([]);
+            }, 0);
+
+            return [...prevBoards, newBoard];
+        });
     };
 
     const deleteBoard = (id: string) => {
