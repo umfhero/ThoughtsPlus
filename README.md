@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="git/newpics/Banner.png" alt="Thoughts+ Banner" width="90%" style="border-radius: 15px;" />
+  <img src="git/newpics/thoughtsplus/Thoughts+Stack.png" alt="Thoughts+ Banner" width="90%" style="border-radius: 15px;" />
 
   <h3>Latest Release 5.4.0</h3>
 
@@ -25,8 +25,8 @@ Built for frictionless event management, quick notes, and constant reminders tha
 ### Dashboard
 
 <div align="center">
-  <img src="git/newpics/dashboard.png" alt="Dashboard" width="100%" />
-  <p><em>Central command centre featuring widget-based layout and real-time data.</em></p>
+  <img src="git/newpics/thoughtsplus/dashboard.png" alt="Dashboard" width="100%" />
+  <p><em>Central command centre featuring widget-based layout, AI briefings, and real-time data.</em></p>
 </div>
 
 ## Features
@@ -93,7 +93,7 @@ All settings are managed through the **Settings** page:
 ### Fortnite Creator Stats (Optional)
 
 - Add your island codes (comma-separated) in Settings
-- Track plays, unique players, favorites, and playtime
+- Track plays, unique players, favourites, and playtime
 - Data syncs across devices
 
 ### Developer Configuration
@@ -139,11 +139,11 @@ If you're forking this project, you can preserve your personal baseline data:
 
 |                                                                                                                                                                          |                                                                                                                                                    |
 | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :------------------------------------------------------------------------------------------------------------------------------------------------: |
-|                  <img src="git/newpics/onboarding-v2.jpg" width="400" /><br>**Setup Wizard**<br>First-run onboarding experience for easy configuration.                  |    <img src="git/newpics/calendar-v2.png" width="400" /><br>**Interactive Calendar**<br>Robust event management built with React & TypeScript.     |
-|                  <img src="git/newpics/creatorstats-v2.png" width="400" /><br>**Creator Stats**<br>Data visualisation and analytics from imported CSVs.                  |       <img src="git/newpics/settings-v2.png" width="400" /><br>**Settings**<br>Comprehensive app configuration and local storage management.       |
-|                    <img src="git/newpics/appearnce-v2.png" width="400" /><br>**Appearance**<br>Theming and UI customisation powered by Tailwind CSS.                     |    <img src="git/newpics/AI%20quick%20add%20note-v2.png" width="400" /><br>**AI Quick Note**<br>Smart input processing for rapid task creation.    |
-| <img src="git/newpics/Board.png" width="400" /><br>**Board / Whiteboard**<br>Infinite canvas with customisable sticky notes, backgrounds, and visual organisation tools. |  <img src="git/newpics/feature%20toggle-v2.png" width="400" /><br>**Feature Toggles**<br>Modular architecture allowing dynamic feature enabling.   |
-|                        <img src="git/newpics/shortcuts-v2.png" width="400" /><br>**Keyboard Shortcuts**<br>Productivity boosters for power users.                        | <img src="git/newpics/scrolleddowndashboard-v2.png" width="400" /><br>**Extended Dashboard**<br>Scrollable view showcasing responsive grid layout. |
+|                  <img src="git/newpics/thoughtsplus/onbaording.png" width="400" /><br>**Setup Wizard**<br>First-run onboarding experience with feature highlights.                  |    <img src="git/newpics/thoughtsplus/calendar.png" width="400" /><br>**Interactive Calendar**<br>Robust event management with recurring tasks and AI-powered creation.     |
+|                  <img src="git/newpics/thoughtsplus/timer.png" width="400" /><br>**Advanced Timer**<br>Microwave-style input, stopwatch mode, and persistent history.                  |       <img src="git/newpics/thoughtsplus/board.png" width="400" /><br>**Board / Whiteboard**<br>Infinite canvas with customisable sticky notes and backgrounds.       |
+|                    <img src="git/newpics/thoughtsplus/github.png" width="400" /><br>**GitHub Integration**<br>View your contribution graph and profile directly in the app.                     |    <img src="git/newpics/thoughtsplus/creatorstats.png" width="400" /><br>**Creator Stats**<br>Fortnite analytics with playtime, players, and favourites tracking.    |
+| <img src="git/newpics/thoughtsplus/settings.png" width="400" /><br>**Settings**<br>Comprehensive configuration for AI, integrations, storage, and notifications. |  <img src="git/newpics/thoughtsplus/settingsappearnce.png" width="400" /><br>**Appearance**<br>Theming, accent colours, and UI customisation powered by Tailwind CSS.   |
+|                        <img src="git/newpics/thoughtsplus/settingsfeaturetoggle.png" width="400" /><br>**Feature Toggles**<br>Modular architecture allowing dynamic feature enabling.                        | <img src="git/newpics/thoughtsplus/boardwidget.png" width="400" /><br>**Board Preview Widget**<br>Live dashboard widget showing your recent boards at a glance. |
 
 ## Roadmap
 
@@ -177,7 +177,7 @@ If you're forking this project, you can preserve your personal baseline data:
 
 ![GitHub Downloads (specific release)](https://img.shields.io/github/downloads/umfhero/CalendarPlus/v5.4.0/total?label=v5.4.0%20downloads)
 
-**The identity update:** A complete rebrand from "Calendar+" to "Thoughts+" to reflect the broader scope of the application as a personal digital assistant.
+**The identity update:** A complete rebrand from "Calendar+" to "Thoughts+" to reflect the broader scope of the application as a Windows nerdy brain dump & organisation suite app.
 
 - **Rebrand** - Renamed to Thoughts+ with new logos and identity.
 - **Website** - Launched dedicated website for better onboarding.
