@@ -175,7 +175,7 @@ If you're forking this project, you can preserve your personal baseline data:
 
 ### v5.4.0 - The Rebrand (Thoughts+)
 
-![GitHub Downloads (specific release)](https://img.shields.io/github/downloads/umfhero/CalendarPlus/v5.4.0/total?label=v5.4.0%20downloads)
+![GitHub Downloads (specific release)](https://img.shields.io/github/downloads/umfhero/ThoughtsPlus/v5.4.0/total?label=v5.4.0%20downloads)
 
 **The identity update:** A complete rebrand from "Calendar+" to "Thoughts+" to reflect the broader scope of the application as a Windows nerdy brain dump & organisation suite app.
 
