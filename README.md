@@ -25,7 +25,7 @@ Built for frictionless event management, quick notes, and constant reminders tha
 ### Dashboard
 
 <div align="center">
-  <img src="git/newpics/V5 dashboard.png" alt="Dashboard" width="100%" />
+  <img src="git/newpics/V5.3.0.png" alt="Dashboard" width="100%" />
   <p><em>Central command centre featuring widget-based layout and real-time data.</em></p>
 </div>
 
