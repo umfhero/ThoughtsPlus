@@ -169,7 +169,39 @@ If you're forking this project, you can preserve your personal baseline data:
 
 ---
 
-## Past Versions
+## Version History
+
+### v5.3.0 - The Efficiency Update
+
+![GitHub Downloads (specific release)](https://img.shields.io/github/downloads/umfhero/CalendarPlus/v5.3.0/total?label=v5.3.0%20downloads)
+
+**The efficiency-focused update:** Introducing a powerful new Timer system, enhanced dashboard widgets, and smarter task management.
+
+<div align="center">
+  <img src="git/newpics/timer.png" alt="Timer Feature" width="100%" />
+  <p><em>New dedicated Timer page with microwave-style input, history tracking, and stopwatch mode.</em></p>
+</div>
+
+#### ⏱️ Advanced Timer Ecosystem
+
+- **Microwave-Style Input** - Rapidly set time by typing digits (e.g., "130" = 1:30).
+- **Quick Timer Modal** - Floating overlay (`Ctrl+Enter`) for instant timer creation from anywhere.
+- **Persistent History** - Restart recent timers with a single click.
+- **Stopwatch Mode** - Count-up functionality for tracking task duration.
+- **Mini Indicator** - Visual progress bar in the sidebar keeps you aware of remaining time.
+- **Smart Alerts** - Window flashing and fullscreen overlays ensure you never miss an alarm.
+
+#### 📋 Dashboard & Task Improvements
+
+- **Board Preview Widget** - Live, high-fidelity snapshots of your whiteboard directly on the dashboard.
+- **Overdue Task Mastery** - Distinct analytics for "Missed" tasks vs "Completed Late" items.
+- **Grid Layout Sync** - Dashboard widgets automatically align heights for a cleaner look.
+- **Unified Headers** - Polished, consistent design language across all containers.
+
+#### ⚙️ Quality of Life
+
+- **Global Time Format** - Toggle between 12H and 24H formats application-wide.
+- **Smart Persistence** - Chart time ranges and view preferences are now saved.
 
 ### v5.2.1 - Stability & Performance Update
 
