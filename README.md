@@ -42,9 +42,9 @@ Built for frictionless event management, quick notes, and constant reminders tha
 - **Creator Analytics** - Track Fortnite creator code performance and stats
 - **Multi-Device Sync** - Seamlessly sync data across devices via cloud folders (OneDrive/Dropbox)
 - **Offline-First Privacy** - Zero telemetry, local storage, and full data ownership
-- **Customizable UI** - Drag-and-drop widgets, themes, and global keyboard shortcuts
+- **Customisable UI** - Drag-and-drop widgets, themes, and global keyboard shortcuts
 
-### AI Optimization for Free Tier Users
+### AI Optimisation for Free Tier Users
 
 CalendarPlus is designed to work seamlessly with **Google Gemini's free tier** (50 requests/day). Through planned caching and smart quota management:
 
@@ -53,7 +53,7 @@ CalendarPlus is designed to work seamlessly with **Google Gemini's free tier** (
 - **Navigate Settings without wasting calls** - Validation results are cached, no repeated checks
 - **Clear quota messages** - Know exactly when you've hit limits and when they'll reset
 
-**No premium API subscription needed** - CalendarPlus maximizes the free tier so you can enjoy AI features without worrying about costs.
+**No premium API subscription needed** - CalendarPlus maximises the free tier so you can enjoy AI features without worrying about costs.
 
 ## Getting Started
 
@@ -142,7 +142,7 @@ If you're forking this project, you can preserve your personal baseline data:
 |                  <img src="git/newpics/onboarding-v2.jpg" width="400" /><br>**Setup Wizard**<br>First-run onboarding experience for easy configuration.                  |    <img src="git/newpics/calendar-v2.png" width="400" /><br>**Interactive Calendar**<br>Robust event management built with React & TypeScript.     |
 |                  <img src="git/newpics/creatorstats-v2.png" width="400" /><br>**Creator Stats**<br>Data visualisation and analytics from imported CSVs.                  |       <img src="git/newpics/settings-v2.png" width="400" /><br>**Settings**<br>Comprehensive app configuration and local storage management.       |
 |                    <img src="git/newpics/appearnce-v2.png" width="400" /><br>**Appearance**<br>Theming and UI customisation powered by Tailwind CSS.                     |    <img src="git/newpics/AI%20quick%20add%20note-v2.png" width="400" /><br>**AI Quick Note**<br>Smart input processing for rapid task creation.    |
-| <img src="git/newpics/Board.png" width="400" /><br>**Board / Whiteboard**<br>Infinite canvas with customizable sticky notes, backgrounds, and visual organization tools. |  <img src="git/newpics/feature%20toggle-v2.png" width="400" /><br>**Feature Toggles**<br>Modular architecture allowing dynamic feature enabling.   |
+| <img src="git/newpics/Board.png" width="400" /><br>**Board / Whiteboard**<br>Infinite canvas with customisable sticky notes, backgrounds, and visual organisation tools. |  <img src="git/newpics/feature%20toggle-v2.png" width="400" /><br>**Feature Toggles**<br>Modular architecture allowing dynamic feature enabling.   |
 |                        <img src="git/newpics/shortcuts-v2.png" width="400" /><br>**Keyboard Shortcuts**<br>Productivity boosters for power users.                        | <img src="git/newpics/scrolleddowndashboard-v2.png" width="400" /><br>**Extended Dashboard**<br>Scrollable view showcasing responsive grid layout. |
 
 ## Roadmap
@@ -152,14 +152,14 @@ If you're forking this project, you can preserve your personal baseline data:
 - **Microsoft Store Distribution** - Currently in progress! Publishing to the Microsoft Store to resolve "Unknown Publisher" warnings and enable seamless background updates. Updates will be announced soon.
 - **On hover Hour timer** - Hoverable hover to see count time in hours instead of days/weeks
 - **Pets** - Mini pets that hang out in the app that are mini AIs (based on personality) that mentions notifcations etc
-- **Advanced Appearance Settings** - Custom font uploads, extended accent color support (backgrounds, icons)
-- **Dashboard Edit Mode** - Rearrange and add widgets to customize the dashboard layout - **Completed**
+- **Advanced Appearance Settings** - Custom font uploads, extended accent colour support (backgrounds, icons)
+- **Dashboard Edit Mode** - Rearrange and add widgets to customise the dashboard layout - **Completed**
 - **Refactor API Logic** - Implemented robust AI model fallback system (Gemini 2.5 -> 2.0 -> 1.5) to prevent API errors and ensure reliability - **Completed**
 - **Third-Party Calendar Imports** - Selective import/export capabilities for external calendars - **Completed**
 - **AI Quick Note with Recurring Options** - Quick note creation with flexible repetition settings - **Completed**
 - **Settings Management** - Notification toggles etc - **Completed**
 - **Task Completion Analytics** - Track completed vs incomplete tasks with weekly/monthly/yearly performance graphs - **Completed**
-- **Enhanced Data Visualization** - More charts, trends, and insights into your productivity patterns - **Completed**
+- **Enhanced Data Visualisation** - More charts, trends, and insights into your productivity patterns - **Completed**
 - **Self-hosted Website** - Official website for CalendarPlus with intuitive onboarding, easy downloads and the latest news and updates - **Completed**
 - **Auto Update** - Automatic updates with self-deletion of old versions and seamless data migration, removing the need to manually uninstall and transfer files - **Completed**
 - **Global Keyboard Shortcuts** - Native support for standard shortcuts (Ctrl+C, Ctrl+V, Ctrl+A) across the entire application - **Completed**
@@ -220,9 +220,9 @@ If you're forking this project, you can preserve your personal baseline data:
 
 - **Removed Auto-Update System** - Simplified deployment and reduced complexity
 - **Removed Roadmap Feature** - Streamlined settings interface for better focus
-- **Performance Optimizations** - Faster load times and improved responsiveness
+- **Performance Optimisations** - Faster load times and improved responsiveness
 - **Stability Enhancements** - Bug fixes and error handling improvements
-- **Documentation Updates** - Updated license and version references across project
+- **Documentation Updates** - Updated licence and version references across project
 
 #### Bug Fixes
 
@@ -234,11 +234,11 @@ If you're forking this project, you can preserve your personal baseline data:
 
 ![GitHub Downloads (specific release)](https://img.shields.io/github/downloads/umfhero/CalendarPlus/v5.2.0/total?label=v5.2.0%20downloads)
 
-**The creative workspace update:** Complete redesign of the Board feature with enhanced sticky notes, customization options, and visual polish.
+**The creative workspace update:** Complete redesign of the Board feature with enhanced sticky notes, customisation options, and visual polish.
 
 <div align="center">
   <img src="git/newpics/Board.png" alt="Board Feature" width="100%" />
-  <p><em>Redesigned Board interface with customizable sticky notes and backgrounds.</em></p>
+  <p><em>Redesigned Board interface with customisable sticky notes and backgrounds.</em></p>
 </div>
 
 #### Board & Sticky Note Enhancements
@@ -249,9 +249,9 @@ If you're forking this project, you can preserve your personal baseline data:
 - **Improved Zoom System** - Smoother pan and zoom controls for infinite canvas
 - **Board Backgrounds** - Grid, dots, cork, and linen background patterns
 - **Board Sidebar** - Quick navigation between multiple boards
-- **Font Customization** - Per-board font settings for personalized styling
+- **Font Customisation** - Per-board font settings for personalised styling
 - **Background Settings** - Per-board background preferences
-- **Board Sorting** - Improved board organization and management
+- **Board Sorting** - Improved board organisation and management
 - **Board Card UI** - Enhanced visual design for board selection
 - **Lined Paper Style** - Adjustable spacing for lined sticky note backgrounds
 - **Menu Button Positioning** - Refined UI controls for better accessibility
@@ -268,22 +268,22 @@ If you're forking this project, you can preserve your personal baseline data:
 
 - **Board Rendering** - Fixed sticky note positioning and rendering issues
 - **UI Consistency** - Resolved styling inconsistencies across board components
-- **Performance** - Optimized board rendering for smoother interactions
+- **Performance** - Optimised board rendering for smoother interactions
 
-### v5.1.4 - Dashboard Customization & Advanced Analytics
+### v5.1.4 - Dashboard Customisation & Advanced Analytics
 
 ![GitHub Downloads (specific release)](https://img.shields.io/github/downloads/umfhero/CalendarPlus/v5.1.4/total?label=v5.1.4%20downloads)
 
-**The productivity powerhouse update:** Complete dashboard overhaul with customizable layouts, advanced task trend analytics, recurring events, and refined user experience controls.
+**The productivity powerhouse update:** Complete dashboard overhaul with customisable layouts, advanced task trend analytics, recurring events, and refined user experience controls.
 
-#### Dashboard Customization
+#### Dashboard Customisation
 
 - **Drag-and-Drop Widget System** - Rearrange dashboard widgets to match your workflow
 - **Combine Widgets** - Place two widgets side-by-side for efficient space usage
 - **Resizable Panels** - Adjust widget heights and widths to your preference
 - **Hide/Show Widgets** - Toggle visibility of widgets you don't need
 - **Custom Widgets** - Add your own custom widgets with URLs and configurations
-- **Edit Mode** - Long-press any widget to enter edit mode for quick customization
+- **Edit Mode** - Long-press any widget to enter edit mode for quick customisation
 - **Persistent Layouts** - Your dashboard configuration syncs across devices
 
 #### Advanced Task Analytics
@@ -292,7 +292,7 @@ If you're forking this project, you can preserve your personal baseline data:
 - **Smart Projections** - See projected scores for upcoming tasks
 - **Performance Metrics** - Track completion rate, missed tasks, early/late completions
 - **Time Range Filters** - View trends by week, month, or all-time
-- **Color-Coded Insights** - Green for completed, red for missed, gray for projections
+- **Colour-Coded Insights** - Green for completed, red for missed, gray for projections
 - **Interactive Tooltips** - Hover over data points for detailed task information
 - **Motivational Feedback** - "On fire!", "Perfect!", and encouraging messages
 
@@ -320,7 +320,7 @@ If you're forking this project, you can preserve your personal baseline data:
 - **Search & Filter** - Enhanced event filtering by importance and search terms
 - **Completion Animations** - Satisfying confetti effects for task completion
 - **Responsive Design** - Better mobile and small-screen layouts
-- **Performance Optimizations** - Faster rendering and smoother animations
+- **Performance Optimisations** - Faster rendering and smoother animations
 
 ### v4.5.0 - Production Ready
 
@@ -335,8 +335,8 @@ If you're forking this project, you can preserve your personal baseline data:
 - Removed all hardcoded personal data
 - Privacy-friendly default state (opt-in integrations)
 - System username detection
-- GitHub profile customization
-- Fortnite creator codes customization
+- GitHub profile customisation
+- Fortnite creator codes customisation
 
 ### V3 - Pre-Production (Released - Wizard Installer)
 
