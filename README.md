@@ -147,25 +147,25 @@ If you're forking this project, you can preserve your personal baseline data:
 
 ### Planned Features
 
-- [ ] **Microsoft Store Distribution** - Currently in progress! Publishing to the Microsoft Store to resolve "Unknown Publisher" warnings and enable seamless background updates. Updates will be announced soon.
-- [ ] **On hover Hour timer** - Hoverable hover to see count time in hours instead of days/weeks
-- [ ] **Pets** - Mini pets that hang out in the app that are mini AIs (based on personality) that mentions notifcations etc
-- [x] **Advanced Appearance Settings** - Custom font uploads, extended accent color support (backgrounds, icons).
-- [x] **Dashboard Edit Mode** - Rearrange and add widgets to customize the dashboard layout.
-- [x] **Refactor API Logic** - Implemented robust AI model fallback system (Gemini 2.5 → 2.0 → 1.5) to prevent API errors and ensure reliability.
-- [x] **Third-Party Calendar Imports** - Selective import/export capabilities for external calendars.
-- [x] **AI Quick Note with Recurring Options** - Quick note creation with flexible repetition settings.
-- [x] **Settings Management** - Notification toggles etc
-- [x] **Task Completion Analytics** - Track completed vs incomplete tasks with weekly/monthly/yearly performance graphs
-- [x] **Enhanced Data Visualization** - More charts, trends, and insights into your productivity patterns
-- [x] **Self-hosted Website** - Official website for CalendarPlus with intuitive onboarding, easy downloads and the latest news and updates
-- [x] **Auto Update** - Automatic updates with self-deletion of old versions and seamless data migration, removing the need to manually uninstall and transfer files
-- [x] **Global Keyboard Shortcuts** - Native support for standard shortcuts (Ctrl+C, Ctrl+V, Ctrl+A) across the entire application
+- **Microsoft Store Distribution** - Currently in progress! Publishing to the Microsoft Store to resolve "Unknown Publisher" warnings and enable seamless background updates. Updates will be announced soon.
+- **On hover Hour timer** - Hoverable hover to see count time in hours instead of days/weeks
+- **Pets** - Mini pets that hang out in the app that are mini AIs (based on personality) that mentions notifcations etc
+- **Advanced Appearance Settings** - Custom font uploads, extended accent color support (backgrounds, icons)
+- **Dashboard Edit Mode** - Rearrange and add widgets to customize the dashboard layout - **Completed**
+- **Refactor API Logic** - Implemented robust AI model fallback system (Gemini 2.5 -> 2.0 -> 1.5) to prevent API errors and ensure reliability - **Completed**
+- **Third-Party Calendar Imports** - Selective import/export capabilities for external calendars - **Completed**
+- **AI Quick Note with Recurring Options** - Quick note creation with flexible repetition settings - **Completed**
+- **Settings Management** - Notification toggles etc - **Completed**
+- **Task Completion Analytics** - Track completed vs incomplete tasks with weekly/monthly/yearly performance graphs - **Completed**
+- **Enhanced Data Visualization** - More charts, trends, and insights into your productivity patterns - **Completed**
+- **Self-hosted Website** - Official website for CalendarPlus with intuitive onboarding, easy downloads and the latest news and updates - **Completed**
+- **Auto Update** - Automatic updates with self-deletion of old versions and seamless data migration, removing the need to manually uninstall and transfer files - **Completed**
+- **Global Keyboard Shortcuts** - Native support for standard shortcuts (Ctrl+C, Ctrl+V, Ctrl+A) across the entire application - **Completed**
 
 ### Future Considerations
 
-- [ ] **Mobile Support (PWA)** - A Progressive Web App implementation for mobile access, featuring "Add to Home Screen" capability and push notifications for task reminders without app store fees.
-- [ ] **Data Persistence & Sync (Migration to v2)** - Transitioning to a cloud-hybrid model using Supabase (PostgreSQL) for real-time multi-device syncing, while retaining offline capabilities via local caching.
+- **Mobile Support (PWA)** - A Progressive Web App implementation for mobile access, featuring "Add to Home Screen" capability and push notifications for task reminders without app store fees.
+- **Data Persistence & Sync (Migration to v2)** - Transitioning to a cloud-hybrid model using Supabase (PostgreSQL) for real-time multi-device syncing, while retaining offline capabilities via local caching.
 
 ---
 
@@ -178,11 +178,16 @@ If you're forking this project, you can preserve your personal baseline data:
 **The efficiency-focused update:** Introducing a powerful new Timer system, enhanced dashboard widgets, and smarter task management.
 
 <div align="center">
-  <img src="git/newpics/timer.png" alt="Timer Feature" width="100%" />
-  <p><em>New dedicated Timer page with microwave-style input, history tracking, and stopwatch mode.</em></p>
+  <img src="git/newpics/V5.3.0.png" alt="Dashboard v5.3.0" width="80%" />
+  <p><em>New Board Preview widget (bottom right) for instant whiteboard access, plus distinct "Missed" and "Completed Late" task statuses in the Events widget.</em></p>
 </div>
 
-#### ⏱️ Advanced Timer Ecosystem
+#### Advanced Timer Ecosystem
+
+<div align="center">
+  <img src="git/newpics/timer.png" alt="Timer Feature" width="80%" />
+  <p><em>New dedicated Timer page with microwave-style input, history tracking, and stopwatch mode.</em></p>
+</div>
 
 - **Microwave-Style Input** - Rapidly set time by typing digits (e.g., "130" = 1:30).
 - **Quick Timer Modal** - Floating overlay (`Ctrl+Enter`) for instant timer creation from anywhere.
@@ -191,14 +196,14 @@ If you're forking this project, you can preserve your personal baseline data:
 - **Mini Indicator** - Visual progress bar in the sidebar keeps you aware of remaining time.
 - **Smart Alerts** - Window flashing and fullscreen overlays ensure you never miss an alarm.
 
-#### 📋 Dashboard & Task Improvements
+#### Dashboard & Task Improvements
 
 - **Board Preview Widget** - Live, high-fidelity snapshots of your whiteboard directly on the dashboard.
 - **Overdue Task Mastery** - Distinct analytics for "Missed" tasks vs "Completed Late" items.
 - **Grid Layout Sync** - Dashboard widgets automatically align heights for a cleaner look.
 - **Unified Headers** - Polished, consistent design language across all containers.
 
-#### ⚙️ Quality of Life
+#### Quality of Life
 
 - **Global Time Format** - Toggle between 12H and 24H formats application-wide.
 - **Smart Persistence** - Chart time ranges and view preferences are now saved.
@@ -209,7 +214,7 @@ If you're forking this project, you can preserve your personal baseline data:
 
 **The stability-focused update:** Streamlined architecture with improved performance and reliability.
 
-#### 🔧 Core Improvements
+#### Core Improvements
 
 - **Removed Auto-Update System** - Simplified deployment and reduced complexity
 - **Removed Roadmap Feature** - Streamlined settings interface for better focus
@@ -217,7 +222,7 @@ If you're forking this project, you can preserve your personal baseline data:
 - **Stability Enhancements** - Bug fixes and error handling improvements
 - **Documentation Updates** - Updated license and version references across project
 
-#### 🐛 Bug Fixes
+#### Bug Fixes
 
 - **Build Error Resolution** - Fixed TypeScript compilation issues in Board.tsx
 - **Component Cleanup** - Removed unused components and dependencies
@@ -234,7 +239,7 @@ If you're forking this project, you can preserve your personal baseline data:
   <p><em>Redesigned Board interface with customizable sticky notes and backgrounds.</em></p>
 </div>
 
-#### 🎨 Board & Sticky Note Enhancements
+#### Board & Sticky Note Enhancements
 
 - **Visual Style Overhaul** - Modern, polished sticky note designs with refined shadows and borders
 - **Context Menus** - Right-click menus for notes and boards with quick actions
@@ -251,13 +256,13 @@ If you're forking this project, you can preserve your personal baseline data:
 - **Global Settings Persistence** - Board preferences saved and restored across sessions
 - **Icon Integration** - Visual indicators throughout board interface
 
-#### 🤖 AI System Upgrades
+#### AI System Upgrades
 
 - **Gemini 2.5 Flash Integration** - Upgraded to latest Gemini model for better performance
 - **Enhanced Model Fallback** - Improved AI model fallback system (2.5 Flash → 2.5 Flash Lite → 2.0 → 1.5)
 - **Better Error Handling** - More robust API error management and user feedback
 
-#### 🐛 Bug Fixes
+#### Bug Fixes
 
 - **Board Rendering** - Fixed sticky note positioning and rendering issues
 - **UI Consistency** - Resolved styling inconsistencies across board components
@@ -269,7 +274,7 @@ If you're forking this project, you can preserve your personal baseline data:
 
 **The productivity powerhouse update:** Complete dashboard overhaul with customizable layouts, advanced task trend analytics, recurring events, and refined user experience controls.
 
-#### 🎨 Dashboard Customization
+#### Dashboard Customization
 
 - **Drag-and-Drop Widget System** - Rearrange dashboard widgets to match your workflow
 - **Combine Widgets** - Place two widgets side-by-side for efficient space usage
@@ -279,7 +284,7 @@ If you're forking this project, you can preserve your personal baseline data:
 - **Edit Mode** - Long-press any widget to enter edit mode for quick customization
 - **Persistent Layouts** - Your dashboard configuration syncs across devices
 
-#### 📊 Advanced Task Analytics
+#### Advanced Task Analytics
 
 - **Task Trend Chart** - Visual graph showing completion score over time
 - **Smart Projections** - See projected scores for upcoming tasks
@@ -289,7 +294,7 @@ If you're forking this project, you can preserve your personal baseline data:
 - **Interactive Tooltips** - Hover over data points for detailed task information
 - **Motivational Feedback** - "On fire!", "Perfect!", and encouraging messages
 
-#### 🔁 Recurring Events
+#### Recurring Events
 
 - **AI-Powered Detection** - Natural language parsing for recurring patterns
 - **Flexible Recurrence** - Daily, weekly, fortnightly, monthly options
@@ -298,7 +303,7 @@ If you're forking this project, you can preserve your personal baseline data:
 - **Visual Indicators** - Repeat icon and "X/Y completed" counters
 - **Delete Options** - Choose to delete single instance or entire series
 
-#### 🐛 Critical Bug Fixes
+#### Critical Bug Fixes
 
 - **AI Modal Backdrop Fix** - Resolved freeze issue when adding recurring events
 - **API Key Deletion** - Fixed persistence bug when removing API keys
@@ -306,7 +311,7 @@ If you're forking this project, you can preserve your personal baseline data:
 - **Recurring Event Creation** - Fixed backend to properly generate all instances
 - **Series Grouping** - Corrected dashboard display for recurring event series
 
-#### 🎯 UI/UX Improvements
+#### UI/UX Improvements
 
 - **Themed Delete Modals** - Beautiful, consistent modals for all confirmations
 - **Improved Event Cards** - Better visual hierarchy and information density
