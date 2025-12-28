@@ -10,7 +10,7 @@
 
 [![Website](https://img.shields.io/badge/Website-officialcalendarplus.netlify.app-blue?style=for-the-badge&logo=netlify)](https://officialcalendarplus.netlify.app/)
 
-> **New in v5.3.0:** Latest release with new features and improvements!
+> **New in v5.3.0:** Efficiency update with new features and improvements!
 
 </div>
 
