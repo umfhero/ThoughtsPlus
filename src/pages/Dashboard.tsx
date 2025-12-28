@@ -656,71 +656,58 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
         e.preventDefault();
     };
 
-    const animationFrameRef = useRef<number>();
-
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {
-            if (animationFrameRef.current) {
-                cancelAnimationFrame(animationFrameRef.current);
+            if (isDragging && containerRef.current) {
+                const containerRect = containerRef.current.getBoundingClientRect();
+                const newLeftWidth = ((e.clientX - containerRect.left) / containerRect.width) * 100;
+
+                // Limit width between 30% and 70%
+                if (newLeftWidth >= 30 && newLeftWidth <= 70) {
+                    setLeftWidth(newLeftWidth);
+                }
             }
 
-            animationFrameRef.current = requestAnimationFrame(() => {
-                if (isDragging && containerRef.current) {
-                    const containerRect = containerRef.current.getBoundingClientRect();
-                    const newLeftWidth = ((e.clientX - containerRect.left) / containerRect.width) * 100;
+            if (isEventsHeightDragging) {
+                setEventsHeight(prev => {
+                    const newH = prev + e.movementY;
+                    return Math.max(200, Math.min(newH, 1200));
+                });
+            }
 
-                    // Limit width between 30% and 70%
-                    if (newLeftWidth >= 30 && newLeftWidth <= 70) {
-                        setLeftWidth(newLeftWidth);
-                    }
-                }
+            if (isTrendsHeightDragging) {
+                setTrendsHeight(prev => {
+                    const newH = prev + e.movementY;
+                    return Math.max(200, Math.min(newH, 1200));
+                });
+            }
 
-                if (isEventsHeightDragging) {
-                    setEventsHeight(prev => {
-                        const newH = prev + e.movementY;
-                        return Math.max(300, Math.min(newH, 1200));
-                    });
-                }
+            if (isBriefingHeightDragging) {
+                setBriefingHeight(prev => {
+                    const current = prev || (briefingRef.current?.offsetHeight || 200);
+                    const newH = current + e.movementY;
+                    return Math.max(150, Math.min(newH, 1200));
+                });
+            }
 
-                if (isTrendsHeightDragging) {
-                    setTrendsHeight(prev => {
-                        const newH = prev + e.movementY;
-                        return Math.max(300, Math.min(newH, 1200));
-                    });
-                }
+            if (isGithubHeightDragging) {
+                setGithubHeight(prev => {
+                    const current = prev || (githubCardRef.current?.offsetHeight || 200);
+                    const newH = current + e.movementY;
+                    return Math.max(200, Math.min(newH, 1200));
+                });
+            }
 
-                if (isBriefingHeightDragging) {
-                    setBriefingHeight(prev => {
-                        const current = prev || (briefingRef.current?.offsetHeight || 200);
-                        const newH = current + e.movementY;
-                        return Math.max(150, Math.min(newH, 1200));
-                    });
-                }
-
-                if (isGithubHeightDragging) {
-                    setGithubHeight(prev => {
-                        const current = prev || (githubCardRef.current?.offsetHeight || 200);
-                        const newH = current + e.movementY;
-                        // Limit minimum height to avoid crushing content
-                        return Math.max(220, Math.min(newH, 1200));
-                    });
-                }
-
-                if (isStatsHeightDragging) {
-                    setStatsHeight(prev => {
-                        const current = prev || (statsRef.current?.offsetHeight || 200);
-                        const newH = current + e.movementY;
-                        return Math.max(250, Math.min(newH, 1200));
-                    });
-                }
-            });
+            if (isStatsHeightDragging) {
+                setStatsHeight(prev => {
+                    const current = prev || (statsRef.current?.offsetHeight || 200);
+                    const newH = current + e.movementY;
+                    return Math.max(200, Math.min(newH, 1200));
+                });
+            }
         };
 
         const handleMouseUp = () => {
-            if (animationFrameRef.current) {
-                cancelAnimationFrame(animationFrameRef.current);
-            }
-
             if (isDragging) {
                 setIsDragging(false);
                 // Save to device-specific settings
@@ -742,9 +729,6 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
         return () => {
             document.removeEventListener('mousemove', handleMouseMove);
             document.removeEventListener('mouseup', handleMouseUp);
-            if (animationFrameRef.current) {
-                cancelAnimationFrame(animationFrameRef.current);
-            }
         };
     }, [isDragging, isEventsHeightDragging, isTrendsHeightDragging, isBriefingHeightDragging, isGithubHeightDragging, isStatsHeightDragging, leftWidth, panelHeight]);
 
@@ -1727,7 +1711,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.22 }}
-                        className="p-8 rounded-[2rem] bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50 relative flex flex-col justify-center overflow-hidden"
+                        className="p-8 rounded-[2rem] bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50 relative flex flex-col overflow-hidden"
                     >
                         <div className="flex items-center justify-between mb-6 flex-shrink-0">
                             <div className="flex items-center gap-2">
@@ -1829,7 +1813,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.25 }}
-                        className="p-8 rounded-[2rem] bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50 relative overflow-hidden transition-colors flex flex-col"
+                        className="p-8 rounded-[2rem] bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50 relative overflow-hidden transition-colors"
                     >
                         <div className="flex items-center justify-between mb-8 relative z-10">
                             <div className="flex items-center gap-2">
@@ -1851,7 +1835,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 relative z-10 overflow-y-auto custom-scrollbar pr-2 -mr-2" style={{ maxHeight: '100%' }}>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 relative z-10">
                             <div className="p-6 rounded-2xl bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm shadow-sm border border-gray-100 dark:border-gray-600">
                                 <div className="flex justify-between items-start mb-2">
                                     <p className="text-sm font-medium text-gray-400 dark:text-gray-300">Total Minutes Played</p>
