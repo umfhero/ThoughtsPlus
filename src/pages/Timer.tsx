@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Pause, StopCircle, RotateCcw, Clock, Timer as TimerIcon, History, Trash2, Plus, Minus, ChevronDown, ChevronUp, BarChart2, Info } from 'lucide-react';
+import { Play, Pause, StopCircle, RotateCcw, Clock, Timer as TimerIcon, History, Trash2, ChevronDown, ChevronUp, BarChart2 } from 'lucide-react';
 import { useTimer, formatTime, formatTimeVerbose } from '../contexts/TimerContext';
 import { useTheme } from '../contexts/ThemeContext';
 import clsx from 'clsx';
@@ -28,14 +28,18 @@ export function TimerPage({ isSidebarCollapsed: _isSidebarCollapsed = false }: {
     const { accentColor } = useTheme();
 
     const [activeTab, setActiveTab] = useState<TabType>('timer');
-    const [customMinutes, setCustomMinutes] = useState(5);
-    const [customSeconds, setCustomSeconds] = useState(0);
+    const [timeInput, setTimeInput] = useState('0500'); // Stored as string "MMSS"
     const [customLabel, setCustomLabel] = useState('');
     const [isCompactMode, setIsCompactMode] = useState(false);
     const [showStats, setShowStats] = useState(true);
 
     const inputRef = useRef<HTMLInputElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
+    const hasTypedRef = useRef(false);
+
+    // Derived values from input string
+    const inputMinutes = parseInt(timeInput.slice(0, Math.max(0, timeInput.length - 2)) || '0');
+    const inputSeconds = parseInt(timeInput.slice(-2) || '0');
 
     // Responsive detection
     useEffect(() => {
@@ -55,32 +59,56 @@ export function TimerPage({ isSidebarCollapsed: _isSidebarCollapsed = false }: {
         return () => observer.disconnect();
     }, []);
 
-    // Focus management
+    // Focus management & Key handling
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            // Space to start/pause
-            if (e.code === 'Space' && !e.target?.toString().includes('Input')) {
-                e.preventDefault();
-                if (activeTimer) {
+            // Ignore if typing in label input
+            if (e.target?.toString().includes('Input')) return;
+
+            if (activeTimer) {
+                if (e.code === 'Space') {
+                    e.preventDefault();
                     activeTimer.isRunning ? pauseTimer() : resumeTimer();
-                } else if (activeTab === 'timer') {
+                }
+            } else if (activeTab === 'timer') {
+                // Timer Setup Mode - Microwave Entry style
+                if (e.key >= '0' && e.key <= '9') {
+                    setTimeInput(prev => {
+                        // If it's the default '0500' and user hasn't typed yet, start fresh
+                        if (prev === '0500' && !hasTypedRef.current) {
+                            hasTypedRef.current = true;
+                            return '000' + e.key;
+                        }
+                        const next = prev + e.key;
+                        hasTypedRef.current = true;
+                        return parseInt(next) > 9959 ? prev : next.slice(-4);
+                    });
+                } else if (e.key === ' ' || e.code === 'Space') {
+                    e.preventDefault();
+                    setTimeInput(prev => {
+                        hasTypedRef.current = true;
+                        return (prev + '0').slice(-4);
+                    });
+                } else if (e.key === 'Backspace') {
+                    setTimeInput(prev => prev.slice(0, -1) || '0');
+                } else if (e.key === 'Enter') {
                     handleStartTimer();
-                } else {
+                }
+            } else {
+                // Stopwatch Mode
+                if (e.code === 'Space') {
+                    e.preventDefault();
                     startStopwatch(customLabel || undefined);
                 }
-            }
-            // Escape to stop
-            if (e.code === 'Escape' && activeTimer) {
-                stopTimer();
             }
         };
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [activeTimer, activeTab, customMinutes, customSeconds, customLabel]);
+    }, [activeTimer, activeTab, timeInput, customLabel]);
 
     const handleStartTimer = () => {
-        const totalSeconds = customMinutes * 60 + customSeconds;
+        const totalSeconds = inputMinutes * 60 + inputSeconds;
         if (totalSeconds > 0) {
             startTimer(totalSeconds, customLabel || undefined);
         }
@@ -91,11 +119,19 @@ export function TimerPage({ isSidebarCollapsed: _isSidebarCollapsed = false }: {
     };
 
     const adjustTime = (type: 'minutes' | 'seconds', delta: number) => {
+        let newMin = inputMinutes;
+        let newSec = inputSeconds;
+
         if (type === 'minutes') {
-            setCustomMinutes(Math.max(0, Math.min(99, customMinutes + delta)));
+            newMin = Math.max(0, Math.min(99, newMin + delta));
         } else {
-            setCustomSeconds(Math.max(0, Math.min(59, customSeconds + delta)));
+            newSec = Math.max(0, Math.min(59, newSec + delta));
         }
+
+        // Reconstruct string "MMSS"
+        const mStr = newMin.toString();
+        const sStr = newSec.toString().padStart(2, '0');
+        setTimeInput(mStr + sStr);
     };
 
     // Calculate progress for circular indicator
@@ -191,21 +227,6 @@ export function TimerPage({ isSidebarCollapsed: _isSidebarCollapsed = false }: {
                                     <span className="font-bold text-gray-800 dark:text-white">{stopwatchCount}</span>
                                 </div>
                             </div>
-                        </div>
-
-                        {/* Quick Info */}
-                        <div className={clsx(
-                            "p-4 rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm",
-                            isCompactMode ? "flex-1 min-w-[140px]" : ""
-                        )}>
-                            <div className="flex items-center gap-2 mb-2">
-                                <Info className="w-4 h-4" style={{ color: accentColor }} />
-                                <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Quick Tips</span>
-                            </div>
-                            <ul className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
-                                <li>• <kbd className="px-1 py-0.5 rounded bg-gray-100 dark:bg-gray-700 font-mono text-[10px]">Space</kbd> Start/Pause</li>
-                                <li>• <kbd className="px-1 py-0.5 rounded bg-gray-100 dark:bg-gray-700 font-mono text-[10px]">Esc</kbd> Stop timer</li>
-                            </ul>
                         </div>
                     </motion.div>
                 )}
@@ -349,33 +370,54 @@ export function TimerPage({ isSidebarCollapsed: _isSidebarCollapsed = false }: {
                                         ) : activeTab === 'timer' ? (
                                             <div className="flex items-center gap-[2cqw]">
                                                 {/* Minutes Input */}
-                                                <div className="flex flex-col items-center">
-                                                    <div className="flex items-center justify-center">
-                                                        <input
-                                                            type="number"
-                                                            value={customMinutes}
-                                                            onChange={(e) => setCustomMinutes(Math.max(0, Math.min(99, parseInt(e.target.value) || 0)))}
-                                                            className="text-center font-mono font-bold text-gray-900 dark:text-white bg-transparent outline-none p-0 w-[32cqw] leading-none text-[22cqw]"
-                                                            placeholder="00"
-                                                        />
+                                                {/* Minutes Column */}
+                                                <div className="flex flex-col items-center gap-[1cqw]">
+                                                    <button
+                                                        onClick={() => adjustTime('minutes', 1)}
+                                                        className="p-[0.5cqw] text-gray-400 hover:text-accent dark:hover:text-white transition-colors active:scale-90"
+                                                    >
+                                                        <ChevronUp className="w-[8cqw] h-[8cqw]" />
+                                                    </button>
+
+                                                    <div className="flex flex-col items-center">
+                                                        <span className="font-mono font-bold text-gray-900 dark:text-white leading-none text-[22cqw] tabular-nums">
+                                                            {inputMinutes.toString().padStart(2, '0')}
+                                                        </span>
+                                                        <span className="uppercase font-bold text-gray-400 text-[3cqw] mt-[1cqw]">Min</span>
                                                     </div>
-                                                    <span className="uppercase font-bold text-gray-400 mt-[2cqw] text-[3cqw]">Min</span>
+
+                                                    <button
+                                                        onClick={() => adjustTime('minutes', -1)}
+                                                        className="p-[0.5cqw] text-gray-400 hover:text-accent dark:hover:text-white transition-colors active:scale-90"
+                                                    >
+                                                        <ChevronDown className="w-[8cqw] h-[8cqw]" />
+                                                    </button>
                                                 </div>
 
-                                                <span className="font-mono font-bold text-gray-300 dark:text-gray-700 pb-[8cqw] leading-none text-[20cqw]">:</span>
+                                                <span className="font-mono font-bold text-gray-300 dark:text-gray-700 pb-[6cqw] leading-none text-[20cqw]">:</span>
 
-                                                {/* Seconds Input */}
-                                                <div className="flex flex-col items-center">
-                                                    <div className="flex items-center justify-center">
-                                                        <input
-                                                            type="number"
-                                                            value={customSeconds.toString().padStart(2, '0')}
-                                                            onChange={(e) => setCustomSeconds(Math.max(0, Math.min(59, parseInt(e.target.value) || 0)))}
-                                                            className="text-center font-mono font-bold text-gray-900 dark:text-white bg-transparent outline-none p-0 w-[32cqw] leading-none text-[22cqw]"
-                                                            placeholder="00"
-                                                        />
+                                                {/* Seconds Column */}
+                                                <div className="flex flex-col items-center gap-[1cqw]">
+                                                    <button
+                                                        onClick={() => adjustTime('seconds', 10)}
+                                                        className="p-[0.5cqw] text-gray-400 hover:text-accent dark:hover:text-white transition-colors active:scale-90"
+                                                    >
+                                                        <ChevronUp className="w-[8cqw] h-[8cqw]" />
+                                                    </button>
+
+                                                    <div className="flex flex-col items-center">
+                                                        <span className="font-mono font-bold text-gray-900 dark:text-white leading-none text-[22cqw] tabular-nums">
+                                                            {inputSeconds.toString().padStart(2, '0')}
+                                                        </span>
+                                                        <span className="uppercase font-bold text-gray-400 text-[3cqw] mt-[1cqw]">Sec</span>
                                                     </div>
-                                                    <span className="uppercase font-bold text-gray-400 mt-[2cqw] text-[3cqw]">Sec</span>
+
+                                                    <button
+                                                        onClick={() => adjustTime('seconds', -10)}
+                                                        className="p-[0.5cqw] text-gray-400 hover:text-accent dark:hover:text-white transition-colors active:scale-90"
+                                                    >
+                                                        <ChevronDown className="w-[8cqw] h-[8cqw]" />
+                                                    </button>
                                                 </div>
                                             </div>
                                         ) : (
@@ -385,28 +427,6 @@ export function TimerPage({ isSidebarCollapsed: _isSidebarCollapsed = false }: {
                                         )}
                                     </div>
                                 </div>
-
-                                {/* Controls for Manual Adjust (Only on Hover & Not Running) */}
-                                {!activeTimer && activeTab === 'timer' && !isCompactMode && (
-                                    <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-between px-[2cqw] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none w-full">
-                                        <div className="pointer-events-auto flex flex-col gap-[2cqw] -translate-x-2">
-                                            <button onClick={() => adjustTime('minutes', 1)} className="p-[2cqw] rounded-full bg-white dark:bg-gray-800 shadow-lg text-gray-500 hover:text-blue-500 hover:scale-110 transition-all border border-gray-100 dark:border-gray-700">
-                                                <Plus className="w-[4cqw] h-[4cqw]" />
-                                            </button>
-                                            <button onClick={() => adjustTime('minutes', -1)} className="p-[2cqw] rounded-full bg-white dark:bg-gray-800 shadow-lg text-gray-500 hover:text-red-500 hover:scale-110 transition-all border border-gray-100 dark:border-gray-700">
-                                                <Minus className="w-[4cqw] h-[4cqw]" />
-                                            </button>
-                                        </div>
-                                        <div className="pointer-events-auto flex flex-col gap-[2cqw] translate-x-2">
-                                            <button onClick={() => adjustTime('seconds', 10)} className="p-[2cqw] rounded-full bg-white dark:bg-gray-800 shadow-lg text-gray-500 hover:text-blue-500 hover:scale-110 transition-all border border-gray-100 dark:border-gray-700">
-                                                <Plus className="w-[4cqw] h-[4cqw]" />
-                                            </button>
-                                            <button onClick={() => adjustTime('seconds', -10)} className="p-[2cqw] rounded-full bg-white dark:bg-gray-800 shadow-lg text-gray-500 hover:text-red-500 hover:scale-110 transition-all border border-gray-100 dark:border-gray-700">
-                                                <Minus className="w-[4cqw] h-[4cqw]" />
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
                             </div>
                         </div>
 
