@@ -238,7 +238,7 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
         <>
             <motion.div
                 animate={{
-                    width: isCollapsed ? 0 : 260,
+                    width: isCollapsed ? 0 : 225,
                     opacity: isCollapsed ? 0 : 1
                 }}
                 transition={{
@@ -250,7 +250,7 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                 className="h-full flex flex-col relative z-30 overflow-hidden"
             >
                 <motion.div
-                    animate={{ x: isCollapsed ? -260 : 0 }}
+                    animate={{ x: isCollapsed ? -225 : 0 }}
                     transition={{
                         type: "spring",
                         stiffness: 180,
@@ -305,7 +305,7 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                                                         <motion.div
                                                             initial={{ opacity: 0, x: -20 }}
                                                             animate={{ opacity: 1, x: 0 }}
-                                                            exit={{ opacity: 0, x: -20 }}
+                                                            exit={{ opacity: 0, x: -20, transition: { duration: 0.1 } }}
                                                             transition={{ type: "spring", stiffness: 500, damping: 14 }}
                                                             className="absolute left-[-16px] top-0 bottom-0 w-[48px] flex items-center justify-center z-20"
                                                         >
@@ -369,7 +369,7 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                                                         <motion.div
                                                             initial={{ opacity: 0, x: -20 }}
                                                             animate={{ opacity: 1, x: 0 }}
-                                                            exit={{ opacity: 0, x: -20 }}
+                                                            exit={{ opacity: 0, x: -20, transition: { duration: 0.1 } }}
                                                             transition={{ type: "spring", stiffness: 500, damping: 14 }}
                                                             className="absolute left-[-16px] top-0 bottom-0 w-[48px] flex items-center justify-center z-20"
                                                         >
@@ -436,7 +436,7 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                                                             <motion.div
                                                                 initial={{ opacity: 0, x: -20 }}
                                                                 animate={{ opacity: 1, x: 0 }}
-                                                                exit={{ opacity: 0, x: -20 }}
+                                                                exit={{ opacity: 0, x: -20, transition: { duration: 0.1 } }}
                                                                 transition={{ type: "spring", stiffness: 500, damping: 14 }}
                                                                 className="absolute left-[-16px] top-0 bottom-0 w-[48px] flex items-center justify-center z-20"
                                                             >
@@ -544,7 +544,7 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                                                         <motion.div
                                                             initial={{ opacity: 0, x: -20 }}
                                                             animate={{ opacity: 1, x: 0 }}
-                                                            exit={{ opacity: 0, x: -20 }}
+                                                            exit={{ opacity: 0, x: -20, transition: { duration: 0.1 } }}
                                                             transition={{ type: "spring", stiffness: 500, damping: 14 }}
                                                             className="absolute left-[-16px] top-0 bottom-0 w-[48px] flex items-center justify-center z-20"
                                                         >
@@ -640,7 +640,7 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                                                         <motion.div
                                                             initial={{ opacity: 0, x: -20 }}
                                                             animate={{ opacity: 1, x: 0 }}
-                                                            exit={{ opacity: 0, x: -20 }}
+                                                            exit={{ opacity: 0, x: -20, transition: { duration: 0.1 } }}
                                                             transition={{ type: "spring", stiffness: 500, damping: 14 }}
                                                             className="absolute left-[-16px] top-0 bottom-0 w-[48px] flex items-center justify-center z-20"
                                                         >
@@ -703,7 +703,7 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                                                         <motion.div
                                                             initial={{ opacity: 0, x: -20 }}
                                                             animate={{ opacity: 1, x: 0 }}
-                                                            exit={{ opacity: 0, x: -20 }}
+                                                            exit={{ opacity: 0, x: -20, transition: { duration: 0.1 } }}
                                                             transition={{ type: "spring", stiffness: 500, damping: 14 }}
                                                             className="absolute left-[-16px] top-0 bottom-0 w-[48px] flex items-center justify-center z-20"
                                                         >
@@ -803,7 +803,7 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                                         <motion.div
                                             initial={{ opacity: 0, x: -20 }}
                                             animate={{ opacity: 1, x: 0 }}
-                                            exit={{ opacity: 0, x: -20 }}
+                                            exit={{ opacity: 0, x: -20, transition: { duration: 0.1 } }}
                                             transition={{ type: "spring", stiffness: 500, damping: 14 }}
                                             className="absolute left-[-16px] top-0 bottom-0 w-[48px] flex items-center justify-center z-20"
                                         >
@@ -844,7 +844,7 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                     onClick={toggleSidebar}
                     className={clsx(
                         "p-3 rounded-xl bg-white shadow-lg border border-gray-100 transition-all duration-300 hover:scale-110 hover:shadow-xl text-gray-600 hover:text-blue-600",
-                        !isCollapsed && "translate-x-[250px]",
+                        !isCollapsed && "translate-x-[215px]",
                         "opacity-50 hover:opacity-100"
                     )}
                 >
