@@ -238,7 +238,7 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
         <>
             <motion.div
                 animate={{
-                    width: isCollapsed ? 0 : 210,
+                    width: isCollapsed ? 0 : 260,
                     opacity: isCollapsed ? 0 : 1
                 }}
                 transition={{
@@ -250,14 +250,14 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                 className="h-full flex flex-col relative z-30 overflow-hidden"
             >
                 <motion.div
-                    animate={{ x: isCollapsed ? -210 : 0 }}
+                    animate={{ x: isCollapsed ? -260 : 0 }}
                     transition={{
                         type: "spring",
                         stiffness: 180,
                         damping: 24,
                         mass: 1
                     }}
-                    className="h-full w-[210px] py-4 pl-4 pr-2"
+                    className="h-full w-[225px] py-4 pl-4 pr-2"
                 >
                     <div className="h-full rounded-3xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border border-white/20 dark:border-gray-700/30 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50 flex flex-col overflow-hidden transition-colors">
                         {/* Logo Area */}
@@ -345,45 +345,55 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                                             <button
                                                 onClick={() => setPage('progress')}
                                                 className={clsx(
-                                                    "w-full flex items-center justify-between p-3 rounded-xl transition-all duration-300 group relative overflow-visible",
+                                                    "w-full flex items-center justify-start p-3 rounded-xl transition-colors duration-300 group relative overflow-visible",
                                                     currentPage === 'progress'
-                                                        ? "bg-gray-900 dark:bg-gray-700 text-white shadow-lg shadow-gray-900/20 dark:shadow-gray-950/30"
+                                                        ? "text-white shadow-lg shadow-gray-900/20 dark:shadow-gray-950/30"
                                                         : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100"
                                                 )}
                                             >
                                                 {currentPage === 'progress' && (
                                                     <motion.div
                                                         layoutId="activeBg"
-                                                        className="absolute inset-0 bg-gray-900 dark:bg-gray-700 rounded-xl"
+                                                        className="absolute top-0 bottom-0 bg-gray-900 dark:bg-gray-700 rounded-xl"
+                                                        initial={{ left: 0, width: "100%" }}
+                                                        animate={{
+                                                            left: showShortcuts ? -24 : 0,
+                                                            width: showShortcuts ? "calc(100% + 24px)" : "100%"
+                                                        }}
                                                         transition={{ type: "spring", stiffness: 400, damping: 30 }}
                                                     />
                                                 )}
-                                                <div className="flex items-center gap-3 relative z-10">
-                                                    <AnimatePresence mode="wait">
-                                                        {showShortcuts && currentPage !== 'drawing' ? (
-                                                            <motion.span
-                                                                key="shortcut"
-                                                                initial={{ opacity: 0, x: 20 }}
-                                                                animate={{ opacity: 1, x: 0 }}
-                                                                exit={{ opacity: 0, x: 20 }}
-                                                                transition={{ type: "spring", stiffness: 500, damping: 25 }}
-                                                                className="text-[10px] font-bold bg-black text-white px-1.5 py-0.5 rounded-md whitespace-nowrap -ml-8"
-                                                            >
+
+                                                <AnimatePresence>
+                                                    {showShortcuts && currentPage !== 'drawing' && (
+                                                        <motion.div
+                                                            initial={{ opacity: 0, x: -20 }}
+                                                            animate={{ opacity: 1, x: 0 }}
+                                                            exit={{ opacity: 0, x: -20 }}
+                                                            transition={{ type: "spring", stiffness: 500, damping: 14 }}
+                                                            className="absolute left-[-16px] top-0 bottom-0 w-[48px] flex items-center justify-center z-20"
+                                                        >
+                                                            <span className="text-[10px] font-bold bg-black text-white px-2 py-1 rounded-md whitespace-nowrap border border-gray-700 flex items-center justify-center shadow-lg">
                                                                 Ctrl+P
-                                                            </motion.span>
-                                                        ) : (
-                                                            <motion.div
-                                                                key="icon"
-                                                                initial={{ opacity: 0, x: -20 }}
-                                                                animate={{ opacity: 1, x: 0 }}
-                                                                exit={{ opacity: 0, x: -20 }}
-                                                                transition={{ type: "spring", stiffness: 500, damping: 25 }}
-                                                                whileHover={{ scale: 1.1 }}
-                                                            >
-                                                                <TrendingUp className={clsx("w-5 h-5 shrink-0")} style={currentPage === 'progress' ? { color: 'var(--accent-primary)' } : undefined} />
-                                                            </motion.div>
-                                                        )}
-                                                    </AnimatePresence>
+                                                            </span>
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
+
+                                                <div className="flex items-center gap-3 relative z-10 w-full">
+                                                    <div className="relative w-5 h-5 shrink-0 flex items-center justify-center">
+                                                        <motion.div
+                                                            animate={{
+                                                                opacity: showShortcuts && currentPage !== 'drawing' ? 0 : 1,
+                                                                scale: showShortcuts && currentPage !== 'drawing' ? 0.5 : 1,
+                                                                x: showShortcuts && currentPage !== 'drawing' ? -15 : 0
+                                                            }}
+                                                            transition={{ type: "spring", stiffness: 500, damping: 14 }}
+                                                            whileHover={{ scale: 1.1 }}
+                                                        >
+                                                            <TrendingUp className={clsx("w-5 h-5 shrink-0")} style={currentPage === 'progress' ? { color: 'var(--accent-primary)' } : undefined} />
+                                                        </motion.div>
+                                                    </div>
                                                     <span className="font-medium text-sm">Progress</span>
                                                 </div>
                                             </button>
@@ -402,45 +412,55 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                                                         setIsCalendarOpen(!isCalendarOpen);
                                                     }}
                                                     className={clsx(
-                                                        "w-full flex items-center justify-between p-3 rounded-xl transition-all duration-300 group relative overflow-visible",
+                                                        "w-full flex items-center justify-between p-3 rounded-xl transition-colors duration-300 group relative overflow-visible",
                                                         currentPage === 'calendar'
-                                                            ? "bg-gray-900 dark:bg-gray-700 text-white shadow-lg shadow-gray-900/20 dark:shadow-gray-950/30"
+                                                            ? "text-white shadow-lg shadow-gray-900/20 dark:shadow-gray-950/30"
                                                             : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100"
                                                     )}
                                                 >
                                                     {currentPage === 'calendar' && (
                                                         <motion.div
                                                             layoutId="activeBg"
-                                                            className="absolute inset-0 bg-gray-900 dark:bg-gray-700 rounded-xl"
+                                                            className="absolute top-0 bottom-0 bg-gray-900 dark:bg-gray-700 rounded-xl"
+                                                            initial={{ left: 0, width: "100%" }}
+                                                            animate={{
+                                                                left: showShortcuts ? -24 : 0,
+                                                                width: showShortcuts ? "calc(100% + 24px)" : "100%"
+                                                            }}
                                                             transition={{ type: "spring", stiffness: 400, damping: 30 }}
                                                         />
                                                     )}
-                                                    <div className="flex items-center gap-3 relative z-10">
-                                                        <AnimatePresence mode="wait">
-                                                            {showShortcuts && currentPage !== 'drawing' ? (
-                                                                <motion.span
-                                                                    key="shortcut"
-                                                                    initial={{ opacity: 0, x: 20 }}
-                                                                    animate={{ opacity: 1, x: 0 }}
-                                                                    exit={{ opacity: 0, x: 20 }}
-                                                                    transition={{ type: "spring", stiffness: 500, damping: 25 }}
-                                                                    className="text-[10px] font-bold bg-black text-white px-1.5 py-0.5 rounded-md whitespace-nowrap -ml-8"
-                                                                >
+
+                                                    <AnimatePresence>
+                                                        {showShortcuts && currentPage !== 'drawing' && (
+                                                            <motion.div
+                                                                initial={{ opacity: 0, x: -20 }}
+                                                                animate={{ opacity: 1, x: 0 }}
+                                                                exit={{ opacity: 0, x: -20 }}
+                                                                transition={{ type: "spring", stiffness: 500, damping: 14 }}
+                                                                className="absolute left-[-16px] top-0 bottom-0 w-[48px] flex items-center justify-center z-20"
+                                                            >
+                                                                <span className="text-[10px] font-bold bg-black text-white px-2 py-1 rounded-md whitespace-nowrap border border-gray-700 flex items-center justify-center shadow-lg">
                                                                     Ctrl+C
-                                                                </motion.span>
-                                                            ) : (
-                                                                <motion.div
-                                                                    key="icon"
-                                                                    initial={{ opacity: 0, x: -20 }}
-                                                                    animate={{ opacity: 1, x: 0 }}
-                                                                    exit={{ opacity: 0, x: -20 }}
-                                                                    transition={{ type: "spring", stiffness: 500, damping: 25 }}
-                                                                    whileHover={{ scale: 1.1 }}
-                                                                >
-                                                                    <CalendarIcon className={clsx("w-5 h-5 shrink-0")} style={currentPage === 'calendar' ? { color: 'var(--accent-primary)' } : undefined} />
-                                                                </motion.div>
-                                                            )}
-                                                        </AnimatePresence>
+                                                                </span>
+                                                            </motion.div>
+                                                        )}
+                                                    </AnimatePresence>
+
+                                                    <div className="flex items-center gap-3 relative z-10 w-full">
+                                                        <div className="relative w-5 h-5 shrink-0 flex items-center justify-center">
+                                                            <motion.div
+                                                                animate={{
+                                                                    opacity: showShortcuts && currentPage !== 'drawing' ? 0 : 1,
+                                                                    scale: showShortcuts && currentPage !== 'drawing' ? 0.5 : 1,
+                                                                    x: showShortcuts && currentPage !== 'drawing' ? -15 : 0
+                                                                }}
+                                                                transition={{ type: "spring", stiffness: 500, damping: 14 }}
+                                                                whileHover={{ scale: 1.1 }}
+                                                            >
+                                                                <CalendarIcon className={clsx("w-5 h-5 shrink-0")} style={currentPage === 'calendar' ? { color: 'var(--accent-primary)' } : undefined} />
+                                                            </motion.div>
+                                                        </div>
                                                         <span className="font-medium text-sm">Calendar</span>
                                                     </div>
                                                     <div className="relative z-10 flex items-center">
@@ -500,44 +520,55 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                                             <button
                                                 onClick={() => setPage('drawing')}
                                                 className={clsx(
-                                                    "w-full flex items-center justify-between p-3 rounded-xl transition-all duration-300 group relative",
+                                                    "w-full flex items-center justify-start p-3 rounded-xl transition-colors duration-300 group relative",
                                                     currentPage === 'drawing'
-                                                        ? "bg-gray-900 dark:bg-gray-700 text-white shadow-lg shadow-gray-900/20 dark:shadow-gray-950/30"
+                                                        ? "text-white shadow-lg shadow-gray-900/20 dark:shadow-gray-950/30"
                                                         : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100"
                                                 )}
                                             >
                                                 {currentPage === 'drawing' && (
                                                     <motion.div
                                                         layoutId="activeBg"
-                                                        className="absolute inset-0 bg-gray-900 dark:bg-gray-700 rounded-xl"
+                                                        className="absolute top-0 bottom-0 bg-gray-900 dark:bg-gray-700 rounded-xl"
+                                                        initial={{ left: 0, width: "100%" }}
+                                                        animate={{
+                                                            left: showShortcuts ? -24 : 0,
+                                                            width: showShortcuts ? "calc(100% + 24px)" : "100%"
+                                                        }}
                                                         transition={{ type: "spring", stiffness: 400, damping: 30 }}
                                                     />
                                                 )}
-                                                <div className="flex items-center gap-3 relative z-10">
-                                                    <AnimatePresence mode="wait">
-                                                        {showShortcuts && currentPage !== 'drawing' ? (
-                                                            <motion.span
-                                                                key="shortcut"
-                                                                initial={{ opacity: 0, x: -20 }}
-                                                                animate={{ opacity: 1, x: 0 }}
-                                                                exit={{ opacity: 0, x: -20 }}
-                                                                transition={{ type: "spring", stiffness: 500, damping: 25 }}
-                                                                className="text-[10px] font-bold bg-black text-white px-1.5 py-0.5 rounded-md"
-                                                            >
+
+                                                <AnimatePresence>
+                                                    {showShortcuts && currentPage !== 'drawing' && (
+                                                        <motion.div
+                                                            initial={{ opacity: 0, x: -20 }}
+                                                            animate={{ opacity: 1, x: 0 }}
+                                                            exit={{ opacity: 0, x: -20 }}
+                                                            transition={{ type: "spring", stiffness: 500, damping: 14 }}
+                                                            className="absolute left-[-16px] top-0 bottom-0 w-[48px] flex items-center justify-center z-20"
+                                                        >
+                                                            <span className="text-[10px] font-bold bg-black text-white px-2 py-1 rounded-md whitespace-nowrap border border-gray-700 flex items-center justify-center shadow-lg">
                                                                 Ctrl+B
-                                                            </motion.span>
-                                                        ) : (
-                                                            <motion.div
-                                                                key="icon"
-                                                                initial={{ opacity: 0, scale: 0.8 }}
-                                                                animate={{ opacity: 1, scale: 1 }}
-                                                                exit={{ opacity: 0, scale: 0.8 }}
-                                                                whileHover={{ scale: 1.1 }}
-                                                            >
-                                                                <PenTool className={clsx("w-5 h-5 shrink-0")} style={currentPage === 'drawing' ? { color: 'var(--accent-primary)' } : undefined} />
-                                                            </motion.div>
-                                                        )}
-                                                    </AnimatePresence>
+                                                            </span>
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
+
+                                                <div className="flex items-center gap-3 relative z-10 w-full">
+                                                    <div className="relative w-5 h-5 shrink-0 flex items-center justify-center">
+                                                        <motion.div
+                                                            animate={{
+                                                                opacity: showShortcuts && currentPage !== 'drawing' ? 0 : 1,
+                                                                scale: showShortcuts && currentPage !== 'drawing' ? 0.5 : 1,
+                                                                x: showShortcuts && currentPage !== 'drawing' ? -15 : 0
+                                                            }}
+                                                            transition={{ type: "spring", stiffness: 500, damping: 14 }}
+                                                            whileHover={{ scale: 1.1 }}
+                                                        >
+                                                            <PenTool className={clsx("w-5 h-5 shrink-0")} style={currentPage === 'drawing' ? { color: 'var(--accent-primary)' } : undefined} />
+                                                        </motion.div>
+                                                    </div>
                                                     <span className="font-medium text-sm">Board</span>
                                                 </div>
                                             </button>
@@ -552,24 +583,26 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                                             <button
                                                 onClick={() => setPage('stats')}
                                                 className={clsx(
-                                                    "w-full flex items-center justify-between p-3 rounded-xl transition-all duration-300 group relative",
+                                                    "w-full flex items-center justify-start p-3 rounded-xl transition-colors duration-300 group relative",
                                                     currentPage === 'stats'
-                                                        ? "bg-gray-900 dark:bg-gray-700 text-white shadow-lg shadow-gray-900/20 dark:shadow-gray-950/30"
+                                                        ? "text-white shadow-lg shadow-gray-900/20 dark:shadow-gray-950/30"
                                                         : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100"
                                                 )}
                                             >
                                                 {currentPage === 'stats' && (
                                                     <motion.div
                                                         layoutId="activeBg"
-                                                        className="absolute inset-0 bg-gray-900 dark:bg-gray-700 rounded-xl"
+                                                        className="absolute top-0 bottom-0 bg-gray-900 dark:bg-gray-700 rounded-xl"
+                                                        initial={{ left: 0, width: "100%" }}
+                                                        animate={{ left: 0, width: "100%" }}
                                                         transition={{ type: "spring", stiffness: 400, damping: 30 }}
                                                     />
                                                 )}
-                                                <div className="flex items-center gap-3 relative z-10">
+                                                <div className="flex items-center gap-3 relative z-10 w-full">
                                                     <motion.div whileHover={{ scale: 1.1 }}>
                                                         <PieChart className={clsx("w-5 h-5 shrink-0")} style={currentPage === 'stats' ? { color: 'var(--accent-primary)' } : undefined} />
                                                     </motion.div>
-                                                    <span className="font-medium text-sm">Creator Stats</span>
+                                                    <span className="font-medium text-sm whitespace-nowrap">Creator Stats</span>
                                                 </div>
                                             </button>
                                         </Reorder.Item>
@@ -583,36 +616,55 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                                             <button
                                                 onClick={() => setPage('github')}
                                                 className={clsx(
-                                                    "w-full flex items-center justify-between p-3 rounded-xl transition-all duration-300 group relative",
+                                                    "w-full flex items-center justify-start p-3 rounded-xl transition-colors duration-300 group relative",
                                                     currentPage === 'github'
-                                                        ? "bg-gray-900 dark:bg-gray-700 text-white shadow-lg shadow-gray-900/20 dark:shadow-gray-950/30"
+                                                        ? "text-white shadow-lg shadow-gray-900/20 dark:shadow-gray-950/30"
                                                         : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100"
                                                 )}
                                             >
                                                 {currentPage === 'github' && (
                                                     <motion.div
                                                         layoutId="activeBg"
-                                                        className="absolute inset-0 bg-gray-900 dark:bg-gray-700 rounded-xl"
+                                                        className="absolute top-0 bottom-0 bg-gray-900 dark:bg-gray-700 rounded-xl"
+                                                        initial={{ left: 0, width: "100%" }}
+                                                        animate={{
+                                                            left: showShortcuts ? -24 : 0,
+                                                            width: showShortcuts ? "calc(100% + 24px)" : "100%"
+                                                        }}
                                                         transition={{ type: "spring", stiffness: 400, damping: 30 }}
                                                     />
                                                 )}
-                                                <div className="flex items-center gap-3 relative z-10">
-                                                    <AnimatePresence>
-                                                        {showShortcuts && currentPage !== 'drawing' && (
-                                                            <motion.span
-                                                                initial={{ opacity: 0, x: -20 }}
-                                                                animate={{ opacity: 1, x: 0 }}
-                                                                exit={{ opacity: 0, x: -20 }}
-                                                                transition={{ type: "spring", stiffness: 500, damping: 25 }}
-                                                                className="text-[10px] font-bold bg-black text-white px-1.5 py-0.5 rounded-md"
-                                                            >
+
+                                                <AnimatePresence>
+                                                    {showShortcuts && currentPage !== 'drawing' && (
+                                                        <motion.div
+                                                            initial={{ opacity: 0, x: -20 }}
+                                                            animate={{ opacity: 1, x: 0 }}
+                                                            exit={{ opacity: 0, x: -20 }}
+                                                            transition={{ type: "spring", stiffness: 500, damping: 14 }}
+                                                            className="absolute left-[-16px] top-0 bottom-0 w-[48px] flex items-center justify-center z-20"
+                                                        >
+                                                            <span className="text-[10px] font-bold bg-black text-white px-2 py-1 rounded-md whitespace-nowrap border border-gray-700 flex items-center justify-center shadow-lg">
                                                                 Ctrl+G
-                                                            </motion.span>
-                                                        )}
-                                                    </AnimatePresence>
-                                                    <motion.div whileHover={{ scale: 1.1 }}>
-                                                        <Github className={clsx("w-5 h-5 shrink-0")} style={currentPage === 'github' ? { color: 'var(--accent-primary)' } : undefined} />
-                                                    </motion.div>
+                                                            </span>
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
+
+                                                <div className="flex items-center gap-3 relative z-10 w-full">
+                                                    <div className="relative w-5 h-5 shrink-0 flex items-center justify-center">
+                                                        <motion.div
+                                                            animate={{
+                                                                opacity: showShortcuts && currentPage !== 'drawing' ? 0 : 1,
+                                                                scale: showShortcuts && currentPage !== 'drawing' ? 0.5 : 1,
+                                                                x: showShortcuts && currentPage !== 'drawing' ? -15 : 0
+                                                            }}
+                                                            transition={{ type: "spring", stiffness: 500, damping: 14 }}
+                                                            whileHover={{ scale: 1.1 }}
+                                                        >
+                                                            <Github className={clsx("w-5 h-5 shrink-0")} style={currentPage === 'github' ? { color: 'var(--accent-primary)' } : undefined} />
+                                                        </motion.div>
+                                                    </div>
                                                     <span className="font-medium text-sm">Github</span>
                                                 </div>
                                             </button>
@@ -627,41 +679,58 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                                             <button
                                                 onClick={() => setPage('timer')}
                                                 className={clsx(
-                                                    "w-full flex items-center justify-between p-3 rounded-xl transition-all duration-300 group relative",
+                                                    "w-full flex items-center justify-start p-3 rounded-xl transition-colors duration-300 group relative",
                                                     currentPage === 'timer'
-                                                        ? "bg-gray-900 dark:bg-gray-700 text-white shadow-lg shadow-gray-900/20 dark:shadow-gray-950/30"
+                                                        ? "text-white shadow-lg shadow-gray-900/20 dark:shadow-gray-950/30"
                                                         : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100"
                                                 )}
                                             >
                                                 {currentPage === 'timer' && (
                                                     <motion.div
                                                         layoutId="activeBg"
-                                                        className="absolute inset-0 bg-gray-900 dark:bg-gray-700 rounded-xl"
+                                                        className="absolute top-0 bottom-0 bg-gray-900 dark:bg-gray-700 rounded-xl"
+                                                        initial={{ left: 0, width: "100%" }}
+                                                        animate={{
+                                                            left: showShortcuts ? -24 : 0,
+                                                            width: showShortcuts ? "calc(100% + 24px)" : "100%"
+                                                        }}
                                                         transition={{ type: "spring", stiffness: 400, damping: 30 }}
                                                     />
                                                 )}
-                                                <div className="flex items-center gap-3 relative z-10">
-                                                    <motion.div
-                                                        whileHover={{ scale: 1.2, rotate: [0, -10, 10, -10, 0] }}
-                                                        transition={{ duration: 0.5 }}
-                                                    >
-                                                        <Timer className={clsx("w-5 h-5 shrink-0")} style={currentPage === 'timer' ? { color: 'var(--accent-primary)' } : undefined} />
-                                                    </motion.div>
+
+                                                <AnimatePresence>
+                                                    {showShortcuts && currentPage !== 'drawing' && (
+                                                        <motion.div
+                                                            initial={{ opacity: 0, x: -20 }}
+                                                            animate={{ opacity: 1, x: 0 }}
+                                                            exit={{ opacity: 0, x: -20 }}
+                                                            transition={{ type: "spring", stiffness: 500, damping: 14 }}
+                                                            className="absolute left-[-16px] top-0 bottom-0 w-[48px] flex items-center justify-center z-20"
+                                                        >
+                                                            <span className="text-[10px] font-bold bg-black text-white px-2 py-1 rounded-md whitespace-nowrap border border-gray-700 flex items-center justify-center shadow-lg">
+                                                                Ctrl+T
+                                                            </span>
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
+
+                                                <div className="flex items-center gap-3 relative z-10 w-full">
+                                                    <div className="relative w-5 h-5 shrink-0 flex items-center justify-center">
+                                                        <motion.div
+                                                            animate={{
+                                                                opacity: showShortcuts && currentPage !== 'drawing' ? 0 : 1,
+                                                                scale: showShortcuts && currentPage !== 'drawing' ? 0.5 : 1,
+                                                                x: showShortcuts && currentPage !== 'drawing' ? -15 : 0
+                                                            }}
+                                                            transition={{ type: "spring", stiffness: 500, damping: 14 }}
+                                                            whileHover={{ scale: 1.1 }}
+                                                        >
+                                                            <Timer className={clsx("w-5 h-5 shrink-0")} style={currentPage === 'timer' ? { color: 'var(--accent-primary)' } : undefined} />
+                                                        </motion.div>
+                                                    </div>
                                                     <span className="font-medium text-sm">Timer</span>
                                                 </div>
                                             </button>
-                                            <AnimatePresence>
-                                                {showShortcuts && currentPage !== 'drawing' && (
-                                                    <motion.span
-                                                        initial={{ opacity: 0, scale: 0.8 }}
-                                                        animate={{ opacity: 1, scale: 1 }}
-                                                        exit={{ opacity: 0, scale: 0.8 }}
-                                                        className="absolute -right-4 top-1/2 -translate-y-1/2 z-30 text-[10px] font-bold bg-black text-white px-1.5 py-0.5 rounded-md"
-                                                    >
-                                                        Ctrl+T
-                                                    </motion.span>
-                                                )}
-                                            </AnimatePresence>
                                         </Reorder.Item>
                                     );
                                 }
@@ -672,7 +741,7 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
 
                         {/* Dev Mode Button */}
                         {showDev && (
-                            <div className="px-4 pt-2">
+                            <div className="pl-8 pr-4 pt-2">
                                 <button
                                     onClick={() => setPage('dev')}
                                     className={clsx(
@@ -705,48 +774,65 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                         )}
 
                         {/* Settings at bottom */}
-                        <div className="px-4 pt-4 pb-4 relative">
+                        <div className="pl-8 pr-4 pt-4 pb-4 relative">
                             <div className="h-px bg-gray-200 dark:bg-gray-700 mb-4" />
                             <button
                                 onClick={() => setPage('settings')}
                                 className={clsx(
-                                    "w-full flex items-center justify-between p-3 rounded-xl transition-all duration-300 group relative",
+                                    "w-full flex items-center justify-start p-3 rounded-xl transition-colors duration-300 group relative",
                                     currentPage === 'settings'
-                                        ? "bg-gray-900 dark:bg-gray-700 text-white shadow-lg shadow-gray-900/20 dark:shadow-gray-950/30"
+                                        ? "text-white shadow-lg shadow-gray-900/20 dark:shadow-gray-950/30"
                                         : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100"
                                 )}
                             >
                                 {currentPage === 'settings' && (
                                     <motion.div
                                         layoutId="activeBg"
-                                        className="absolute inset-0 bg-gray-900 dark:bg-gray-700 rounded-xl"
+                                        className="absolute top-0 bottom-0 bg-gray-900 dark:bg-gray-700 rounded-xl"
+                                        initial={{ left: 0, width: "100%" }}
+                                        animate={{
+                                            left: showShortcuts ? -24 : 0,
+                                            width: showShortcuts ? "calc(100% + 24px)" : "100%"
+                                        }}
                                         transition={{ type: "spring", stiffness: 400, damping: 30 }}
                                     />
                                 )}
-                                <div className="flex items-center gap-3 relative z-10">
-                                    <motion.div
-                                        whileHover={{ scale: 1.2, rotate: [0, -10, 10, -10, 0] }}
-                                        transition={{ duration: 0.5 }}
-                                    >
-                                        <Settings className={clsx("w-5 h-5 shrink-0")} style={currentPage === 'settings' ? { color: 'var(--accent-primary)' } : undefined} />
-                                    </motion.div>
+
+                                <AnimatePresence>
+                                    {showShortcuts && currentPage !== 'drawing' && (
+                                        <motion.div
+                                            initial={{ opacity: 0, x: -20 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            exit={{ opacity: 0, x: -20 }}
+                                            transition={{ type: "spring", stiffness: 500, damping: 14 }}
+                                            className="absolute left-[-16px] top-0 bottom-0 w-[48px] flex items-center justify-center z-20"
+                                        >
+                                            <span className="text-[10px] font-bold bg-black text-white px-2 py-1 rounded-md whitespace-nowrap border border-gray-700 flex items-center justify-center shadow-lg">
+                                                Ctrl+S
+                                            </span>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+
+                                <div className="flex items-center gap-3 relative z-10 w-full">
+                                    <div className="relative w-5 h-5 shrink-0 flex items-center justify-center">
+                                        <motion.div
+                                            animate={{
+                                                opacity: showShortcuts && currentPage !== 'drawing' ? 0 : 1,
+                                                scale: showShortcuts && currentPage !== 'drawing' ? 0.5 : 1,
+                                                x: showShortcuts && currentPage !== 'drawing' ? -15 : 0
+                                            }}
+                                            transition={{ type: "spring", stiffness: 500, damping: 14 }}
+                                            whileHover={{ scale: 1.1 }}
+                                        >
+                                            <Settings className={clsx("w-5 h-5 shrink-0")} style={currentPage === 'settings' ? { color: 'var(--accent-primary)' } : undefined} />
+                                        </motion.div>
+                                    </div>
                                     <span className="font-medium text-sm">
                                         Settings
                                     </span>
                                 </div>
                             </button>
-                            <AnimatePresence>
-                                {showShortcuts && currentPage !== 'drawing' && (
-                                    <motion.span
-                                        initial={{ opacity: 0, scale: 0.8 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.8 }}
-                                        className="absolute right-0 top-1/2 z-30 text-[10px] font-bold bg-black text-white px-1.5 py-0.5 rounded-md"
-                                    >
-                                        Ctrl+S
-                                    </motion.span>
-                                )}
-                            </AnimatePresence>
                         </div>
                     </div>
                 </motion.div>
@@ -758,7 +844,7 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                     onClick={toggleSidebar}
                     className={clsx(
                         "p-3 rounded-xl bg-white shadow-lg border border-gray-100 transition-all duration-300 hover:scale-110 hover:shadow-xl text-gray-600 hover:text-blue-600",
-                        !isCollapsed && "translate-x-[200px]",
+                        !isCollapsed && "translate-x-[250px]",
                         "opacity-50 hover:opacity-100"
                     )}
                 >
