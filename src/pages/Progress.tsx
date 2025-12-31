@@ -343,10 +343,8 @@ export function ProgressPage({ notes, isSidebarCollapsed = false }: ProgressPage
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.1 }}
-                className={clsx("p-3 rounded-xl relative overflow-hidden dark:!bg-gray-800 dark:!border-gray-700", stretch && "flex-1")}
-                style={{ background: 'color-mix(in srgb, var(--accent-primary) 25%, white)', border: '1px solid color-mix(in srgb, var(--accent-primary) 40%, white)' }}
+                className={clsx("p-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 relative overflow-hidden", stretch && "flex-1")}
             >
-                <div className="absolute top-0 right-0 w-20 h-20 rounded-full -translate-y-1/2 translate-x-1/2" style={{ background: 'color-mix(in srgb, var(--accent-primary) 15%, transparent)' }} />
                 <div className="flex items-center gap-2 mb-2">
                     <div className="p-1.5 rounded-lg" style={{ background: 'color-mix(in srgb, var(--accent-primary) 15%, transparent)' }}>
                         <Calendar className="w-4 h-4" style={{ color: 'var(--accent-primary)' }} />
@@ -534,7 +532,7 @@ export function ProgressPage({ notes, isSidebarCollapsed = false }: ProgressPage
                                                                             ? "border-2"
                                                                             : "bg-gray-50/50 dark:bg-gray-700/30 border-gray-100 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600"
                                                                 )}
-                                                                style={week.isCurrentWeek ? { borderColor: 'var(--accent-primary)', backgroundColor: 'color-mix(in srgb, var(--accent-primary) 5%, transparent)' } : undefined}
+                                                                style={week.isCurrentWeek ? { borderColor: 'var(--accent-primary)' } : undefined}
                                                             >
                                                                 {/* Current week indicator */}
                                                                 {week.isCurrentWeek && (
