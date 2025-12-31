@@ -1,13 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './pages/Dashboard';
-import { CalendarPage } from './pages/Calendar';
-import { StatsPage } from './pages/Stats';
-import { SettingsPage } from './pages/Settings';
-import { BoardPage } from './pages/Board';
-import { GithubPage } from './pages/Github';
-import { TimerPage } from './pages/Timer';
-import { ProgressPage } from './pages/Progress';
 import { AiQuickAddModal } from './components/AiQuickAddModal';
 import { ShortcutsOverlay } from './components/ShortcutsOverlay';
 import { SetupWizard } from './components/SetupWizard';
@@ -18,6 +11,32 @@ import { TimerAlertOverlay, TimerMiniIndicator } from './components/TimerAlertOv
 import { QuickTimerModal } from './components/QuickTimerModal';
 import { DevPage } from './pages/Dev';
 import { Page, Note, NotesData } from './types';
+
+// Lazy load pages for better performance
+const CalendarPage = lazy(() => import('./pages/Calendar').then(m => ({ default: m.CalendarPage })));
+const StatsPage = lazy(() => import('./pages/Stats').then(m => ({ default: m.StatsPage })));
+const SettingsPage = lazy(() => import('./pages/Settings').then(m => ({ default: m.SettingsPage })));
+const BoardPage = lazy(() => import('./pages/Board').then(m => ({ default: m.BoardPage })));
+const GithubPage = lazy(() => import('./pages/Github').then(m => ({ default: m.GithubPage })));
+const TimerPage = lazy(() => import('./pages/Timer').then(m => ({ default: m.TimerPage })));
+const ProgressPage = lazy(() => import('./pages/Progress').then(m => ({ default: m.ProgressPage })));
+
+// Preload function to load pages in background
+const preloadPages = () => {
+    // Delay preloading to not interfere with initial render
+    setTimeout(() => {
+        import('./pages/Calendar');
+        import('./pages/Settings');
+        import('./pages/Progress');
+    }, 1000);
+
+    setTimeout(() => {
+        import('./pages/Board');
+        import('./pages/Github');
+        import('./pages/Timer');
+        import('./pages/Stats');
+    }, 2000);
+};
 
 function App() {
     const [currentPage, setCurrentPage] = useState<Page>('dashboard');
@@ -39,34 +58,51 @@ function App() {
 
     // Dev Mode State
     const [showDev, setShowDev] = useState(false);
-    const [isMockMode, setIsMockMode] = useState(false);
+    const [isMockMode, setIsMockMode] = useState(() => {
+        return localStorage.getItem('dev_mock_mode') === 'true';
+    });
     const [isSetupDemoMode, setIsSetupDemoMode] = useState(false);
 
-    // Mock Data
+    // Sync mock mode to localStorage
+    useEffect(() => {
+        localStorage.setItem('dev_mock_mode', String(isMockMode));
+    }, [isMockMode]);
+
+    // Mock Data - designed to show green (completed), orange (late), red (missed), and predictive line
     const [mockNotesState, setMockNotesState] = useState<NotesData>({
-        // T-3: Completed (Green segment start)
+        // T-5: Completed on time (Green)
+        [new Date(Date.now() - 5 * 86400000).toISOString().split('T')[0]]: [
+            { id: '1', title: 'Sprint Planning', description: 'Weekly sprint setup.', time: '09:00', importance: 'high', completed: true }
+        ],
+        // T-4: Completed on time (Green)
+        [new Date(Date.now() - 4 * 86400000).toISOString().split('T')[0]]: [
+            { id: '2', title: 'Team Standup', description: 'Daily sync.', time: '10:00', importance: 'medium', completed: true }
+        ],
+        // T-3: Completed LATE (Orange)
         [new Date(Date.now() - 3 * 86400000).toISOString().split('T')[0]]: [
-            { id: '1', title: 'Project Kickoff', description: 'Initial planning phase.', time: '09:00', importance: 'high', completed: true }
+            { id: '3', title: 'Project Kickoff', description: 'Initial planning phase.', time: '09:00', importance: 'high', completed: true, completedLate: true }
         ],
-        // T-2: Missed (Red segment)
+        // T-2: Missed (Red)
         [new Date(Date.now() - 2 * 86400000).toISOString().split('T')[0]]: [
-            { id: '2', title: 'Submit Report', description: 'Weekly progress report.', time: '17:00', importance: 'medium', completed: false }
+            { id: '4', title: 'Submit Report', description: 'Weekly progress report.', time: '17:00', importance: 'medium', missed: true }
         ],
-        // T-1: Missed (Red segment)
+        // T-1: Completed LATE (Orange)
         [new Date(Date.now() - 1 * 86400000).toISOString().split('T')[0]]: [
-            { id: '3', title: 'Client Call', description: 'Discuss requirements.', time: '14:00', importance: 'high', completed: false }
+            { id: '5', title: 'Code Review', description: 'Review pull requests.', time: '14:00', importance: 'low', completed: true, completedLate: true }
         ],
-        // Upcoming (Predictive) - 5 tasks distributed
-        [new Date().toISOString().split('T')[0]]: [ // Today
-            { id: '4', title: 'Team Meeting', description: 'Sync up.', time: '10:00', importance: 'medium' },
-            { id: '5', title: 'Code Review', description: 'Review PRs.', time: '14:00', importance: 'low' }
+        // Today: Upcoming tasks
+        [new Date().toISOString().split('T')[0]]: [
+            { id: '6', title: 'Team Meeting', description: 'Sync up with team.', time: '10:00', importance: 'medium' },
+            { id: '7', title: 'Client Call', description: 'Discuss requirements.', time: '14:00', importance: 'high' }
         ],
-        [new Date(Date.now() + 1 * 86400000).toISOString().split('T')[0]]: [ // Tomorrow
-            { id: '6', title: 'Design Review', description: 'Check new mockups.', time: '11:00', importance: 'high' }
+        // Tomorrow: Upcoming
+        [new Date(Date.now() + 1 * 86400000).toISOString().split('T')[0]]: [
+            { id: '8', title: 'Design Review', description: 'Check new mockups.', time: '11:00', importance: 'high' }
         ],
-        [new Date(Date.now() + 2 * 86400000).toISOString().split('T')[0]]: [ // Day after tomorrow
-            { id: '7', title: 'Update Documentation', description: 'API docs.', time: '15:00', importance: 'low' },
-            { id: '8', title: 'Release Planning', description: 'Prepare for v2.0.', time: '16:00', importance: 'medium' }
+        // Day after tomorrow: Upcoming
+        [new Date(Date.now() + 2 * 86400000).toISOString().split('T')[0]]: [
+            { id: '9', title: 'Update Documentation', description: 'API docs.', time: '15:00', importance: 'low' },
+            { id: '10', title: 'Release Planning', description: 'Prepare for v2.0.', time: '16:00', importance: 'medium' }
         ]
     });
 
@@ -84,6 +120,11 @@ function App() {
         handleResize(); // Initial check
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    // Preload pages when Dashboard is active
+    useEffect(() => {
+        preloadPages();
     }, []);
 
     useEffect(() => {
@@ -462,46 +503,55 @@ function App() {
                     <main className="flex-1 h-full relative overflow-hidden">
                         <div className="h-full py-4 pr-4 pl-2">
                             <div className="h-full overflow-hidden relative">
-                                {currentPage === 'dashboard' && (
-                                    <Dashboard
-                                        notes={activeNotes}
-                                        onNavigateToNote={handleNavigateToNote}
-                                        userName={activeUserName}
-                                        onAddNote={handleAddNote}
-                                        onUpdateNote={handleUpdateNote}
-                                        onOpenAiModal={() => setIsAiModalOpen(true)}
-                                        isLoading={isLoading}
-                                        isSidebarCollapsed={isSidebarCollapsed}
-                                        isEditMode={isEditMode}
-                                        setIsEditMode={setIsEditMode}
-                                    />
-                                )}
-                                {currentPage === 'calendar' && (
-                                    <CalendarPage
-                                        notes={activeNotes}
-                                        setNotes={setNotes}
-                                        initialSelectedDate={selectedDate}
-                                        currentMonth={currentMonth}
-                                        setCurrentMonth={setCurrentMonth}
-                                        isSidebarCollapsed={isSidebarCollapsed}
-                                    />
-                                )}
-                                {currentPage === 'stats' && <StatsPage isSidebarCollapsed={isSidebarCollapsed} />}
-                                {currentPage === 'drawing' && <BoardPage />}
-                                {currentPage === 'github' && <GithubPage isMockMode={isMockMode} isSidebarCollapsed={isSidebarCollapsed} />}
-                                {currentPage === 'timer' && <TimerPage isSidebarCollapsed={isSidebarCollapsed} />}
-                                {currentPage === 'progress' && <ProgressPage notes={activeNotes} isSidebarCollapsed={isSidebarCollapsed} />}
-                                {currentPage === 'settings' && <SettingsPage />}
-                                {currentPage === 'dev' && (
-                                    <DevPage
-                                        isMockMode={isMockMode}
-                                        toggleMockMode={() => setIsMockMode(!isMockMode)}
-                                        onForceSetup={() => {
-                                            setIsSetupDemoMode(true);
-                                            setShowSetup(true);
-                                        }}
-                                    />
-                                )}
+                                <Suspense fallback={
+                                    <div className="flex h-full items-center justify-center">
+                                        <div className="animate-pulse flex flex-col items-center gap-2">
+                                            <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700"></div>
+                                            <div className="text-xs text-gray-400">Loading...</div>
+                                        </div>
+                                    </div>
+                                }>
+                                    {currentPage === 'dashboard' && (
+                                        <Dashboard
+                                            notes={activeNotes}
+                                            onNavigateToNote={handleNavigateToNote}
+                                            userName={activeUserName}
+                                            onAddNote={handleAddNote}
+                                            onUpdateNote={handleUpdateNote}
+                                            onOpenAiModal={() => setIsAiModalOpen(true)}
+                                            isLoading={isLoading}
+                                            isSidebarCollapsed={isSidebarCollapsed}
+                                            isEditMode={isEditMode}
+                                            setIsEditMode={setIsEditMode}
+                                        />
+                                    )}
+                                    {currentPage === 'calendar' && (
+                                        <CalendarPage
+                                            notes={activeNotes}
+                                            setNotes={setNotes}
+                                            initialSelectedDate={selectedDate}
+                                            currentMonth={currentMonth}
+                                            setCurrentMonth={setCurrentMonth}
+                                            isSidebarCollapsed={isSidebarCollapsed}
+                                        />
+                                    )}
+                                    {currentPage === 'stats' && <StatsPage isSidebarCollapsed={isSidebarCollapsed} />}
+                                    {currentPage === 'drawing' && <BoardPage />}
+                                    {currentPage === 'github' && <GithubPage isMockMode={isMockMode} isSidebarCollapsed={isSidebarCollapsed} />}
+                                    {currentPage === 'timer' && <TimerPage isSidebarCollapsed={isSidebarCollapsed} />}
+                                    {currentPage === 'progress' && <ProgressPage notes={activeNotes} isSidebarCollapsed={isSidebarCollapsed} />}
+                                    {currentPage === 'settings' && <SettingsPage />}
+                                    {currentPage === 'dev' && (
+                                        <DevPage
+                                            isMockMode={isMockMode}
+                                            toggleMockMode={() => setIsMockMode(!isMockMode)}
+                                            onForceSetup={() => {
+                                                setIsSetupDemoMode(true);
+                                                setShowSetup(true);
+                                            }}
+                                        />
+                                    )}
+                                </Suspense>
                             </div>
                         </div>
                     </main>

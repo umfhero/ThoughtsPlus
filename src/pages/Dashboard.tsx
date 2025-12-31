@@ -137,9 +137,8 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
         return [
             { id: 'row-1', widgets: ['briefing'] },
             { id: 'row-2', widgets: ['main_content'] },
-            { id: 'row-3', widgets: ['github'] },
-            { id: 'row-4', widgets: ['fortnite'] },
-            { id: 'row-5', widgets: ['board'] }
+            { id: 'row-3', widgets: ['board'] },
+            { id: 'row-4', widgets: ['github'] }
         ];
     });
 
@@ -148,7 +147,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
         if (saved) {
             return JSON.parse(saved);
         }
-        return [];
+        return ['fortnite'];
     });
     const longPressTimer = useRef<NodeJS.Timeout | null>(null);
     const [showEditTip, setShowEditTip] = useState(false);
@@ -1099,8 +1098,16 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
             // In dev mode, skip AI briefing unless explicitly enabled in Settings
             if (import.meta.env.DEV) {
                 const devBriefingEnabled = localStorage.getItem('dev_enable_ai_briefing') === 'true';
+                const isMockModeActive = localStorage.getItem('dev_mock_mode') === 'true';
+
                 if (!devBriefingEnabled) {
-                    setAiSummary("AI briefing disabled in dev mode. Enable in Settings → AI Configuration.");
+                    if (isMockModeActive) {
+                        // Show mock briefing when mock mode is active
+                        setAiSummary("Good morning! You have **3 upcoming tasks** this week. Your **Project Kickoff** meeting went well yesterday. Don't forget to **Submit Report** by end of day, and prepare for tomorrow's **Client Call**. Keep up the great work!");
+                    } else {
+                        // Show disabled message when not in mock mode
+                        setAiSummary("AI briefing disabled in dev mode. Enable in Settings → AI Configuration.");
+                    }
                     return;
                 }
             }

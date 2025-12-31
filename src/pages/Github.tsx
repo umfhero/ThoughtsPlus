@@ -136,6 +136,19 @@ export function GithubPage({ isMockMode, isSidebarCollapsed = false }: { isMockM
 
     useEffect(() => {
         if (!isMockMode && githubUsername) {
+            // First try to load cached data for this username
+            const cachedProfile = localStorage.getItem(`github_profile_${githubUsername}`);
+            const cachedRepos = localStorage.getItem(`github_repos_${githubUsername}`);
+            const cachedReadme = localStorage.getItem(`github_readme_${githubUsername}`);
+
+            if (cachedProfile && cachedRepos) {
+                setProfile(JSON.parse(cachedProfile));
+                setRepos(JSON.parse(cachedRepos));
+                if (cachedReadme) setReadme(cachedReadme);
+                setLoading(false); // Show cached data immediately
+            }
+
+            // Then fetch fresh data in background
             fetchGithubData();
         }
     }, [githubUsername, isMockMode]);
@@ -205,7 +218,8 @@ export function GithubPage({ isMockMode, isSidebarCollapsed = false }: { isMockM
         }
 
         try {
-            setLoading(true);
+            // Only set loading true if we don't have profile data yet
+            if (!profile) setLoading(true);
             setError(null);
 
             // Get user-configured token
@@ -236,7 +250,13 @@ export function GithubPage({ isMockMode, isSidebarCollapsed = false }: { isMockM
             if (readmeRes.ok) {
                 const readmeHtml = await readmeRes.text();
                 setReadme(readmeHtml);
+                localStorage.setItem(`github_readme_${githubUsername}`, readmeHtml);
             }
+
+            // Cache the data
+            localStorage.setItem(`github_profile_${githubUsername}`, JSON.stringify(userData));
+            localStorage.setItem(`github_repos_${githubUsername}`, JSON.stringify(filteredRepos));
+
         } catch (err) {
             setError('Failed to load Github data. Please check your username and internet connection.');
             console.error(err);
@@ -338,8 +358,8 @@ export function GithubPage({ isMockMode, isSidebarCollapsed = false }: { isMockM
                                         key={year}
                                         onClick={() => setSelectedYear(year)}
                                         className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${selectedYear === year
-                                                ? 'text-white'
-                                                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                                            ? 'text-white'
+                                            : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                                             }`}
                                         style={selectedYear === year ? { backgroundColor: accentColor } : undefined}
                                     >

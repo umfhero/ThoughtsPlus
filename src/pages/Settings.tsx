@@ -35,7 +35,7 @@ export function SettingsPage() {
     const [enabledFeatures, setEnabledFeatures] = useState({
         calendar: true,
         drawing: true,
-        stats: true,
+        stats: false,
         github: true,
         timer: true,
         aiDescriptions: !import.meta.env.DEV // false in dev, true in production
