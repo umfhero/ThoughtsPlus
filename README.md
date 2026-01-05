@@ -173,15 +173,6 @@ If you're forking this project, you can preserve your personal baseline data:
 
 ## Version History
 
-### v5.5.0 - Minor Improvements
-
-![GitHub Downloads (specific release)](https://img.shields.io/github/downloads/umfhero/ThoughtsPlus/v5.5.0/total?label=v5.5.0%20downloads)
-
-**Quality of life update:** Minor UI fixes and visual polish.
-
-- **Progress Page** - Fixed pluralisation issue with "weeks with tasks" label
-- **Visual Polish** - Enhanced accent colour visibility on This Week card
-
 ### v5.4.0 - The Rebrand (ThoughtsPlus)
 
 ![GitHub Downloads (specific release)](https://img.shields.io/github/downloads/umfhero/ThoughtsPlus/v5.4.0/total?label=v5.4.0%20downloads)
