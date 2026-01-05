@@ -145,30 +145,6 @@ If you're forking this project, you can preserve your personal baseline data:
 | <img src="git/newpics/thoughtsplus/settings.png" width="400" /><br>**Settings**<br>Comprehensive configuration for AI, integrations, storage, and notifications. |  <img src="git/newpics/thoughtsplus/settingsappearnce.png" width="400" /><br>**Appearance**<br>Theming, accent colours, and UI customisation powered by Tailwind CSS.   |
 |                        <img src="git/newpics/thoughtsplus/settingsfeaturetoggle.png" width="400" /><br>**Feature Toggles**<br>Modular architecture allowing dynamic feature enabling.                        | <img src="git/newpics/thoughtsplus/boardwidget.png" width="400" /><br>**Board Preview Widget**<br>Live dashboard widget showing your recent boards at a glance. |
 
-## Roadmap
-
-### Planned Features
-
-- **Microsoft Store Distribution** - Currently in progress! Publishing to the Microsoft Store to resolve "Unknown Publisher" warnings and enable seamless background updates. Updates will be announced soon.
-- **On hover Hour timer** - Hoverable hover to see count time in hours instead of days/weeks
-- **Pets** - Mini pets that hang out in the app that are mini AIs (based on personality) that mentions notifcations etc
-- **Advanced Appearance Settings** - Custom font uploads, extended accent colour support (backgrounds, icons)
-- **Dashboard Edit Mode** - Rearrange and add widgets to customise the dashboard layout - **Completed**
-- **Refactor API Logic** - Implemented robust AI model fallback system (Gemini 2.5 -> 2.0 -> 1.5) to prevent API errors and ensure reliability - **Completed**
-- **Third-Party Calendar Imports** - Selective import/export capabilities for external calendars - **Completed**
-- **AI Quick Note with Recurring Options** - Quick note creation with flexible repetition settings - **Completed**
-- **Settings Management** - Notification toggles etc - **Completed**
-- **Task Completion Analytics** - Track completed vs incomplete tasks with weekly/monthly/yearly performance graphs - **Completed**
-- **Enhanced Data Visualisation** - More charts, trends, and insights into your productivity patterns - **Completed**
-- **Self-hosted Website** - Official website for ThoughtsPlus with intuitive onboarding, easy downloads and the latest news and updates - **Completed**
-- **Auto Update** - Automatic updates with self-deletion of old versions and seamless data migration, removing the need to manually uninstall and transfer files - **Completed**
-- **Global Keyboard Shortcuts** - Native support for standard shortcuts (Ctrl+C, Ctrl+V, Ctrl+A) across the entire application - **Completed**
-
-### Future Considerations
-
-- **Mobile Support (PWA)** - A Progressive Web App implementation for mobile access, featuring "Add to Home Screen" capability and push notifications for task reminders without app store fees.
-- **Data Persistence & Sync (Migration to v2)** - Transitioning to a cloud-hybrid model using Supabase (PostgreSQL) for real-time multi-device syncing, while retaining offline capabilities via local caching.
-
 ---
 
 ## Version History
