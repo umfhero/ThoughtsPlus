@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="git/newpics/thoughtsplus/ThoughtsPlusStack.png" alt="ThoughtsPlus Banner" width="70%" style="border-radius: 15px;" />
+  <img src="git/newpics/thoughtsplus/Thoughts+Stack.png" alt="ThoughtsPlus Banner" width="70%" style="border-radius: 15px;" />
 
   <h3>ThoughtsPlus</h3>
 
@@ -175,7 +175,7 @@ If you're forking this project, you can preserve your personal baseline data:
 
 ### v5.5.0 - Minor Improvements
 
-![GitHub Downloads (specific release)](https://img.shields.io/github/downloads/umfhero/ThoughtsPlus/v5.5.0/total?label=v5.5.0%20downloads)
+![GitHub Downloads (specific release)](https://img.shields.io/github/downloads/umfhero/Thoughts+/v5.5.0/total?label=v5.5.0%20downloads)
 
 **Quality of life update:** Minor UI fixes and visual polish.
 
