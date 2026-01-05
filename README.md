@@ -137,17 +137,62 @@ If you're forking this project, you can preserve your personal baseline data:
 
 ### Application Tour
 
-|                                                                                                                                                                          |                                                                                                                                                    |
-| :----------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :------------------------------------------------------------------------------------------------------------------------------------------------: |
-|                  <img src="git/newpics/thoughtsplus/onbaording.png" width="400" /><br>**Setup Wizard**<br>First-run onboarding experience with feature highlights.                  |    <img src="git/newpics/thoughtsplus/calendar.png" width="400" /><br>**Interactive Calendar**<br>Robust event management with recurring tasks and AI-powered creation.     |
-|                  <img src="git/newpics/thoughtsplus/timer.png" width="400" /><br>**Advanced Timer**<br>Microwave-style input, stopwatch mode, and persistent history.                  |       <img src="git/newpics/thoughtsplus/board.png" width="400" /><br>**Board / Whiteboard**<br>Infinite canvas with customisable sticky notes and backgrounds.       |
-|                    <img src="git/newpics/thoughtsplus/github.png" width="400" /><br>**GitHub Integration**<br>View your contribution graph and profile directly in the app.                     |    <img src="git/newpics/thoughtsplus/creatorstats.png" width="400" /><br>**Creator Stats**<br>Fortnite analytics with playtime, players, and favourites tracking.    |
-| <img src="git/newpics/thoughtsplus/settings.png" width="400" /><br>**Settings**<br>Comprehensive configuration for AI, integrations, storage, and notifications. |  <img src="git/newpics/thoughtsplus/settingsappearnce.png" width="400" /><br>**Appearance**<br>Theming, accent colours, and UI customisation powered by Tailwind CSS.   |
-|                        <img src="git/newpics/thoughtsplus/settingsfeaturetoggle.png" width="400" /><br>**Feature Toggles**<br>Modular architecture allowing dynamic feature enabling.                        | <img src="git/newpics/thoughtsplus/boardwidget.png" width="400" /><br>**Board Preview Widget**<br>Live dashboard widget showing your recent boards at a glance. |
+|                                                                                                                                                                  |                                                                                                                                                                      |
+| :--------------------------------------------------------------------------------------------------------------------------------------------------------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
+|        <img src="git/newpics/thoughtsplus/onbaording.png" width="400" /><br>**Setup Wizard**<br>First-run onboarding experience with feature highlights.         | <img src="git/newpics/thoughtsplus/calendar.png" width="400" /><br>**Interactive Calendar**<br>Robust event management with recurring tasks and AI-powered creation. |
+|       <img src="git/newpics/thoughtsplus/timer.png" width="400" /><br>**Advanced Timer**<br>Microwave-style input, stopwatch mode, and persistent history.       |      <img src="git/newpics/thoughtsplus/board.png" width="400" /><br>**Board / Whiteboard**<br>Infinite canvas with customisable sticky notes and backgrounds.       |
+|     <img src="git/newpics/thoughtsplus/github.png" width="400" /><br>**GitHub Integration**<br>View your contribution graph and profile directly in the app.     |   <img src="git/newpics/thoughtsplus/creatorstats.png" width="400" /><br>**Creator Stats**<br>Fortnite analytics with playtime, players, and favourites tracking.    |
+| <img src="git/newpics/thoughtsplus/settings.png" width="400" /><br>**Settings**<br>Comprehensive configuration for AI, integrations, storage, and notifications. | <img src="git/newpics/thoughtsplus/settingsappearnce.png" width="400" /><br>**Appearance**<br>Theming, accent colours, and UI customisation powered by Tailwind CSS. |
+|  <img src="git/newpics/thoughtsplus/settingsfeaturetoggle.png" width="400" /><br>**Feature Toggles**<br>Modular architecture allowing dynamic feature enabling.  |   <img src="git/newpics/thoughtsplus/boardwidget.png" width="400" /><br>**Board Preview Widget**<br>Live dashboard widget showing your recent boards at a glance.    |
 
 ---
 
 ## Version History
+
+### v5.6.0 - The Layout Update
+
+![GitHub Downloads (specific release)](https://img.shields.io/github/downloads/umfhero/ThoughtsPlus/v5.6.0/total?label=v5.6.0%20downloads)
+
+**The customisation update:** Multiple dashboard layouts, Focus-Centric UI with bottom navigation, and enhanced Progress page with task completion.
+
+#### Dashboard Layout Presets
+
+- **Default Layout** - Classic widget-based dashboard with Events, Trends, and Board Preview.
+- **Focus-Centric Layout** - Minimalist design with Playfair Display font, centred greeting, and elegant bottom navigation bar.
+- **Timeline & Flow Layout** - Left-side timeline view with clickable completion dots for upcoming events.
+- **Calendar-Centric Layout** - Large calendar view with integrated task statistics and trends.
+
+#### Progress Page Enhancements
+
+- **Events Panel** - Added "Events This Week" container matching the Dashboard style.
+- **Time Range Sync** - Events panel automatically syncs with Task Trends time range (1D/1W/1M/ALL).
+- **Task Completion** - Complete/uncomplete tasks directly from Progress page with confetti celebration.
+- **Coloured Task Cards** - Importance-based colours (High=Red, Medium=Amber, Low=Green).
+- **Overdue Banners** - Visual "OVERDUE" indicator on past-due tasks.
+
+#### UI Improvements
+
+- **Icon-Only Sidebar Mode** - Toggle sidebar between full labels and compact icons-only view.
+- **Layout Previews** - Visual preview cards in Settings for each dashboard layout option.
+- **Better Click Targets** - Larger, easier-to-click checkboxes throughout the application.
+- **Stable Scrolling** - Fixed scrollbar glitches with improved gutter styling.
+
+---
+
+### v5.5.0 - The Progress Update
+
+![GitHub Downloads (specific release)](https://img.shields.io/github/downloads/umfhero/ThoughtsPlus/v5.5.0/total?label=v5.5.0%20downloads)
+
+**The analytics update:** New Progress page with weekly/monthly tracking, streak indicators, and performance improvements.
+
+- **Progress Page** - Dedicated analytics page with weekly/monthly completion tracking.
+- **Week Details Modal** - Click any week to see detailed task breakdown and statistics.
+- **Streak Tracking** - Visual streak indicators with best streak records.
+- **Lazy Loading** - Improved performance with code-splitting for all pages.
+- **Taskbar Badge** - Windows taskbar shows pending task count.
+- **1D Chart Filter** - New "Today" option added to Task Trends chart.
+
+---
 
 ### v5.4.0 - The Rebrand (ThoughtsPlus)
 

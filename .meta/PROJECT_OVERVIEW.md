@@ -293,6 +293,61 @@ const result = await window.ipcRenderer.invoke("my-handler", arg1, arg2);
 
 ## Recent Version History
 
+### V5.6.0 - The Layout Update
+
+_Focus: Multiple dashboard layouts, Focus-Centric UI, and Progress page enhancements._
+
+#### New Features
+
+- **Dashboard Layout Presets**:
+
+  - **Default Layout**: Classic widget-based dashboard with Events, Trends, and Board Preview.
+  - **Focus-Centric Layout**: Minimalist design with Playfair Display font, centered content, and bottom navigation bar.
+  - **Timeline & Flow Layout**: Left-side timeline view with upcoming events and completion checkboxes.
+  - **Calendar-Centric Layout**: Large calendar view with integrated task stats and trends.
+
+- **Focus-Centric Dashboard**:
+
+  - **Bottom Navigation Bar**: Landscape-oriented nav bar with icon tooltips.
+  - **Collapsible Nav**: Hide/show bottom bar with smooth animations.
+  - **Logo Header**: Centered Thoughts+ logo in top-left corner.
+  - **Playfair Display Font**: Elegant serif typography for headers.
+
+- **Timeline-Flow Completion**:
+
+  - **Clickable Timeline Dots**: Complete tasks directly from timeline view.
+  - **Visual Feedback**: Completed tasks show green checkmark and strikethrough title.
+
+- **Progress Page Enhancements**:
+  - **Events Panel**: Added "Events This Week" container matching Dashboard style.
+  - **Time Range Sync**: Events panel syncs with Task Trends time range (1D/1W/1M/ALL).
+  - **Task Completion**: Click checkboxes to complete/uncomplete tasks with confetti animation.
+  - **Coloured Task Cards**: Importance-based colors (High=Red, Medium=Amber, Low=Green).
+  - **Overdue Banners**: Visual "OVERDUE" indicator on past-due tasks.
+  - **Improved Scrolling**: Fixed scrollbar glitches with stable gutter styling.
+
+#### Improvements
+
+- **Icon-Only Sidebar Mode**: Toggle sidebar between full labels and icons-only.
+- **Layout Previews**: Visual preview cards in Settings for each dashboard layout.
+- **Notifications Removed**: Cleaned up unused notification toast system.
+- **Better Click Targets**: Larger, easier-to-click checkboxes throughout the app.
+
+---
+
+### V5.5.0 - The Progress Update
+
+_Focus: Progress page analytics, weekly tracking, and performance._
+
+- **Progress Page**: New dedicated page with weekly/monthly completion analytics.
+- **Week Details Modal**: Click any week to see detailed task breakdown.
+- **Streak Tracking**: Visual streak indicators and best streak records.
+- **Lazy Loading**: Improved performance with code-splitting for all pages.
+- **Taskbar Badge**: Windows taskbar shows pending task count.
+- **1D Chart Filter**: New "Today" option for Task Trends chart.
+
+---
+
 ### V5.4.0 - Thoughts+ Rebrand
 
 _Focus: Rebranding to Thoughts+, new logo, and website update._
@@ -419,7 +474,7 @@ _Focus: Infinite canvas, sticky notes, and recurrence._
 ```json
 {
   "name": "thoughts-plus",
-  "version": "5.5.0",
+  "version": "5.6.0",
   "author": "umf",
   "productName": "Thoughts+",
   "build": {
@@ -484,4 +539,4 @@ _Focus: Infinite canvas, sticky notes, and recurrence._
 
 ---
 
-_Last updated: January 4, 2026 (v5.5.0)_
+_Last updated: January 5, 2026 (v5.6.0)_
