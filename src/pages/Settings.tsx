@@ -1375,49 +1375,6 @@ export function SettingsPage() {
                                         </button>
                                     </div>
                                 )}
-
-                                {/* Preview of current sidebar state */}
-                                <div className="p-4 rounded-xl bg-gray-100 dark:bg-gray-700/30 border border-gray-200 dark:border-gray-600">
-                                    <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-3">Current Preview</p>
-                                    <div className="flex items-center gap-3">
-                                        <div className={clsx(
-                                            "rounded-lg bg-gray-800 dark:bg-gray-900 transition-all flex flex-col items-center py-3 gap-2",
-                                            effectiveSidebarIconOnly ? "w-12 px-2" : "w-32 px-3"
-                                        )}>
-                                            <div className="w-6 h-6 rounded bg-gray-700" style={{ backgroundColor: accentColor }} />
-                                            {!effectiveSidebarIconOnly && (
-                                                <div className="w-full space-y-1.5">
-                                                    <div className="h-2 w-full bg-gray-700 rounded" />
-                                                    <div className="h-2 w-3/4 bg-gray-700 rounded" />
-                                                </div>
-                                            )}
-                                            <div className="w-full mt-1 space-y-1">
-                                                {[1, 2, 3].map(i => (
-                                                    <div key={i} className={clsx(
-                                                        "h-4 bg-gray-700 rounded flex items-center gap-1 px-1",
-                                                        effectiveSidebarIconOnly ? "w-6 justify-center" : "w-full"
-                                                    )}>
-                                                        <div className="w-2 h-2 rounded bg-gray-600" />
-                                                        {!effectiveSidebarIconOnly && <div className="h-1.5 flex-1 bg-gray-600 rounded" />}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                        <div className="text-sm text-gray-600 dark:text-gray-400">
-                                            {effectiveSidebarIconOnly ? (
-                                                <span className="flex items-center gap-1.5">
-                                                    <Check className="w-4 h-4 text-green-500" />
-                                                    Compact icon mode
-                                                </span>
-                                            ) : (
-                                                <span className="flex items-center gap-1.5">
-                                                    <Check className="w-4 h-4 text-green-500" />
-                                                    Full sidebar with labels
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
                             </div>
                         </div>
                     </div>
