@@ -44,11 +44,6 @@ export function SettingsPage() {
         aiDescriptions: !import.meta.env.DEV // false in dev, true in production
     });
 
-    // Companion Mode
-    const [companionMode, setCompanionMode] = useState(() => {
-        return localStorage.getItem('companion-mode') === 'true';
-    });
-
     // Dev mode AI briefing toggle (only used in dev mode)
     const [enableDevBriefing, setEnableDevBriefing] = useState(() => {
         return localStorage.getItem('dev_enable_ai_briefing') === 'true';
@@ -243,18 +238,6 @@ export function SettingsPage() {
         localStorage.setItem('feature-toggles', JSON.stringify(newFeatures));
         // Dispatch custom event to notify other components
         window.dispatchEvent(new CustomEvent('feature-toggles-changed', { detail: newFeatures }));
-    };
-
-    const toggleCompanionMode = () => {
-        const newValue = !companionMode;
-        setCompanionMode(newValue);
-        localStorage.setItem('companion-mode', String(newValue));
-        window.dispatchEvent(new CustomEvent('companion-mode-changed', { detail: newValue }));
-        addNotification({
-            title: newValue ? 'Companion Mode Enabled' : 'Companion Mode Disabled',
-            message: newValue ? 'Your companion pet is now visible!' : 'Your companion pet has been hidden.',
-            type: 'info'
-        });
     };
 
     const handleSelectFolder = async () => {
@@ -1564,31 +1547,6 @@ export function SettingsPage() {
                                     layout
                                     className="w-4 h-4 rounded-full bg-white shadow-md"
                                     animate={{ x: enabledFeatures.timer ? 16 : 0 }}
-                                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                                />
-                            </button>
-                        </div>
-
-                        {/* Companion Mode Toggle */}
-                        <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600">
-                            <div className="flex items-center gap-3">
-                                <Heart className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                                <div>
-                                    <span className="font-medium text-gray-800 dark:text-gray-200">Companion Mode</span>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Show a pet companion on all pages</p>
-                                </div>
-                            </div>
-                            <button
-                                onClick={toggleCompanionMode}
-                                className={clsx(
-                                    "w-10 h-6 rounded-full p-1 transition-colors duration-300 focus:outline-none",
-                                    companionMode ? "bg-pink-500" : "bg-gray-300 dark:bg-gray-600"
-                                )}
-                            >
-                                <motion.div
-                                    layout
-                                    className="w-4 h-4 rounded-full bg-white shadow-md"
-                                    animate={{ x: companionMode ? 16 : 0 }}
                                     transition={{ type: "spring", stiffness: 500, damping: 30 }}
                                 />
                             </button>

@@ -9,7 +9,8 @@ import {
     Sparkles,
     X,
     ArrowUp,
-    Timer
+    Timer,
+    Code
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Page } from '../types';
@@ -71,6 +72,7 @@ export function ShortcutsOverlay({ currentPage }: ShortcutsOverlayProps) {
         { icon: PenTool, key: 'Ctrl + B', description: 'Board', color: 'text-white' },
         { icon: Github, key: 'Ctrl + G', description: 'Github', color: 'text-white' },
         { icon: Settings, key: 'Ctrl + S', description: 'Settings', color: 'text-white' },
+        { icon: Code, key: 'Ctrl + /', description: 'Dev Tools', color: 'text-white' },
         { icon: ArrowUp, key: 'Ctrl + ↑/↓', description: 'Navigate Pages', color: 'text-white' },
         { icon: X, key: 'Esc', description: 'Close Menus / Sidebar', color: 'text-white' },
     ];

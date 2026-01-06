@@ -243,6 +243,41 @@ export function DevPage({ isMockMode, toggleMockMode, onForceSetup }: DevPagePro
                 <div className="bg-blue-50 dark:bg-blue-900/10 rounded-xl p-4 md:p-6 border border-blue-200 dark:border-blue-800/30 shadow-sm h-fit">
                     <h2 className="text-xl font-semibold mb-4 text-blue-600 dark:text-blue-400">Dashboard Tools</h2>
                     <div className="space-y-4">
+                        {/* Companion Mode Toggle */}
+                        <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                            <div className="flex flex-col min-w-0 pr-2">
+                                <span className="font-medium text-gray-800 dark:text-gray-200 truncate">Companion Pets</span>
+                                <span className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+                                    Show a pet companion that floats on all pages
+                                </span>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    const current = localStorage.getItem('companion-mode') === 'true';
+                                    const newValue = !current;
+                                    localStorage.setItem('companion-mode', String(newValue));
+                                    window.dispatchEvent(new CustomEvent('companion-mode-changed', { detail: newValue }));
+                                    addNotification({
+                                        title: newValue ? 'Companion Mode Enabled' : 'Companion Mode Disabled',
+                                        message: newValue ? 'Your companion pet is now visible!' : 'Your companion pet has been hidden.',
+                                        type: 'info',
+                                        duration: 2000
+                                    });
+                                }}
+                                className={clsx(
+                                    "w-10 h-6 rounded-full p-1 transition-colors duration-300 flex-shrink-0",
+                                    localStorage.getItem('companion-mode') === 'true'
+                                        ? "bg-pink-500"
+                                        : "bg-gray-300 dark:bg-gray-600"
+                                )}
+                            >
+                                <div className={clsx(
+                                    "w-4 h-4 rounded-full bg-white shadow-md transition-transform",
+                                    localStorage.getItem('companion-mode') === 'true' ? "translate-x-4" : ""
+                                )} />
+                            </button>
+                        </div>
+
                         {/* Add this in the Dev Tools settings section */}
                         <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
                             <div className="flex flex-col min-w-0 pr-2">
