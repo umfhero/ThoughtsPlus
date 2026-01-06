@@ -1,4 +1,5 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
+import { motion } from 'framer-motion';
 import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './pages/Dashboard';
 import { AiQuickAddModal } from './components/AiQuickAddModal';
@@ -62,6 +63,11 @@ function App() {
         return localStorage.getItem('dev_mock_mode') === 'true';
     });
     const [isSetupDemoMode, setIsSetupDemoMode] = useState(false);
+
+    // Companion Mode State
+    const [companionMode, setCompanionMode] = useState(() => {
+        return localStorage.getItem('companion-mode') === 'true';
+    });
 
     // Sync mock mode to localStorage
     useEffect(() => {
@@ -131,6 +137,16 @@ function App() {
         checkFirstRun();
         loadNotes();
         loadUserName();
+
+        // Listen for companion mode changes
+        const handleCompanionModeChange = (event: CustomEvent) => {
+            setCompanionMode(event.detail);
+        };
+        window.addEventListener('companion-mode-changed', handleCompanionModeChange as EventListener);
+
+        return () => {
+            window.removeEventListener('companion-mode-changed', handleCompanionModeChange as EventListener);
+        };
     }, []);
 
     useEffect(() => {
@@ -533,6 +549,7 @@ function App() {
                 handleUpdateNote={handleUpdateNote}
                 setIsSetupDemoMode={setIsSetupDemoMode}
                 setShowSetup={setShowSetup}
+                companionMode={companionMode}
             />
         </TimerProvider>
         </DashboardLayoutProvider>
@@ -567,6 +584,7 @@ interface AppContentProps {
     handleUpdateNote: (note: Note, date: Date) => void;
     setIsSetupDemoMode: (value: boolean) => void;
     setShowSetup: (value: boolean) => void;
+    companionMode: boolean;
 }
 
 function AppContent(props: AppContentProps) {
@@ -578,7 +596,7 @@ function AppContent(props: AppContentProps) {
         selectedDate, setNotes, isMockMode, setIsMockMode,
         isAiModalOpen, setIsAiModalOpen, isQuickTimerOpen, setIsQuickTimerOpen,
         handleNavigateToNote, handleMonthSelect, handleAddNote, handleUpdateNote,
-        setIsSetupDemoMode, setShowSetup
+        setIsSetupDemoMode, setShowSetup, companionMode
     } = props;
 
     return (
@@ -674,6 +692,30 @@ function AppContent(props: AppContentProps) {
                 onClose={() => setIsQuickTimerOpen(false)}
             />
             <TimerMiniIndicator isSidebarCollapsed={isSidebarCollapsed} />
+
+            {/* Companion Pet */}
+            {companionMode && (
+                <motion.div
+                    initial={{ opacity: 0, scale: 0 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0 }}
+                    className="fixed bottom-6 right-6 z-40 pointer-events-none select-none"
+                >
+                    <motion.div
+                        animate={{
+                            y: [0, -10, 0],
+                        }}
+                        transition={{
+                            duration: 2,
+                            repeat: Infinity,
+                            ease: "easeInOut"
+                        }}
+                        className="text-6xl drop-shadow-lg"
+                    >
+                        🐱
+                    </motion.div>
+                </motion.div>
+            )}
         </div>
     );
 }

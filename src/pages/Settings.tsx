@@ -44,6 +44,11 @@ export function SettingsPage() {
         aiDescriptions: !import.meta.env.DEV // false in dev, true in production
     });
 
+    // Companion Mode
+    const [companionMode, setCompanionMode] = useState(() => {
+        return localStorage.getItem('companion-mode') === 'true';
+    });
+
     // Dev mode AI briefing toggle (only used in dev mode)
     const [enableDevBriefing, setEnableDevBriefing] = useState(() => {
         return localStorage.getItem('dev_enable_ai_briefing') === 'true';
@@ -238,6 +243,18 @@ export function SettingsPage() {
         localStorage.setItem('feature-toggles', JSON.stringify(newFeatures));
         // Dispatch custom event to notify other components
         window.dispatchEvent(new CustomEvent('feature-toggles-changed', { detail: newFeatures }));
+    };
+
+    const toggleCompanionMode = () => {
+        const newValue = !companionMode;
+        setCompanionMode(newValue);
+        localStorage.setItem('companion-mode', String(newValue));
+        window.dispatchEvent(new CustomEvent('companion-mode-changed', { detail: newValue }));
+        addNotification({
+            title: newValue ? 'Companion Mode Enabled' : 'Companion Mode Disabled',
+            message: newValue ? 'Your companion pet is now visible!' : 'Your companion pet has been hidden.',
+            type: 'info'
+        });
     };
 
     const handleSelectFolder = async () => {
@@ -1094,7 +1111,7 @@ export function SettingsPage() {
                     initial={{ y: -15, scale: 0.97 }}
                     animate={{ y: 0, scale: 1 }}
                     transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.35 }}
-                    className="p-6 rounded-3xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50 h-full"
+                    className="p-6 rounded-3xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50"
                 >
                     <div className="flex items-center gap-3 mb-6">
                         <div className="p-2.5 rounded-xl bg-pink-50 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400">
@@ -1106,7 +1123,7 @@ export function SettingsPage() {
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                         {/* Left Column: Accent & Font */}
                         {/* Left Column: Accent & Font */}
-                        <div className="flex flex-col gap-6 h-full">
+                        <div className="flex flex-col gap-6">
                             {/* Accent Color */}
                             <div className="flex-1 flex flex-col">
                                 <p className="text-sm xl:text-lg font-medium text-gray-700 dark:text-gray-300 mb-4">Accent Color</p>
@@ -1158,7 +1175,7 @@ export function SettingsPage() {
                             {/* Font Selection */}
                             <div className="flex-[1.5] flex flex-col">
                                 <p className="text-sm xl:text-lg font-medium text-gray-700 dark:text-gray-300 mb-4">Application Font</p>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 xl:gap-4 h-full">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 xl:gap-4">
                                     {['Outfit', 'Inter', 'Roboto', 'Poppins', 'Lato'].map(font => (
                                         <button
                                             key={font}
@@ -1198,9 +1215,9 @@ export function SettingsPage() {
 
                         {/* Right Column: Theme Previews */}
                         {/* Right Column: Theme Previews */}
-                        <div className="flex flex-col h-full">
+                        <div className="flex flex-col">
                             <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Theme Mode</p>
-                            <div className="grid grid-cols-1 gap-6 h-full">
+                            <div className="grid grid-cols-1 gap-6">
                                 <button
                                     onClick={() => setTheme('light')}
                                     className={clsx(
@@ -1547,6 +1564,31 @@ export function SettingsPage() {
                                     layout
                                     className="w-4 h-4 rounded-full bg-white shadow-md"
                                     animate={{ x: enabledFeatures.timer ? 16 : 0 }}
+                                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                                />
+                            </button>
+                        </div>
+
+                        {/* Companion Mode Toggle */}
+                        <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600">
+                            <div className="flex items-center gap-3">
+                                <Heart className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                                <div>
+                                    <span className="font-medium text-gray-800 dark:text-gray-200">Companion Mode</span>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Show a pet companion on all pages</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={toggleCompanionMode}
+                                className={clsx(
+                                    "w-10 h-6 rounded-full p-1 transition-colors duration-300 focus:outline-none",
+                                    companionMode ? "bg-pink-500" : "bg-gray-300 dark:bg-gray-600"
+                                )}
+                            >
+                                <motion.div
+                                    layout
+                                    className="w-4 h-4 rounded-full bg-white shadow-md"
+                                    animate={{ x: companionMode ? 16 : 0 }}
                                     transition={{ type: "spring", stiffness: 500, damping: 30 }}
                                 />
                             </button>
