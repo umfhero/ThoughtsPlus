@@ -1,0 +1,93 @@
+/* Local Font Definitions - Bundled for APPX/Store compatibility */
+/* These fonts are loaded locally to avoid network issues in sandboxed environments */
+/* Note: For the initial APPX release, we use system fonts as fallback */
+
+/* Font Stack Strategy for APPX:
+   - Playfair Display falls back to Georgia (serif, elegant)
+   - Outfit falls back to -apple-system, Segoe UI (clean, modern)
+   - Inter falls back to system UI fonts
+   - Architects Daughter falls back to Comic Sans MS (handwriting-like)
+*/
+
+/* Attempt to load local font files if they exist */
+@font-face {
+    font-family: 'Outfit-Local';
+    font-style: normal;
+    font-weight: 300;
+    font-display: swap;
+    src: url('./Outfit-Light.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'Outfit-Local';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('./Outfit-Regular.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'Outfit-Local';
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url('./Outfit-Medium.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'Outfit-Local';
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url('./Outfit-SemiBold.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'Outfit-Local';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('./Outfit-Bold.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'PlayfairDisplay-Local';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('./PlayfairDisplay-Regular.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'PlayfairDisplay-Local';
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url('./PlayfairDisplay-Medium.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'PlayfairDisplay-Local';
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url('./PlayfairDisplay-SemiBold.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'PlayfairDisplay-Local';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('./PlayfairDisplay-Bold.woff2') format('woff2');
+}
+
+/* System font fallbacks - these are ALWAYS available */
+/* Outfit primary - falls back to modern system sans-serif */
+/* We use CSS variables to allow dynamic switching */
+:root {
+    --outfit-font: 'Outfit-Local', 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Roboto', 'Helvetica Neue', sans-serif;
+    --playfair-font: 'PlayfairDisplay-Local', 'Georgia', serif;
+    --inter-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+

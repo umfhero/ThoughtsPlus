@@ -1,4 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Architects+Daughter&family=Inter:wght@300;400;500;600;700&family=Lato:wght@300;400;700&family=Outfit:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap');
+/* Import local fonts for APPX/Store compatibility */
+@import '../assets/fonts/fonts.css';
 
 @tailwind base;
 @tailwind components;
@@ -6,7 +7,8 @@
 
 body {
   @apply bg-gray-50 text-gray-900 font-sans;
-  font-family: var(--app-font, 'Outfit'), sans-serif;
+  /* Use CSS variable system - falls back to system fonts if local fonts unavailable */
+  font-family: var(--app-font, 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif);
   overflow: hidden;
 }
 

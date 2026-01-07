@@ -5,6 +5,8 @@ import react from '@vitejs/plugin-react'
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  // Use relative paths for APPX/packaged app compatibility
+  base: './',
   plugins: [
     react(),
     electron({
@@ -29,4 +31,16 @@ export default defineConfig({
       renderer: {},
     }),
   ],
+  build: {
+    // Ensure assets use relative paths
+    assetsDir: 'assets',
+    rollupOptions: {
+      output: {
+        // Ensure consistent asset naming for caching
+        assetFileNames: 'assets/[name]-[hash][extname]',
+        chunkFileNames: 'assets/[name]-[hash].js',
+        entryFileNames: 'assets/[name]-[hash].js',
+      },
+    },
+  },
 })

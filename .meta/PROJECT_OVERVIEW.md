@@ -539,4 +539,33 @@ _Focus: Infinite canvas, sticky notes, and recurrence._
 
 ---
 
-_Last updated: January 5, 2026 (v5.6.0)_
+## Microsoft Store APPX Certification - v5.6.0 Fixes
+
+Fixed critical blank white screen issue when app launches in Microsoft Store APPX certification environment.
+
+### Root Causes
+
+- External Google Fonts CDN loading in sandboxed APPX environment
+- Absolute asset paths incompatible with file:// protocol
+- No error boundary for handling failures
+- Missing startup diagnostics
+
+### Fixes Implemented
+
+1. **vite.config.ts** - Added `base: './'` for relative paths
+2. **index.html** - Removed Google Fonts CDN links, fixed asset paths
+3. **src/styles/index.css** - Replaced external imports with local font definitions
+4. **src/components/ErrorBoundary.tsx** - New error boundary component
+5. **src/main.tsx** - Added error boundary wrapper and startup logging
+6. **electron/main.ts** - Added IPC handlers for error logging
+7. **src/assets/fonts/fonts.css** - Local font definitions with system fallbacks
+
+### Testing
+
+- Build: `npm run build`
+- Run: `./release/win-unpacked/Thoughts+.exe`
+- Verify: App launches without blank screen, all pages load, no console errors
+
+---
+
+_Last updated: January 7, 2026 (v5.6.0)_

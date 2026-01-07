@@ -9,7 +9,10 @@
     "build": "tsc && vite build && electron-builder",
     "build:compile": "tsc && vite build",
     "build:installer": "npm run build:compile && electron-builder && makensis installer.nsi",
-    "preview": "vite preview"
+    "build:appx": "npm run build",
+    "preview": "vite preview",
+    "download:fonts": "powershell -ExecutionPolicy Bypass -File ./download-fonts.ps1",
+    "cert:check": "npm run build:compile && npm run test:build"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

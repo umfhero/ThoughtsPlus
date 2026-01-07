@@ -426,6 +426,20 @@ if (process.platform === 'win32') {
 function setupIpcHandlers() {
     console.log('📡 Setting up IPC handlers...');
 
+    // Error logging from renderer (for debugging APPX issues)
+    ipcMain.handle('log-error', (_, errorData) => {
+        console.error('❌ Renderer Error:', errorData);
+        return true;
+    });
+
+    // Open DevTools from renderer
+    ipcMain.handle('open-dev-tools', () => {
+        if (win) {
+            win.webContents.openDevTools();
+        }
+        return true;
+    });
+
     // Flash window for timer alert
     ipcMain.handle('flash-window', () => {
         if (win) {
