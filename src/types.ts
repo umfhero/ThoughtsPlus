@@ -41,3 +41,42 @@ export interface Note {
 export interface NotesData {
     [date: string]: Note[];
 }
+
+export interface Milestone {
+    id: string;
+    title: string;           // e.g., "University Start", "First Day at New Job"
+    description?: string;    // Optional context
+    date: string;            // ISO date string (YYYY-MM-DD)
+    time?: string;           // HH:mm
+    colour?: string;         // Optional hex colour for visual customisation
+}
+
+export interface MilestonesData {
+    [date: string]: Milestone[];
+}
+
+export interface LifeChapter {
+    id: string;
+    title: string;
+    startDate: string; // ISO date string YYYY-MM-DD
+    endDate?: string; // ISO date string YYYY-MM-DD (optional for ongoing)
+    description?: string;
+    colour: string;
+}
+
+export interface LifeChaptersData {
+    chapters: LifeChapter[];
+}
+
+export interface Snapshot {
+    id: string;
+    type: 'monthly' | 'yearly';
+    date: string; // ISO date string (YYYY-MM-DD) representing the period (e.g., 2025-01-01 for Jan 2025)
+    content: string;
+    tags?: string[];
+    sentiment?: 'positive' | 'neutral' | 'negative' | 'mixed';
+}
+
+export interface SnapshotsData {
+    [periodKey: string]: Snapshot; // Key e.g., "monthly-2025-01" or "yearly-2025"
+}

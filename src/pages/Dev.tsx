@@ -1,15 +1,16 @@
 import { useNotification } from '../contexts/NotificationContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { AlertTriangle, CheckCircle, Info, AlertCircle, ToggleLeft, ToggleRight, Trash2, RefreshCw, Rocket, Bell, MousePointerClick } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Info, AlertCircle, ToggleLeft, ToggleRight, Trash2, RefreshCw, Rocket, Bell, MousePointerClick, Camera } from 'lucide-react';
 import clsx from 'clsx';
 
 interface DevPageProps {
     isMockMode: boolean;
     toggleMockMode: () => void;
     onForceSetup: () => void;
+    onForceSnapshot?: () => void;
 }
 
-export function DevPage({ isMockMode, toggleMockMode, onForceSetup }: DevPageProps) {
+export function DevPage({ isMockMode, toggleMockMode, onForceSetup, onForceSnapshot }: DevPageProps) {
     const { addNotification } = useNotification();
     const { accentColor } = useTheme();
 
@@ -125,11 +126,11 @@ export function DevPage({ isMockMode, toggleMockMode, onForceSetup }: DevPagePro
     };
 
     return (
-        <div className="h-full p-8 overflow-y-auto">
-            <h1 className="text-3xl font-bold mb-8">Developer Tools</h1>
+        <div className="h-full p-4 sm:p-6 md:p-8 overflow-y-auto custom-scrollbar">
+            <h1 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 md:mb-8">Developer Tools</h1>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8 w-full max-w-7xl mx-auto">
-                <div className="space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 md:gap-8 w-full max-w-7xl mx-auto">
+                <div className="space-y-4 sm:space-y-6 md:space-y-8">
                     {/* Mock Mode Toggle */}
                     <div className="bg-white/50 dark:bg-gray-800/50 rounded-xl p-4 md:p-6 border border-white/20 dark:border-gray-700/30 shadow-sm">
                         <div className="flex items-center justify-between mb-4">
@@ -352,9 +353,31 @@ export function DevPage({ isMockMode, toggleMockMode, onForceSetup }: DevPagePro
                                 <div className="text-xs opacity-80 truncate">Forces the "Press & Hold" helper to show again</div>
                             </div>
                         </button>
+
+                        {/* Force Snapshot Button */}
+                        {onForceSnapshot && (
+                            <button
+                                onClick={() => {
+                                    onForceSnapshot();
+                                    addNotification({
+                                        title: 'Snapshot Triggered',
+                                        message: 'Navigate to Progress page to test snapshot creation.',
+                                        type: 'info',
+                                        duration: 3000
+                                    });
+                                }}
+                                className="w-full flex items-center gap-3 p-4 rounded-lg border border-blue-200 dark:border-blue-800/30 bg-white/50 dark:bg-gray-800/50 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-blue-600 dark:text-blue-400"
+                            >
+                                <Camera size={20} className="flex-shrink-0" />
+                                <div className="text-left flex-1 min-w-0">
+                                    <div className="font-medium truncate">Force Snapshot</div>
+                                    <div className="text-xs opacity-80 truncate">Test snapshot creation functionality</div>
+                                </div>
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }

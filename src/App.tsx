@@ -10,7 +10,7 @@ import { TimerProvider } from './contexts/TimerContext';
 import { TimerAlertOverlay, TimerMiniIndicator } from './components/TimerAlertOverlay';
 import { QuickTimerModal } from './components/QuickTimerModal';
 import { DevPage } from './pages/Dev';
-import { Page, Note, NotesData } from './types';
+import { Page, Note, NotesData, Milestone, MilestonesData, LifeChapter, LifeChaptersData, Snapshot, SnapshotsData } from './types';
 import { DashboardLayoutProvider, useDashboardLayout } from './contexts/DashboardLayoutContext';
 
 // Lazy load pages for better performance
@@ -42,6 +42,11 @@ const preloadPages = () => {
 function App() {
     const [currentPage, setCurrentPage] = useState<Page>('dashboard');
     const [notes, setNotes] = useState<NotesData>({});
+
+
+    const [milestones, setMilestones] = useState<MilestonesData>({});
+    const [lifeChapters, setLifeChapters] = useState<LifeChaptersData>({ chapters: [] });
+    const [snapshots, setSnapshots] = useState<SnapshotsData>({});
     const [isLoading, setIsLoading] = useState(true);
     const [showSetup, setShowSetup] = useState(false);
     const [checkingSetup, setCheckingSetup] = useState(true);
@@ -372,6 +377,15 @@ function App() {
             if (data && data.notes) {
                 setNotes(data.notes);
             }
+            if (data && data.milestones) {
+                setMilestones(data.milestones);
+            }
+            if (data && data.lifeChapters) {
+                setLifeChapters(data.lifeChapters);
+            }
+            if (data && data.snapshots) {
+                setSnapshots(data.snapshots);
+            }
         } finally {
             setIsLoading(false);
         }
@@ -507,6 +521,98 @@ function App() {
         await window.ipcRenderer.invoke('save-data', { ...currentData, notes: newNotes });
     };
 
+    const saveMilestonesToBackend = async (newMilestones: MilestonesData) => {
+        // @ts-ignore
+        const currentData = await window.ipcRenderer.invoke('get-data');
+        // @ts-ignore
+        await window.ipcRenderer.invoke('save-data', { ...currentData, milestones: newMilestones });
+    };
+
+    const handleAddMilestone = async (milestone: Milestone) => {
+        const dateKey = milestone.date;
+        const newMilestones = { ...milestones };
+        if (!newMilestones[dateKey]) newMilestones[dateKey] = [];
+        newMilestones[dateKey].push(milestone);
+        setMilestones(newMilestones);
+        await saveMilestonesToBackend(newMilestones);
+        addNotification({
+            title: 'Milestone Added',
+            message: `"${milestone.title}" has been added.`,
+            type: 'success',
+            duration: 3000
+        });
+    };
+
+    const handleUpdateMilestone = async (milestone: Milestone) => {
+        const dateKey = milestone.date;
+        const newMilestones = { ...milestones };
+        if (newMilestones[dateKey]) {
+            newMilestones[dateKey] = newMilestones[dateKey].map(m =>
+                m.id === milestone.id ? milestone : m
+            );
+            setMilestones(newMilestones);
+            await saveMilestonesToBackend(newMilestones);
+        }
+    };
+
+    const handleDeleteMilestone = async (milestoneId: string, dateKey: string) => {
+        const newMilestones = { ...milestones };
+        if (newMilestones[dateKey]) {
+            newMilestones[dateKey] = newMilestones[dateKey].filter(m => m.id !== milestoneId);
+            if (newMilestones[dateKey].length === 0) delete newMilestones[dateKey];
+            setMilestones(newMilestones);
+            await saveMilestonesToBackend(newMilestones);
+            addNotification({
+                title: 'Milestone Deleted',
+                message: 'The milestone has been removed.',
+                type: 'info',
+                duration: 3000
+            });
+        }
+    };
+
+    const saveLifeChaptersToBackend = async (data: LifeChaptersData) => {
+        // @ts-ignore
+        const currentData = await window.ipcRenderer.invoke('get-data');
+        // @ts-ignore
+        await window.ipcRenderer.invoke('save-data', { ...currentData, lifeChapters: data });
+    };
+
+    const handleAddLifeChapter = async (chapter: LifeChapter) => {
+        const newChapters = { ...lifeChapters, chapters: [...lifeChapters.chapters, chapter] };
+        setLifeChapters(newChapters);
+        await saveLifeChaptersToBackend(newChapters);
+    };
+
+    const handleDeleteLifeChapter = async (chapterId: string) => {
+        const newChapters = {
+            ...lifeChapters,
+            chapters: lifeChapters.chapters.filter(c => c.id !== chapterId)
+        };
+        setLifeChapters(newChapters);
+        await saveLifeChaptersToBackend(newChapters);
+    };
+
+    const saveSnapshotsToBackend = async (data: SnapshotsData) => {
+        // @ts-ignore
+        const currentData = await window.ipcRenderer.invoke('get-data');
+        // @ts-ignore
+        await window.ipcRenderer.invoke('save-data', { ...currentData, snapshots: data });
+    };
+
+    const handleAddSnapshot = async (snapshot: Snapshot) => {
+        const newSnapshots = { ...snapshots, [snapshot.id]: snapshot };
+        setSnapshots(newSnapshots);
+        await saveSnapshotsToBackend(newSnapshots);
+    };
+
+    const handleDeleteSnapshot = async (snapshotId: string) => {
+        const newSnapshots = { ...snapshots };
+        delete newSnapshots[snapshotId];
+        setSnapshots(newSnapshots);
+        await saveSnapshotsToBackend(newSnapshots);
+    };
+
     if (checkingSetup) {
         return (
             <div className="w-screen h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
@@ -521,37 +627,47 @@ function App() {
 
     return (
         <DashboardLayoutProvider>
-        <TimerProvider>
-            <AppContent 
-                currentPage={currentPage}
-                setCurrentPage={setCurrentPage}
-                activeNotes={activeNotes}
-                activeUserName={activeUserName}
-                isSidebarCollapsed={isSidebarCollapsed}
-                setIsSidebarCollapsed={setIsSidebarCollapsed}
-                showDev={showDev}
-                isEditMode={isEditMode}
-                setIsEditMode={setIsEditMode}
-                isLoading={isLoading}
-                currentMonth={currentMonth}
-                setCurrentMonth={setCurrentMonth}
-                selectedDate={selectedDate}
-                setNotes={setNotes}
-                isMockMode={isMockMode}
-                setIsMockMode={setIsMockMode}
-                isAiModalOpen={isAiModalOpen}
-                setIsAiModalOpen={setIsAiModalOpen}
-                isQuickTimerOpen={isQuickTimerOpen}
-                setIsQuickTimerOpen={setIsQuickTimerOpen}
-                handleNavigateToNote={handleNavigateToNote}
-                handleMonthSelect={handleMonthSelect}
-                handleAddNote={handleAddNote}
-                handleUpdateNote={handleUpdateNote}
-                setIsSetupDemoMode={setIsSetupDemoMode}
-                setShowSetup={setShowSetup}
-                companionMode={companionMode}
-            />
-        </TimerProvider>
+            <TimerProvider>
+                <AppContent
+                    currentPage={currentPage}
+                    setCurrentPage={setCurrentPage}
+                    activeNotes={activeNotes}
+                    activeUserName={activeUserName}
+                    isSidebarCollapsed={isSidebarCollapsed}
+                    setIsSidebarCollapsed={setIsSidebarCollapsed}
+                    showDev={showDev}
+                    isEditMode={isEditMode}
+                    setIsEditMode={setIsEditMode}
+                    isLoading={isLoading}
+                    currentMonth={currentMonth}
+                    setCurrentMonth={setCurrentMonth}
+                    selectedDate={selectedDate}
+                    setNotes={setNotes}
+                    isMockMode={isMockMode}
+                    setIsMockMode={setIsMockMode}
+                    isAiModalOpen={isAiModalOpen}
+                    setIsAiModalOpen={setIsAiModalOpen}
+                    isQuickTimerOpen={isQuickTimerOpen}
+                    setIsQuickTimerOpen={setIsQuickTimerOpen}
+                    handleNavigateToNote={handleNavigateToNote}
+                    handleMonthSelect={handleMonthSelect}
+                    handleAddNote={handleAddNote}
+                    handleUpdateNote={handleUpdateNote}
+                    setIsSetupDemoMode={setIsSetupDemoMode}
+                    setShowSetup={setShowSetup}
+                    companionMode={companionMode}
+                    milestones={milestones}
+                    handleAddMilestone={handleAddMilestone}
+                    handleUpdateMilestone={handleUpdateMilestone}
+                    handleDeleteMilestone={handleDeleteMilestone}
+                    lifeChapters={lifeChapters}
+                    handleAddLifeChapter={handleAddLifeChapter}
+                    handleDeleteLifeChapter={handleDeleteLifeChapter}
+                    snapshots={snapshots}
+                    handleAddSnapshot={handleAddSnapshot}
+                    handleDeleteSnapshot={handleDeleteSnapshot}
+                />
+            </TimerProvider>
         </DashboardLayoutProvider>
     );
 }
@@ -585,18 +701,32 @@ interface AppContentProps {
     setIsSetupDemoMode: (value: boolean) => void;
     setShowSetup: (value: boolean) => void;
     companionMode: boolean;
+    milestones: MilestonesData;
+    handleAddMilestone: (milestone: Milestone) => void;
+    handleUpdateMilestone: (milestone: Milestone) => void;
+    handleDeleteMilestone: (milestoneId: string, dateKey: string) => void;
+    lifeChapters: LifeChaptersData;
+    handleAddLifeChapter: (chapter: LifeChapter) => void;
+    handleDeleteLifeChapter: (chapterId: string) => void;
+    snapshots: SnapshotsData;
+    handleAddSnapshot: (snapshot: Snapshot) => void;
+    handleDeleteSnapshot: (snapshotId: string) => void;
 }
 
 function AppContent(props: AppContentProps) {
     const { effectiveSidebarIconOnly } = useDashboardLayout();
     const {
-        currentPage, setCurrentPage, activeNotes, activeUserName, 
-        isSidebarCollapsed, setIsSidebarCollapsed, showDev, isEditMode, 
-        setIsEditMode, isLoading, currentMonth, setCurrentMonth, 
+        currentPage, setCurrentPage, activeNotes, activeUserName,
+        isSidebarCollapsed, setIsSidebarCollapsed, showDev, isEditMode,
+        setIsEditMode, isLoading, currentMonth, setCurrentMonth,
         selectedDate, setNotes, isMockMode, setIsMockMode,
         isAiModalOpen, setIsAiModalOpen, isQuickTimerOpen, setIsQuickTimerOpen,
         handleNavigateToNote, handleMonthSelect, handleAddNote, handleUpdateNote,
-        setIsSetupDemoMode, setShowSetup, companionMode
+        setIsSetupDemoMode, setShowSetup, companionMode,
+
+        milestones, handleAddMilestone, handleUpdateMilestone, handleDeleteMilestone,
+        lifeChapters, handleAddLifeChapter, handleDeleteLifeChapter,
+        snapshots, handleAddSnapshot, handleDeleteSnapshot
     } = props;
 
     return (
@@ -651,13 +781,31 @@ function AppContent(props: AppContentProps) {
                                         currentMonth={currentMonth}
                                         setCurrentMonth={setCurrentMonth}
                                         isSidebarCollapsed={isSidebarCollapsed}
+                                        milestones={milestones}
+                                        onAddMilestone={handleAddMilestone}
+                                        onUpdateMilestone={handleUpdateMilestone}
+                                        onDeleteMilestone={handleDeleteMilestone}
+                                        lifeChapters={lifeChapters}
+                                        onAddLifeChapter={handleAddLifeChapter}
+                                        onDeleteLifeChapter={handleDeleteLifeChapter}
                                     />
                                 )}
                                 {currentPage === 'stats' && <StatsPage isSidebarCollapsed={isSidebarCollapsed} />}
                                 {currentPage === 'drawing' && <BoardPage />}
                                 {currentPage === 'github' && <GithubPage isMockMode={isMockMode} isSidebarCollapsed={isSidebarCollapsed} />}
                                 {currentPage === 'timer' && <TimerPage isSidebarCollapsed={isSidebarCollapsed} />}
-                                {currentPage === 'progress' && <ProgressPage notes={activeNotes} isSidebarCollapsed={isSidebarCollapsed} onUpdateNote={handleUpdateNote} />}
+                                {currentPage === 'progress' && (
+                                    <ProgressPage
+                                        notes={activeNotes}
+                                        milestones={milestones}
+                                        lifeChapters={lifeChapters}
+                                        snapshots={snapshots}
+                                        onAddSnapshot={handleAddSnapshot}
+                                        onDeleteSnapshot={handleDeleteSnapshot}
+                                        isSidebarCollapsed={isSidebarCollapsed}
+                                        onUpdateNote={handleUpdateNote}
+                                    />
+                                )}
                                 {currentPage === 'settings' && <SettingsPage />}
                                 {currentPage === 'dev' && (
                                     <DevPage
@@ -666,6 +814,19 @@ function AppContent(props: AppContentProps) {
                                         onForceSetup={() => {
                                             setIsSetupDemoMode(true);
                                             setShowSetup(true);
+                                        }}
+                                        onForceSnapshot={() => {
+                                            // Generate a test snapshot
+                                            const now = new Date();
+                                            const snapshot: Snapshot = {
+                                                id: crypto.randomUUID(),
+                                                type: 'monthly',
+                                                date: now.toISOString().split('T')[0],
+                                                content: 'This is a test snapshot generated from Dev Tools. Use this to test the snapshot display and functionality.',
+                                                tags: ['test', 'dev'],
+                                                sentiment: 'neutral'
+                                            };
+                                            handleAddSnapshot(snapshot);
                                         }}
                                     />
                                 )}

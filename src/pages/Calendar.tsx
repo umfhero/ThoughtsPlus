@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Plus, X, Trash2, Sparkles, Edit2, Search, Repeat } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, X, Trash2, Sparkles, Edit2, Search, Repeat, Flag } from 'lucide-react';
 import {
     format,
     addMonths,
@@ -15,10 +15,11 @@ import {
     isToday,
     parseISO,
     addDays,
-    addWeeks
+    addWeeks,
+    formatDistanceToNow
 } from 'date-fns';
 import clsx from 'clsx';
-import { NotesData, Note } from '../types';
+import { NotesData, Note, MilestonesData, Milestone, LifeChaptersData, LifeChapter } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 
 interface CalendarPageProps {
@@ -28,9 +29,16 @@ interface CalendarPageProps {
     initialSelectedNoteId: string | null;
     currentMonth: Date;
     setCurrentMonth: (date: Date) => void;
+    milestones?: MilestonesData;
+    onAddMilestone?: (milestone: Milestone) => void;
+    onUpdateMilestone?: (milestone: Milestone) => void;
+    onDeleteMilestone?: (milestoneId: string, dateKey: string) => void;
+    lifeChapters?: LifeChaptersData;
+    onAddLifeChapter?: (chapter: LifeChapter) => void;
+    onDeleteLifeChapter?: (chapterId: string) => void;
 }
 
-export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMonth, setCurrentMonth }: Omit<CalendarPageProps, 'initialSelectedNoteId'> & { isSidebarCollapsed?: boolean }) {
+export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMonth, setCurrentMonth, milestones = {}, onAddMilestone, onUpdateMilestone, onDeleteMilestone, lifeChapters = { chapters: [] }, onAddLifeChapter: _onAddLifeChapter, onDeleteLifeChapter: _onDeleteLifeChapter }: Omit<CalendarPageProps, 'initialSelectedNoteId'> & { isSidebarCollapsed?: boolean }) {
     const { accentColor } = useTheme();
     const [selectedDate, setSelectedDate] = useState<Date | null>(initialSelectedDate || null);
     const [direction, setDirection] = useState(0);
@@ -79,6 +87,18 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
         dateKey: null,
         seriesId: null
     });
+
+    // Milestone Form State
+    const [showMilestoneForm, setShowMilestoneForm] = useState(false);
+    const [milestoneTitle, setMilestoneTitle] = useState('');
+    const [milestoneDescription, setMilestoneDescription] = useState('');
+    const [milestoneTime, setMilestoneTime] = useState(() => {
+        // Default to current user time
+        const now = new Date();
+        return format(now, 'HH:mm');
+    });
+    const [milestoneColour, setMilestoneColour] = useState('#8b5cf6'); // Default purple
+    const [editingMilestoneId, setEditingMilestoneId] = useState<string | null>(null);
 
     const convertTo12Hour = (time24: string): string => {
         const [hours, minutes] = time24.split(':').map(Number);
@@ -143,6 +163,50 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
         setRecurrenceEndMode('count');
         setRecurrenceCount(5);
         setRecurrenceEndDate('');
+        // Reset milestone form too
+        setShowMilestoneForm(false);
+        setMilestoneTitle('');
+        setMilestoneDescription('');
+        setMilestoneTime(format(new Date(), 'HH:mm'));
+        setMilestoneColour('#8b5cf6');
+        setEditingMilestoneId(null);
+    };
+
+    const handleSaveMilestone = () => {
+        if (!selectedDate || !milestoneTitle.trim() || !onAddMilestone) return;
+
+        const dateKey = format(selectedDate, 'yyyy-MM-dd');
+        const milestone: Milestone = {
+            id: editingMilestoneId || crypto.randomUUID(),
+            title: milestoneTitle.trim(),
+            description: milestoneDescription.trim() || undefined,
+            date: dateKey,
+            time: milestoneTime,
+            colour: milestoneColour
+        };
+
+        if (editingMilestoneId && onUpdateMilestone) {
+            onUpdateMilestone(milestone);
+        } else {
+            onAddMilestone(milestone);
+        }
+
+        resetForm();
+    };
+
+    const handleDeleteMilestone = (milestoneId: string, dateKey: string) => {
+        if (onDeleteMilestone) {
+            onDeleteMilestone(milestoneId, dateKey);
+        }
+    };
+
+    const loadMilestoneForEditing = (milestone: Milestone) => {
+        setShowMilestoneForm(true);
+        setEditingMilestoneId(milestone.id);
+        setMilestoneTitle(milestone.title);
+        setMilestoneDescription(milestone.description || '');
+        setMilestoneTime(milestone.time || '09:00');
+        setMilestoneColour(milestone.colour || '#8b5cf6');
     };
 
     const loadNoteForEditing = (note: Note) => {
@@ -522,6 +586,15 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
                                     const isTodayDate = isToday(day);
                                     const dateKey = format(day, 'yyyy-MM-dd');
                                     const dayNotes = notes[dateKey] || [];
+                                    const dayMilestones = milestones[dateKey] || [];
+                                    
+                                    // Check if this day is within any life chapter
+                                    const dayDate = day.getTime();
+                                    const activeChapter = lifeChapters.chapters.find(chapter => {
+                                        const start = parseISO(chapter.startDate).getTime();
+                                        const end = chapter.endDate ? parseISO(chapter.endDate).getTime() : Infinity;
+                                        return dayDate >= start && dayDate <= end;
+                                    });
 
                                     return (
                                         <div
@@ -536,9 +609,21 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
                                             style={isSelected ? {
                                                 backgroundColor: `${accentColor}15`,
                                                 borderColor: `${accentColor}40`
+                                            } : activeChapter ? {
+                                                backgroundColor: `${activeChapter.colour}10`,
+                                                borderColor: `${activeChapter.colour}30`
                                             } : {}}
                                         >
-                                            <div className="flex justify-between items-start mb-1">
+                                            {/* Life Chapter Indicator */}
+                                            {activeChapter && (
+                                                <div 
+                                                    className="absolute bottom-0 left-0 right-0 h-1 z-0"
+                                                    style={{ backgroundColor: activeChapter.colour }}
+                                                    title={activeChapter.title}
+                                                />
+                                            )}
+                                            
+                                            <div className="flex justify-between items-start mb-1 relative z-10">
                                                 <span
                                                     className={clsx(
                                                         "w-7 h-7 flex items-center justify-center rounded-full text-sm font-bold transition-all",
@@ -556,14 +641,41 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
                                                 >
                                                     {format(day, 'd')}
                                                 </span>
-                                                {dayNotes.length > 0 && (
-                                                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-purple-100 text-[10px] font-bold text-purple-600">
-                                                        {dayNotes.length}
-                                                    </span>
+                                                <div className="flex items-center gap-1">
+                                                    {dayNotes.length > 0 && (
+                                                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-purple-100 text-[10px] font-bold text-purple-600">
+                                                            {dayNotes.length}
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                {/* Absolute Positioned Milestones - Only show flags */}
+                                                {dayMilestones.length > 0 && (
+                                                    <div className="absolute top-2 right-2 flex flex-col gap-1 items-end z-20">
+                                                        {dayMilestones.map((milestone) => (
+                                                            <div
+                                                                key={milestone.id}
+                                                                className="group/milestone relative"
+                                                            >
+                                                                <Flag
+                                                                    className="w-4 h-4 transition-transform hover:scale-110"
+                                                                    style={{ color: milestone.colour || '#8b5cf6', fill: milestone.colour ? `${milestone.colour}40` : '#8b5cf640' }}
+                                                                />
+                                                                {/* Hover Tooltip - shows above the flag */}
+                                                                <div
+                                                                    className="absolute right-0 bottom-full mb-1 opacity-0 group-hover/milestone:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 px-2 py-1 rounded-lg text-xs font-semibold shadow-lg border bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                                                                    style={{ borderColor: milestone.colour || '#8b5cf6' }}
+                                                                >
+                                                                    {milestone.title}
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
                                                 )}
                                             </div>
 
-                                            <div className="flex-1 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
+                                            <div className="flex-1 overflow-y-auto space-y-1 pr-1 custom-scrollbar pt-1 relative z-10">
+                                                {/* Tasks */}
                                                 {dayNotes.map((note, i) => (
                                                     <div key={i} className={clsx("text-[10px] px-1.5 py-0.5 rounded-md shadow-sm truncate border", importanceColors[note.importance || 'misc'])}>
                                                         {note.title}
@@ -608,224 +720,371 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
                             </button>
                         </div>
 
-                        <div className="space-y-3 bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-200 dark:border-gray-700 shrink-0">
-                            <input
-                                type="text"
-                                placeholder="Event Title"
-                                value={title}
-                                onChange={(e) => setTitle(e.target.value)}
-                                className="w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2"
-                                style={{ '--tw-ring-color': `${accentColor}33` } as any}
-                            />
-                            <textarea
-                                placeholder="Description"
-                                value={description}
-                                onChange={(e) => setDescription(e.target.value)}
-                                className="w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 h-24 resize-none focus:outline-none focus:ring-2"
-                                style={{ '--tw-ring-color': `${accentColor}33` } as any}
-                            />
-                            <div className="flex flex-col lg:flex-row gap-2">
+
+                        <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-4">
+                            <div className="space-y-3 bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-200 dark:border-gray-700 shrink-0">
                                 <input
-                                    type="time"
-                                    value={time}
-                                    onChange={(e) => setTime(e.target.value)}
-                                    className="w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 cursor-pointer [color-scheme:light] dark:[color-scheme:dark]"
+                                    type="text"
+                                    placeholder="Event Title"
+                                    value={title}
+                                    onChange={(e) => setTitle(e.target.value)}
+                                    className="w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2"
                                     style={{ '--tw-ring-color': `${accentColor}33` } as any}
                                 />
-                                <select
-                                    value={importance}
-                                    onChange={(e) => setImportance(e.target.value as any)}
-                                    className="w-full border-2 rounded-xl px-3 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-offset-1 cursor-pointer"
-                                    style={{
-                                        backgroundColor: importance === 'high' ? '#fee2e2' :
-                                            importance === 'medium' ? '#fef3c7' :
-                                                importance === 'low' ? '#dcfce7' : '#f3f4f6',
-                                        borderColor: importance === 'high' ? '#ef4444' :
-                                            importance === 'medium' ? '#f59e0b' :
-                                                importance === 'low' ? '#22c55e' : '#9ca3af',
-                                        color: importance === 'high' ? '#991b1b' :
-                                            importance === 'medium' ? '#92400e' :
-                                                importance === 'low' ? '#166534' : '#374151',
-                                        '--tw-ring-color': `${accentColor}33`
-                                    } as any}
-                                >
-                                    <option value="low">Low</option>
-                                    <option value="medium">Medium</option>
-                                    <option value="high">High</option>
-                                    <option value="misc">Misc</option>
-                                </select>
-                            </div>
-
-                            {/* Recurrence Options */}
-                            <div className="border-t border-gray-200 dark:border-gray-600 pt-3 mt-1">
-                                <label className="flex items-center gap-2 mb-2 cursor-pointer">
+                                <textarea
+                                    placeholder="Description"
+                                    value={description}
+                                    onChange={(e) => setDescription(e.target.value)}
+                                    className="w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 h-24 resize-none focus:outline-none focus:ring-2"
+                                    style={{ '--tw-ring-color': `${accentColor}33` } as any}
+                                />
+                                <div className="flex flex-col lg:flex-row gap-2">
                                     <input
-                                        type="checkbox"
-                                        checked={isRecurring}
-                                        onChange={(e) => setIsRecurring(e.target.checked)}
-                                        className="rounded border-gray-300 focus:ring-2"
+                                        type="time"
+                                        value={time}
+                                        onChange={(e) => setTime(e.target.value)}
+                                        className="w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 cursor-pointer [color-scheme:light] dark:[color-scheme:dark]"
+                                        style={{ '--tw-ring-color': `${accentColor}33` } as any}
+                                    />
+                                    <select
+                                        value={importance}
+                                        onChange={(e) => setImportance(e.target.value as any)}
+                                        className="w-full border-2 rounded-xl px-3 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-offset-1 cursor-pointer"
                                         style={{
-                                            accentColor: accentColor,
+                                            backgroundColor: importance === 'high' ? '#fee2e2' :
+                                                importance === 'medium' ? '#fef3c7' :
+                                                    importance === 'low' ? '#dcfce7' : '#f3f4f6',
+                                            borderColor: importance === 'high' ? '#ef4444' :
+                                                importance === 'medium' ? '#f59e0b' :
+                                                    importance === 'low' ? '#22c55e' : '#9ca3af',
+                                            color: importance === 'high' ? '#991b1b' :
+                                                importance === 'medium' ? '#92400e' :
+                                                    importance === 'low' ? '#166534' : '#374151',
                                             '--tw-ring-color': `${accentColor}33`
                                         } as any}
-                                    />
-                                    <Repeat className="w-4 h-4 text-gray-500" />
-                                    <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">Repeat Event</span>
-                                </label>
-
-                                {isRecurring && (
-                                    <motion.div
-                                        initial={{ height: 0, opacity: 0 }}
-                                        animate={{ height: 'auto', opacity: 1 }}
-                                        className="pl-6 space-y-3 overflow-hidden"
                                     >
-                                        <div className="flex flex-col gap-2">
-                                            <select
-                                                value={recurrenceType}
-                                                onChange={(e) => setRecurrenceType(e.target.value as any)}
-                                                className="w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2"
-                                                style={{ '--tw-ring-color': `${accentColor}33` } as any}
-                                            >
-                                                <option value="daily">Daily</option>
-                                                <option value="weekly">Weekly</option>
-                                                <option value="fortnightly">Every 2 Weeks</option>
-                                                <option value="monthly">Monthly</option>
-                                            </select>
-                                            <select
-                                                value={recurrenceEndMode}
-                                                onChange={(e) => setRecurrenceEndMode(e.target.value as any)}
-                                                className="w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2"
-                                                style={{ '--tw-ring-color': `${accentColor}33` } as any}
-                                            >
-                                                <option value="count">For X times</option>
-                                                <option value="date">Until Date</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            {recurrenceEndMode === 'count' ? (
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-sm text-gray-500 dark:text-gray-400">Repeat</span>
-                                                    <input
-                                                        type="number"
-                                                        min="1"
-                                                        max="100"
-                                                        value={recurrenceCount}
-                                                        onChange={(e) => setRecurrenceCount(parseInt(e.target.value) || 1)}
-                                                        className="w-16 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2"
-                                                        style={{ '--tw-ring-color': `${accentColor}33` } as any}
-                                                    />
-                                                    <span className="text-sm text-gray-500 dark:text-gray-400">times</span>
-                                                </div>
-                                            ) : (
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-sm text-gray-500 dark:text-gray-400">Until</span>
-                                                    <input
-                                                        type="date"
-                                                        value={recurrenceEndDate}
-                                                        onChange={(e) => setRecurrenceEndDate(e.target.value)}
-                                                        className="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2"
-                                                        style={{ '--tw-ring-color': `${accentColor}33` } as any}
-                                                    />
-                                                </div>
-                                            )}
-                                        </div>
-                                    </motion.div>
-                                )}
+                                        <option value="low">Low</option>
+                                        <option value="medium">Medium</option>
+                                        <option value="high">High</option>
+                                        <option value="misc">Misc</option>
+                                    </select>
+                                </div>
+
+                                {/* Recurrence Options */}
+                                <div className="border-t border-gray-200 dark:border-gray-600 pt-3 mt-1">
+                                    <label className="flex items-center gap-2 mb-2 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={isRecurring}
+                                            onChange={(e) => setIsRecurring(e.target.checked)}
+                                            className="rounded border-gray-300 focus:ring-2"
+                                            style={{
+                                                accentColor: accentColor,
+                                                '--tw-ring-color': `${accentColor}33`
+                                            } as any}
+                                        />
+                                        <Repeat className="w-4 h-4 text-gray-500" />
+                                        <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">Repeat Event</span>
+                                    </label>
+
+                                    {isRecurring && (
+                                        <motion.div
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: 'auto', opacity: 1 }}
+                                            className="pl-6 space-y-3 overflow-hidden"
+                                        >
+                                            <div className="flex flex-col gap-2">
+                                                <select
+                                                    value={recurrenceType}
+                                                    onChange={(e) => setRecurrenceType(e.target.value as any)}
+                                                    className="w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2"
+                                                    style={{ '--tw-ring-color': `${accentColor}33` } as any}
+                                                >
+                                                    <option value="daily">Daily</option>
+                                                    <option value="weekly">Weekly</option>
+                                                    <option value="fortnightly">Every 2 Weeks</option>
+                                                    <option value="monthly">Monthly</option>
+                                                </select>
+                                                <select
+                                                    value={recurrenceEndMode}
+                                                    onChange={(e) => setRecurrenceEndMode(e.target.value as any)}
+                                                    className="w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2"
+                                                    style={{ '--tw-ring-color': `${accentColor}33` } as any}
+                                                >
+                                                    <option value="count">For X times</option>
+                                                    <option value="date">Until Date</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                {recurrenceEndMode === 'count' ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-sm text-gray-500 dark:text-gray-400">Repeat</span>
+                                                        <input
+                                                            type="number"
+                                                            min="1"
+                                                            max="100"
+                                                            value={recurrenceCount}
+                                                            onChange={(e) => setRecurrenceCount(parseInt(e.target.value) || 1)}
+                                                            className="w-16 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2"
+                                                            style={{ '--tw-ring-color': `${accentColor}33` } as any}
+                                                        />
+                                                        <span className="text-sm text-gray-500 dark:text-gray-400">times</span>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-sm text-gray-500 dark:text-gray-400">Until</span>
+                                                        <input
+                                                            type="date"
+                                                            value={recurrenceEndDate}
+                                                            onChange={(e) => setRecurrenceEndDate(e.target.value)}
+                                                            className="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2"
+                                                            style={{ '--tw-ring-color': `${accentColor}33` } as any}
+                                                        />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </div>
+
+                                <button
+                                    onClick={handleSaveNote}
+                                    disabled={!title.trim() || isGenerating}
+                                    className="w-full text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                                    style={{
+                                        backgroundColor: accentColor
+                                    }}
+                                >
+                                    {isGenerating ? <Sparkles className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                                    {editingNoteId ? 'Update Event' : 'Add Event'}
+                                </button>
                             </div>
 
-                            <button
-                                onClick={handleSaveNote}
-                                disabled={!title.trim() || isGenerating}
-                                className="w-full text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-                                style={{
-                                    backgroundColor: accentColor
-                                }}
-                            >
-                                {isGenerating ? <Sparkles className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                                {editingNoteId ? 'Update Event' : 'Add Event'}
-                            </button>
-                        </div>
+                            {/* Milestone Form Section */}
+                            <div className="mt-3 bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-200 dark:border-gray-700 shrink-0">
+                                <button
+                                    onClick={() => setShowMilestoneForm(!showMilestoneForm)}
+                                    className="flex items-center justify-between w-full text-left"
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <Flag className="w-4 h-4 text-purple-500" />
+                                        <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                                            {showMilestoneForm ? 'Hide Milestone Form' : 'Add Milestone'}
+                                        </span>
+                                    </div>
+                                    <span className="text-xs text-gray-400">
+                                        {showMilestoneForm ? '−' : '+'}
+                                    </span>
+                                </button>
 
-                        <div className="flex-1 overflow-y-auto custom-scrollbar space-y-4 mt-4 min-h-0">
-                            {isSearchActive ? (
-                                filteredNotes.length > 0 ? (
-                                    filteredNotes.map(({ date, note }) => (
+                                <AnimatePresence>
+                                    {showMilestoneForm && (
+                                        <motion.div
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: 'auto', opacity: 1 }}
+                                            exit={{ height: 0, opacity: 0 }}
+                                            className="overflow-hidden"
+                                        >
+                                            <div className="space-y-3 pt-3 mt-3 border-t border-gray-200 dark:border-gray-600 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
+                                                <input
+                                                    type="text"
+                                                    placeholder="Milestone Title (e.g., University Start)"
+                                                    value={milestoneTitle}
+                                                    onChange={(e) => setMilestoneTitle(e.target.value)}
+                                                    className="w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2"
+                                                    style={{ '--tw-ring-color': '#8b5cf633' } as any}
+                                                />
+                                                <textarea
+                                                    placeholder="Description (optional)"
+                                                    value={milestoneDescription}
+                                                    onChange={(e) => setMilestoneDescription(e.target.value)}
+                                                    className="w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 h-16 resize-none focus:outline-none focus:ring-2"
+                                                    style={{ '--tw-ring-color': '#8b5cf633' } as any}
+                                                />
+                                                <div className="flex items-center gap-2">
+                                                    <input
+                                                        type="time"
+                                                        value={milestoneTime}
+                                                        onChange={(e) => setMilestoneTime(e.target.value)}
+                                                        className="w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 cursor-pointer [color-scheme:light] dark:[color-scheme:dark]"
+                                                        style={{ '--tw-ring-color': '#8b5cf633' } as any}
+                                                    />
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm text-gray-500 dark:text-gray-400">Colour:</span>
+                                                    <input
+                                                        type="color"
+                                                        value={milestoneColour}
+                                                        onChange={(e) => setMilestoneColour(e.target.value)}
+                                                        className="w-8 h-8 rounded-lg border-0 cursor-pointer"
+                                                    />
+                                                    <div
+                                                        className="flex-1 h-2 rounded-full"
+                                                        style={{ backgroundColor: milestoneColour }}
+                                                    />
+                                                </div>
+                                                <button
+                                                    onClick={handleSaveMilestone}
+                                                    disabled={!milestoneTitle.trim()}
+                                                    className="w-full font-bold py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-50 text-white"
+                                                    style={{ backgroundColor: milestoneColour }}
+                                                >
+                                                    <Flag className="w-4 h-4" />
+                                                    {editingMilestoneId ? 'Update Milestone' : 'Add Milestone'}
+                                                </button>
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
+
+                            {/* Milestones Display Section */}
+                            {selectedDate && !isSearchActive && (milestones[format(selectedDate, 'yyyy-MM-dd')] || []).length > 0 && (
+                                <div className="mt-4 shrink-0">
+                                    <h4 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2 flex items-center gap-2">
+                                        <Flag className="w-3.5 h-3.5" />
+                                        Milestones
+                                    </h4>
+                                    <div className="space-y-2">
+                                        {(milestones[format(selectedDate, 'yyyy-MM-dd')] || []).map((milestone) => (
+                                            <motion.div
+                                                key={milestone.id}
+                                                layout
+                                                className="p-3 rounded-xl border group relative"
+                                                style={{
+                                                    backgroundColor: milestone.colour ? `${milestone.colour}10` : '#8b5cf610',
+                                                    borderColor: milestone.colour ? `${milestone.colour}30` : '#8b5cf630'
+                                                }}
+                                            >
+                                                <div className="flex justify-between items-start">
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <Flag
+                                                                className="w-4 h-4 shrink-0"
+                                                                style={{ color: milestone.colour || '#8b5cf6' }}
+                                                            />
+                                                            <h5
+                                                                className="font-bold text-sm truncate"
+                                                                style={{ color: milestone.colour || '#8b5cf6' }}
+                                                            >
+                                                                {milestone.title}
+                                                            </h5>
+                                                        </div>
+                                                        {milestone.description && (
+                                                            <p className="text-xs text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">
+                                                                {milestone.description}
+                                                            </p>
+                                                        )}
+                                                        <div
+                                                            className="text-xs font-medium"
+                                                            style={{ color: milestone.colour || '#8b5cf6' }}
+                                                        >
+                                                            {milestone.time ? convertTo12Hour(milestone.time) + ' • ' : ''}
+                                                            {formatDistanceToNow(parseISO(milestone.date), { addSuffix: true })}
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <button
+                                                            onClick={() => loadMilestoneForEditing(milestone)}
+                                                            className="p-1.5 hover:bg-white/50 dark:hover:bg-gray-700/50 rounded-lg transition-colors"
+                                                        >
+                                                            <Edit2 className="w-3.5 h-3.5 text-gray-500" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeleteMilestone(milestone.id, milestone.date)}
+                                                            className="p-1.5 hover:bg-red-100 text-red-500 rounded-lg transition-colors"
+                                                        >
+                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </motion.div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="flex-1 overflow-y-auto custom-scrollbar space-y-4 mt-4 min-h-0">
+                                {isSearchActive ? (
+                                    filteredNotes.length > 0 ? (
+                                        filteredNotes.map(({ date, note }) => (
+                                            <motion.div
+                                                layout
+                                                key={note.id}
+                                                onClick={() => {
+                                                    setSelectedDate(date);
+                                                    if (!isSameMonth(date, currentMonth)) {
+                                                        setCurrentMonth(date);
+                                                    }
+                                                }}
+                                                className={clsx("p-4 rounded-xl border group relative cursor-pointer hover:shadow-md transition-all", importanceColors[note.importance])}
+                                            >
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <div>
+                                                        <h4 className="font-bold">{note.title}</h4>
+                                                        <div className="text-xs opacity-70 mt-1 font-semibold">
+                                                            {format(date, 'MMM d, yyyy')} • {convertTo12Hour(note.time)}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <p className="text-sm opacity-80 mb-3">{note.description}</p>
+                                                <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setSelectedDate(date);
+                                                        loadNoteForEditing(note);
+                                                    }} className="p-1.5 hover:bg-white/50 dark:hover:bg-gray-700/50 rounded-lg transition-colors">
+                                                        <Edit2 className="w-3.5 h-3.5" />
+                                                    </button>
+                                                    <button onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDeleteNote(note.id, date);
+                                                    }} className="p-1.5 hover:bg-red-100 text-red-600 rounded-lg transition-colors">
+                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                    </button>
+                                                </div>
+                                            </motion.div>
+                                        ))
+                                    ) : (
+                                        <div className="text-center py-10 text-gray-400 dark:text-gray-500">
+                                            <p>No matching events found</p>
+                                        </div>
+                                    )
+                                ) : (
+                                    (notes[format(selectedDate!, 'yyyy-MM-dd')] || []).map((note) => (
                                         <motion.div
                                             layout
                                             key={note.id}
-                                            onClick={() => {
-                                                setSelectedDate(date);
-                                                if (!isSameMonth(date, currentMonth)) {
-                                                    setCurrentMonth(date);
-                                                }
-                                            }}
-                                            className={clsx("p-4 rounded-xl border group relative cursor-pointer hover:shadow-md transition-all", importanceColors[note.importance])}
+                                            className={clsx("p-4 rounded-xl border group relative", importanceColors[note.importance])}
                                         >
                                             <div className="flex justify-between items-start mb-2">
-                                                <div>
-                                                    <h4 className="font-bold">{note.title}</h4>
-                                                    <div className="text-xs opacity-70 mt-1 font-semibold">
-                                                        {format(date, 'MMM d, yyyy')} • {convertTo12Hour(note.time)}
-                                                    </div>
-                                                </div>
+                                                <h4 className="font-bold">{note.title}</h4>
+                                                <span className="text-xs font-bold opacity-70 bg-white/50 dark:bg-gray-700/50 px-2 py-1 rounded-md">{convertTo12Hour(note.time)}</span>
                                             </div>
                                             <p className="text-sm opacity-80 mb-3">{note.description}</p>
                                             <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <button onClick={(e) => {
                                                     e.stopPropagation();
-                                                    setSelectedDate(date);
                                                     loadNoteForEditing(note);
                                                 }} className="p-1.5 hover:bg-white/50 dark:hover:bg-gray-700/50 rounded-lg transition-colors">
                                                     <Edit2 className="w-3.5 h-3.5" />
                                                 </button>
                                                 <button onClick={(e) => {
                                                     e.stopPropagation();
-                                                    handleDeleteNote(note.id, date);
+                                                    handleDeleteNote(note.id);
                                                 }} className="p-1.5 hover:bg-red-100 text-red-600 rounded-lg transition-colors">
                                                     <Trash2 className="w-3.5 h-3.5" />
                                                 </button>
                                             </div>
                                         </motion.div>
                                     ))
-                                ) : (
-                                    <div className="text-center py-10 text-gray-400 dark:text-gray-500">
-                                        <p>No matching events found</p>
+                                )}
+                                {!isSearchActive && (!notes[format(selectedDate!, 'yyyy-MM-dd')] || notes[format(selectedDate!, 'yyyy-MM-dd')].length === 0) && (
+                                    <div className="text-center py-4 text-gray-400 dark:text-gray-500">
+                                        <p className="text-sm">No events for this day</p>
                                     </div>
-                                )
-                            ) : (
-                                (notes[format(selectedDate!, 'yyyy-MM-dd')] || []).map((note) => (
-                                    <motion.div
-                                        layout
-                                        key={note.id}
-                                        className={clsx("p-4 rounded-xl border group relative", importanceColors[note.importance])}
-                                    >
-                                        <div className="flex justify-between items-start mb-2">
-                                            <h4 className="font-bold">{note.title}</h4>
-                                            <span className="text-xs font-bold opacity-70 bg-white/50 dark:bg-gray-700/50 px-2 py-1 rounded-md">{convertTo12Hour(note.time)}</span>
-                                        </div>
-                                        <p className="text-sm opacity-80 mb-3">{note.description}</p>
-                                        <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button onClick={(e) => {
-                                                e.stopPropagation();
-                                                loadNoteForEditing(note);
-                                            }} className="p-1.5 hover:bg-white/50 dark:hover:bg-gray-700/50 rounded-lg transition-colors">
-                                                <Edit2 className="w-3.5 h-3.5" />
-                                            </button>
-                                            <button onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleDeleteNote(note.id);
-                                            }} className="p-1.5 hover:bg-red-100 text-red-600 rounded-lg transition-colors">
-                                                <Trash2 className="w-3.5 h-3.5" />
-                                            </button>
-                                        </div>
-                                    </motion.div>
-                                ))
-                            )}
-                            {!isSearchActive && (!notes[format(selectedDate!, 'yyyy-MM-dd')] || notes[format(selectedDate!, 'yyyy-MM-dd')].length === 0) && (
-                                <div className="text-center py-4 text-gray-400 dark:text-gray-500">
-                                    <p className="text-sm">No events for this day</p>
-                                </div>
-                            )}
+                                )}
+                            </div>
                         </div>
                     </motion.div>
                 )}
@@ -982,52 +1241,54 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
             </AnimatePresence>
 
             {/* Delete Confirmation Modal */}
-            {deleteConfirmation.isOpen && (
-                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                    <motion.div
-                        initial={{ scale: 0.9, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 max-w-md w-full border border-gray-200 dark:border-gray-700"
-                    >
-                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
-                            Delete Recurring Event?
-                        </h3>
-                        <p className="text-gray-600 dark:text-gray-300 mb-6">
-                            This is a recurring event. Would you like to delete the entire series?
-                        </p>
-
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => {
-                                    if (deleteConfirmation.noteId && deleteConfirmation.dateKey) {
-                                        deleteNote(deleteConfirmation.noteId, deleteConfirmation.dateKey, true);
-                                    }
-                                }}
-                                className="flex-1 px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl font-medium transition-colors"
-                            >
-                                Delete Series
-                            </button>
-                            <button
-                                onClick={() => {
-                                    if (deleteConfirmation.noteId && deleteConfirmation.dateKey) {
-                                        deleteNote(deleteConfirmation.noteId, deleteConfirmation.dateKey, false);
-                                    }
-                                }}
-                                className="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl font-medium transition-colors"
-                            >
-                                Delete This Only
-                            </button>
-                        </div>
-
-                        <button
-                            onClick={() => setDeleteConfirmation({ isOpen: false, noteId: null, dateKey: null, seriesId: null })}
-                            className="w-full mt-3 text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+            {
+                deleteConfirmation.isOpen && (
+                    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 max-w-md w-full border border-gray-200 dark:border-gray-700"
                         >
-                            Cancel
-                        </button>
-                    </motion.div>
-                </div>
-            )}
-        </div>
+                            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+                                Delete Recurring Event?
+                            </h3>
+                            <p className="text-gray-600 dark:text-gray-300 mb-6">
+                                This is a recurring event. Would you like to delete the entire series?
+                            </p>
+
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => {
+                                        if (deleteConfirmation.noteId && deleteConfirmation.dateKey) {
+                                            deleteNote(deleteConfirmation.noteId, deleteConfirmation.dateKey, true);
+                                        }
+                                    }}
+                                    className="flex-1 px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl font-medium transition-colors"
+                                >
+                                    Delete Series
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        if (deleteConfirmation.noteId && deleteConfirmation.dateKey) {
+                                            deleteNote(deleteConfirmation.noteId, deleteConfirmation.dateKey, false);
+                                        }
+                                    }}
+                                    className="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl font-medium transition-colors"
+                                >
+                                    Delete This Only
+                                </button>
+                            </div>
+
+                            <button
+                                onClick={() => setDeleteConfirmation({ isOpen: false, noteId: null, dateKey: null, seriesId: null })}
+                                className="w-full mt-3 text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                        </motion.div>
+                    </div>
+                )
+            }
+        </div >
     );
 }
