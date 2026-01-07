@@ -81,11 +81,18 @@ export function SettingsPage() {
             setEnabledFeatures(features);
         };
 
+        // Listen for data path changes from wizard
+        const handleDataPathChange = () => {
+            loadDataPath();
+        };
+
         window.addEventListener('feature-toggles-changed', handleFeatureToggleChange as EventListener);
+        window.addEventListener('data-path-changed', handleDataPathChange);
 
         return () => {
-            // Cleanup feature toggle listener
+            // Cleanup listeners
             window.removeEventListener('feature-toggles-changed', handleFeatureToggleChange as EventListener);
+            window.removeEventListener('data-path-changed', handleDataPathChange);
         };
     }, []);
 

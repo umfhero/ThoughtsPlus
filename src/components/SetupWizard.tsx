@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Folder, Sparkles, Github, Code, Check, ChevronRight, ChevronLeft, PenTool, Clock, Layout, MessageSquare, Cloud, Shield, Palette, Repeat, Calendar, Target, Sidebar as SidebarIcon } from 'lucide-react';
+import logoPng from '../assets/Thoughts+.png';
 import clsx from 'clsx';
 import { useDashboardLayout, DashboardLayoutType } from '../contexts/DashboardLayoutContext';
 import { LayoutPreview } from './LayoutPreview';
@@ -93,6 +94,8 @@ export function SetupWizard({ onComplete, isDemoMode = false }: SetupWizardProps
             if (!isDemoMode) {
                 // @ts-ignore
                 await window.ipcRenderer.invoke('set-data-path', dataPath);
+                // Notify Settings page to reload path
+                window.dispatchEvent(new CustomEvent('data-path-changed'));
             }
             setStep(2);
         } else if (step === 2) {
@@ -155,7 +158,7 @@ export function SetupWizard({ onComplete, isDemoMode = false }: SetupWizardProps
             <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="bg-white rounded-3xl shadow-2xl max-w-3xl w-full p-8 border border-gray-200 relative z-10"
+                className="bg-white rounded-3xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-8 border border-gray-200 relative z-10"
                 style={{ WebkitAppRegion: 'no-drag' } as any}
             >
                 {showWelcome ? (
@@ -168,7 +171,7 @@ export function SetupWizard({ onComplete, isDemoMode = false }: SetupWizardProps
                     >
                         <div className="mb-6 flex justify-center">
                             <div className="p-3">
-                                <img src="/Thoughts+.png" alt="Thoughts+" className="w-24 h-24" />
+                                <img src={logoPng} alt="Thoughts+" className="w-24 h-24" />
                             </div>
                         </div>
 

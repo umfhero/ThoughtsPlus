@@ -95,7 +95,7 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
     const [enabledFeatures, setEnabledFeatures] = useState({
         calendar: true,
         drawing: true,
-        stats: true,
+        stats: false,
         github: true,
         timer: true
     });

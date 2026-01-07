@@ -29,6 +29,8 @@ const DEFAULT_DATA_PATH = ONEDRIVE_DATA_PATH;
 let currentDataPath = DEFAULT_DATA_PATH;
 
 // Device-specific settings (stored locally, not synced)
+// NOTE: This persists in AppData\Roaming\thoughts-plus\device-settings.json and survives app uninstall
+// To fully reset for testing: Delete %AppData%\Roaming\thoughts-plus folder
 const DEVICE_SETTINGS_PATH = path.join(app.getPath('userData'), 'device-settings.json');
 let deviceSettings: any = {};
 
