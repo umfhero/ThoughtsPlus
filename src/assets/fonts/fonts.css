@@ -10,7 +10,10 @@
 */
 
 /* Attempt to load local font files if they exist */
-@font-face {
+/* NOTE: Most fonts are not downloaded yet - using system font fallbacks */
+/* Uncomment these @font-face rules after downloading fonts with: npm run download:fonts */
+
+/* @font-face {
     font-family: 'Outfit-Local';
     font-style: normal;
     font-weight: 300;
@@ -80,6 +83,15 @@
     font-weight: 700;
     font-display: swap;
     src: url('./PlayfairDisplay-Bold.woff2') format('woff2');
+} */
+
+/* Only load the font that actually exists */
+@font-face {
+    font-family: 'ArchitectsDaughter-Local';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('./ArchitectsDaughter-Regular.woff2') format('woff2');
 }
 
 /* System font fallbacks - these are ALWAYS available */
