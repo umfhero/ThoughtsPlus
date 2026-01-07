@@ -8,6 +8,7 @@ import { formatICSDate } from '../utils/icsHelper';
 import { useDashboardLayout } from '../contexts/DashboardLayoutContext';
 import { LayoutPreview } from '../components/LayoutPreview';
 import { LAYOUT_CONFIGS, getAllLayoutTypes } from '../utils/dashboardLayouts';
+import { Contributor, fetchGithubContributors } from '../utils/github';
 
 export function SettingsPage() {
     const [dataPath, setDataPath] = useState<string>('Loading...');
@@ -52,6 +53,10 @@ export function SettingsPage() {
     // Update State
     const [currentVersion, setCurrentVersion] = useState('Loading...');
 
+    // Contributors State
+    const [contributors, setContributors] = useState<Contributor[]>([]);
+    const [contributorsLoading, setContributorsLoading] = useState(true);
+
     // Font State
     const [currentFont, setCurrentFont] = useState('Outfit');
     const [customFontFile, setCustomFontFile] = useState<File | null>(null);
@@ -74,6 +79,7 @@ export function SettingsPage() {
         loadCreatorCodes();
         loadUserName();
         loadCurrentVersion();
+        loadContributors();
 
         // Listen for feature toggle changes from other components (e.g., Quick Note modal)
         const handleFeatureToggleChange = (event: CustomEvent) => {
@@ -340,6 +346,18 @@ export function SettingsPage() {
         }
     };
 
+    const loadContributors = async () => {
+        setContributorsLoading(true);
+        try {
+            const data = await fetchGithubContributors('umfhero', 'ThoughtsPlus');
+            setContributors(data);
+        } catch (err) {
+            console.error('Failed to load contributors:', err);
+        } finally {
+            setContributorsLoading(false);
+        }
+    };
+
     // Updated Mini App Preview Component
     const AppPreview = ({ mode, accent, font }: { mode: 'light' | 'dark', accent: string, font: string }) => {
         const isDark = mode === 'dark';
@@ -533,7 +551,49 @@ export function SettingsPage() {
                     transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0 }}
                     className="mb-6 p-6 rounded-3xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50 relative overflow-hidden"
                 >
-                    <div className="flex flex-col gap-6">
+                    {/* Contributors Section - Top Right */}
+                    <div className="absolute top-6 right-6 flex flex-col items-end gap-2">
+                        <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Contributors
+                        </div>
+                        {contributorsLoading ? (
+                            <div className="flex items-center gap-1.5">
+                                <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse" />
+                                <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse" />
+                            </div>
+                        ) : contributors.length > 0 ? (
+                            <div className="flex items-center gap-1.5">
+                                {contributors.slice(0, 5).map((contributor) => (
+                                    <button
+                                        key={contributor.id}
+                                        onClick={() => openExternalLink(contributor.html_url)}
+                                        className="group relative"
+                                        title={`${contributor.login} (${contributor.contributions} contributions)`}
+                                    >
+                                        <img
+                                            src={contributor.avatar_url}
+                                            alt={contributor.login}
+                                            className="w-8 h-8 rounded-full border-2 border-gray-100 dark:border-gray-700 hover:border-blue-500 dark:hover:border-blue-400 transition-all hover:scale-110"
+                                        />
+                                        <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-900 dark:bg-gray-700 text-white text-xs px-2 py-1 rounded whitespace-nowrap pointer-events-none z-10">
+                                            {contributor.login}
+                                        </div>
+                                    </button>
+                                ))}
+                                {contributors.length > 5 && (
+                                    <button
+                                        onClick={() => openExternalLink('https://github.com/umfhero/ThoughtsPlus/graphs/contributors')}
+                                        className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 flex items-center justify-center text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
+                                        title={`+${contributors.length - 5} more contributors`}
+                                    >
+                                        +{contributors.length - 5}
+                                    </button>
+                                )}
+                            </div>
+                        ) : null}
+                    </div>
+
+                    <div className="flex flex-col gap-6 pr-32">{/* Add right padding to prevent overlap with contributors */}
                         <div>
                             <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-1">
                                 ThoughtsPlus v{currentVersion}

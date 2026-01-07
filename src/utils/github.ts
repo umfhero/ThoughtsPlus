@@ -66,3 +66,57 @@ export function getCachedContributions(year: number): Activity[] | null {
     }
     return null;
 }
+
+export interface Contributor {
+    login: string;
+    id: number;
+    avatar_url: string;
+    html_url: string;
+    contributions: number;
+}
+
+const CONTRIBUTORS_CACHE_KEY = 'github_contributors_cache';
+const CACHE_DURATION = 1000 * 60 * 60 * 24; // 24 hours
+
+interface ContributorsCachedData {
+    timestamp: number;
+    contributors: Contributor[];
+}
+
+export async function fetchGithubContributors(owner: string, repo: string): Promise<Contributor[]> {
+    // Check cache first
+    const cached = localStorage.getItem(CONTRIBUTORS_CACHE_KEY);
+    if (cached) {
+        const { timestamp, contributors } = JSON.parse(cached) as ContributorsCachedData;
+        if (Date.now() - timestamp < CACHE_DURATION) {
+            return contributors;
+        }
+    }
+
+    try {
+        const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/contributors`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch contributors');
+        }
+        
+        const contributors: Contributor[] = await response.json();
+
+        // Cache the results
+        localStorage.setItem(CONTRIBUTORS_CACHE_KEY, JSON.stringify({
+            timestamp: Date.now(),
+            contributors
+        }));
+
+        return contributors;
+    } catch (error) {
+        console.error('Error fetching GitHub contributors:', error);
+        
+        // If fetch fails, return cached data even if expired
+        if (cached) {
+            const { contributors } = JSON.parse(cached) as ContributorsCachedData;
+            return contributors;
+        }
+        
+        return [];
+    }
+}
