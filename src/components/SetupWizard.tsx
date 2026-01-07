@@ -27,11 +27,24 @@ export function SetupWizard({ onComplete, isDemoMode = false }: SetupWizardProps
     const { layoutType, setLayoutType } = useDashboardLayout();
     const { theme, accentColor } = useTheme();
     const [selectedLayout, setSelectedLayout] = useState<DashboardLayoutType>(layoutType);
+    const [appVersion, setAppVersion] = useState<string>('');
 
     useEffect(() => {
         // Load default path suggestions
         loadDefaultPaths();
+        // Load app version
+        loadAppVersion();
     }, []);
+
+    const loadAppVersion = async () => {
+        try {
+            // @ts-ignore
+            const version = await window.ipcRenderer.invoke('get-current-version');
+            setAppVersion(version || '5.6.5');
+        } catch {
+            setAppVersion('5.6.5');
+        }
+    };
 
     const loadDefaultPaths = async () => {
         // @ts-ignore
@@ -176,7 +189,7 @@ export function SetupWizard({ onComplete, isDemoMode = false }: SetupWizardProps
                         </div>
 
                         <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                            Welcome to <span className="text-blue-500">Thoughts+</span>
+                            Welcome to <span className="text-blue-500">ThoughtsPlus</span>
                         </h1>
 
                         <p className="text-base text-gray-600 mb-6 max-w-xl mx-auto">
@@ -243,7 +256,7 @@ export function SetupWizard({ onComplete, isDemoMode = false }: SetupWizardProps
                         </button>
 
                         <p className="text-xs text-gray-400 mt-4">
-                            Created by @umfhero • Version 5.5.0
+                            Created by @umfhero • Version {appVersion}
                         </p>
                     </motion.div>
                 ) : (
@@ -291,7 +304,7 @@ export function SetupWizard({ onComplete, isDemoMode = false }: SetupWizardProps
                                                 Choose Data Location
                                             </h2>
                                             <p className="text-sm text-gray-500">
-                                                Where should Thoughts+ store your data?
+                                                Where should ThoughtsPlus store your data?
                                             </p>
                                         </div>
                                     </div>

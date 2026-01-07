@@ -452,7 +452,7 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                             </div>
                             {!isIconOnly && (
                                 <div className="flex flex-col">
-                                    <span className="font-bold text-lg tracking-tight text-gray-900 dark:text-gray-100">Thoughts+</span>
+                                    <span className="font-bold text-lg tracking-tight text-gray-900 dark:text-gray-100">ThoughtsPlus</span>
                                 </div>
                             )}
                         </div>

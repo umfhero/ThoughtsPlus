@@ -328,11 +328,12 @@ async function tryMigrateLegacyData() {
 
 function createWindow() {
     // Use the icon from the app resources
+    // Windows uses .ico for proper taskbar transparency, other platforms use .png
     let iconPath: string;
     if (process.platform === 'win32') {
         iconPath = app.isPackaged
-            ? path.join(process.resourcesPath, 'Thoughts+.png')
-            : path.join(process.env.VITE_PUBLIC || '', 'Thoughts+.png');
+            ? path.join(process.resourcesPath, 'ThoughtsPlus.ico')
+            : path.join(process.env.VITE_PUBLIC || '', 'ThoughtsPlus.ico');
     } else {
         iconPath = path.join(process.env.VITE_PUBLIC || '', 'Thoughts+.png');
     }

@@ -8,7 +8,7 @@ import { DashboardLayoutProvider } from './contexts/DashboardLayoutContext'
 import { ErrorBoundary } from './components/ErrorBoundary'
 
 // Log startup for debugging APPX issues
-console.log('🚀 Thoughts+ starting...');
+console.log('🚀 ThoughtsPlus starting...');
 console.log('📍 Location:', window.location.href);
 console.log('🌐 User Agent:', navigator.userAgent);
 
