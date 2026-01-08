@@ -2273,7 +2273,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                                     "text-gray-500 dark:text-gray-400 leading-relaxed text-base md:text-lg max-w-md mx-auto",
                                     usePlaïfair && "font-['Playfair_Display']"
                                 )}>
-                                    {parseBoldText(aiSummary)}
+                                    {parseBoldText(aiSummary || '')}
                                 </p>
                             )}
                         </motion.div>
@@ -2488,7 +2488,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                                         </div>
                                     ) : (
                                         <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
-                                            {parseBoldText(aiSummary)}
+                                            {parseBoldText(aiSummary || '')}
                                         </p>
                                     )}
                                 </div>
@@ -2680,7 +2680,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                                     </div>
                                 ) : (
                                     <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
-                                        {parseBoldText(aiSummary)}
+                                        {parseBoldText(aiSummary || '')}
                                     </p>
                                 )}
                             </div>
