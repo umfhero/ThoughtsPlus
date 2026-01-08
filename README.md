@@ -4,6 +4,7 @@
   <h3>ThoughtsPlus</h3>
 
 ![GitHub Release](https://img.shields.io/github/v/release/umfhero/ThoughtsPlus)
+![Microsoft Store](https://img.shields.io/badge/dynamic/json?url=https://raw.githubusercontent.com/umfhero/ThoughtsPlus/main/version.json&query=$.msstore_version&label=Microsoft%20Store&color=0078D4&logo=microsoft)
 ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/umfhero/ThoughtsPlus/total)
 ![GitHub last commit](https://img.shields.io/github/last-commit/umfhero/ThoughtsPlus)
 ![GitHub stars](https://img.shields.io/github/stars/umfhero/ThoughtsPlus?style=social)

@@ -1,0 +1,90 @@
+name: Sync Microsoft Store Version
+
+on:
+  # Run daily at midnight UTC to check for updates
+  schedule:
+    - cron: '0 0 * * *'
+  
+  # Manual trigger
+  workflow_dispatch:
+    inputs:
+      force_version:
+        description: 'Force a specific version (optional, leave blank to auto-detect)'
+        required: false
+        type: string
+
+jobs:
+  sync-version:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Fetch Microsoft Store version
+        id: fetch-version
+        run: |
+          # If force_version is provided, use it
+          if [ -n "${{ github.event.inputs.force_version }}" ]; then
+            echo "version=${{ github.event.inputs.force_version }}" >> $GITHUB_OUTPUT
+            echo "Using forced version: ${{ github.event.inputs.force_version }}"
+            exit 0
+          fi
+          
+          # Fetch from Microsoft Store API
+          RESPONSE=$(curl -s "https://storeedgefd.dsx.mp.microsoft.com/v9.0/products/9NB8VZFWNV81?market=US&locale=en-US&deviceFamily=Windows.Desktop")
+          
+          # Extract version from Notes field (format: "Version X.X.X - ...")
+          VERSION=$(echo "$RESPONSE" | jq -r '.Payload.Notes[0]' | grep -oP 'Version\s+\K[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+          
+          if [ -z "$VERSION" ]; then
+            echo "Could not extract version from Store API"
+            # Try to get current version from version.json
+            CURRENT_VERSION=$(cat version.json | jq -r '.msstore_version')
+            echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          else
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "Detected version: $VERSION"
+          fi
+
+      - name: Get current version from file
+        id: current-version
+        run: |
+          if [ -f version.json ]; then
+            CURRENT=$(cat version.json | jq -r '.msstore_version')
+            echo "current=$CURRENT" >> $GITHUB_OUTPUT
+          else
+            echo "current=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update version.json if changed
+        if: steps.fetch-version.outputs.version != steps.current-version.outputs.current
+        run: |
+          cat > version.json << EOF
+          {
+            "msstore_version": "${{ steps.fetch-version.outputs.version }}",
+            "last_updated": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          }
+          EOF
+          
+          echo "Updated version.json:"
+          cat version.json
+
+      - name: Commit and push changes
+        if: steps.fetch-version.outputs.version != steps.current-version.outputs.current
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git add version.json
+          
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: update Microsoft Store version to ${{ steps.fetch-version.outputs.version }}"
+            git push
+          fi
