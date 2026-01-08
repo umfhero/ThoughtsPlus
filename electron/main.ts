@@ -1214,10 +1214,11 @@ function setupIpcHandlers() {
 
 // Helper function to try multiple Gemini models
 async function generateWithFallback(genAI: GoogleGenerativeAI, prompt: string): Promise<string> {
-    // Only use models available on the free tier
+    // Use stable Gemini model names available on the free tier
     const models = [
-        "gemini-2.5-flash",
-        "gemini-2.5-flash-lite"
+        "gemini-1.5-flash",
+        "gemini-1.5-flash-latest",
+        "gemini-pro"
     ];
 
     let lastError;
