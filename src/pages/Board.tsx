@@ -1326,14 +1326,29 @@ function StickyNoteComponent({ note, isSelected, onMouseDown, onResizeStart, onD
                 height: note.height,
             }}
             className={clsx(
-                "rounded-lg shadow-lg transition-shadow duration-150 cursor-move group",
+                "rounded-lg shadow-lg transition-shadow duration-150 group",
                 isSelected && "ring-4 ring-[var(--accent-primary)] shadow-2xl"
             )}
-            onMouseDown={onMouseDown}
         >
             {/* Attachment (tape/pin) - needs to be above the note content */}
             <div className="absolute top-0 left-0 w-full pointer-events-none" style={{ zIndex: 10 }}>
                 {getAttachmentStyle()}
+            </div>
+
+            {/* Drag Handle Bar - appears on hover */}
+            <div
+                className="absolute top-0 left-0 right-0 h-6 cursor-move z-20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-t-lg"
+                style={{ backgroundColor: 'rgba(0,0,0,0.08)' }}
+                onMouseDown={onMouseDown}
+            >
+                <div className="flex gap-0.5">
+                    <div className="w-1 h-1 rounded-full bg-black/30" />
+                    <div className="w-1 h-1 rounded-full bg-black/30" />
+                    <div className="w-1 h-1 rounded-full bg-black/30" />
+                    <div className="w-1 h-1 rounded-full bg-black/30" />
+                    <div className="w-1 h-1 rounded-full bg-black/30" />
+                    <div className="w-1 h-1 rounded-full bg-black/30" />
+                </div>
             </div>
 
             {/* Menu Settings Button */}
@@ -1348,6 +1363,7 @@ function StickyNoteComponent({ note, isSelected, onMouseDown, onResizeStart, onD
             >
                 <MoreVertical className="w-4 h-4" />
             </button>
+
 
             <div
                 className={clsx(
@@ -1402,6 +1418,7 @@ function StickyNoteComponent({ note, isSelected, onMouseDown, onResizeStart, onD
                                     style={{ fontFamily: getFontFamily(), fontSize: `${note.fontSize}px` }}
                                     placeholder="List item..."
                                     onClick={(e) => e.stopPropagation()}
+                                    onMouseDown={(e) => e.stopPropagation()}
                                 />
                                 <button
                                     onClick={(e) => {
@@ -1467,6 +1484,7 @@ function StickyNoteComponent({ note, isSelected, onMouseDown, onResizeStart, onD
                             placeholder="https://..."
                             className="w-full px-3 py-2 bg-white/50 rounded border border-gray-300 focus:outline-none text-gray-800 placeholder-gray-500"
                             onClick={(e) => e.stopPropagation()}
+                            onMouseDown={(e) => e.stopPropagation()}
                         />
                         {note.linkUrl && (
                             <button
@@ -1488,6 +1506,7 @@ function StickyNoteComponent({ note, isSelected, onMouseDown, onResizeStart, onD
                             style={{ fontFamily: getFontFamily(), fontSize: `${note.fontSize}px` }}
                             placeholder="Add notes about this link..."
                             onClick={(e) => e.stopPropagation()}
+                            onMouseDown={(e) => e.stopPropagation()}
                         />
                     </div>
                 ) : note.type === 'audio' ? (
@@ -1511,6 +1530,7 @@ function StickyNoteComponent({ note, isSelected, onMouseDown, onResizeStart, onD
                         }}
                         placeholder="Type here..."
                         onClick={(e) => e.stopPropagation()}
+                        onMouseDown={(e) => e.stopPropagation()}
                     />
                 )}
             </div>
