@@ -1,7 +1,5 @@
 <div align="center">
-  <img src="git/newpics/thoughtsplus/Thoughts+Stack.png" alt="ThoughtsPlus Banner" width="70%" style="border-radius: 15px;" />
-
-  <h3>ThoughtsPlus</h3>
+  <img src="git/newpics/thoughtsplus/banner.png" alt="ThoughtsPlus Banner" width="70%" style="border-radius: 15px; overflow: hidden;" />
 
 ![Microsoft Store](https://img.shields.io/badge/dynamic/json?url=https://raw.githubusercontent.com/umfhero/ThoughtsPlus/main/version.json&query=$.msstore_version&label=Microsoft%20Store&color=0078D4&logo=microsoft)
 ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/umfhero/ThoughtsPlus/total)
