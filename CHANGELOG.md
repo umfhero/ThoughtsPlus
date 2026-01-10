@@ -61,6 +61,7 @@ Track all new features, fixes, and changes for each version.
   - **Game Mode Friendly**: Designed to be lightweight and non-intrusive.
 - **Global Hotkeys**: Configurable system-wide shortcuts for other app functions
 - **Settings**: Added "Check for Updates" button linking to Microsoft Store
+- Global language, 
 
 ## v5.7.0
 

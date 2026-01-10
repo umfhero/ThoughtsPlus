@@ -1510,11 +1510,11 @@ function StickyNoteComponent({ note, isSelected, onMouseDown, onResizeStart, onD
 
     const getFontFamily = () => {
         switch (note.font) {
-            case 'modern': return 'Inter, sans-serif';
-            case 'serif': return 'Georgia, serif';
-            case 'handwritten': return 'Comic Sans MS, cursive';
-            case 'script': return 'Brush Script MT, cursive';
-            default: return 'Inter, sans-serif';
+            case 'modern': return "'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif";
+            case 'serif': return "'Playfair Display', 'Georgia', 'Times New Roman', serif";
+            case 'handwritten': return "'Architects Daughter', 'Comic Sans MS', cursive";
+            case 'script': return "'Architects Daughter', 'Brush Script MT', cursive";
+            default: return "'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif";
         }
     };
 

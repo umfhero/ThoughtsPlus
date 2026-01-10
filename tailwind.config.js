@@ -15,8 +15,14 @@ module.exports = {
                 },
             },
             fontFamily: {
-                handwriting: ['"Architects Daughter"', 'cursive'],
-                sans: ['var(--app-font)', 'Outfit', 'sans-serif'],
+                // Primary app font - uses CSS variable for dynamic switching
+                sans: ['var(--app-font)', 'Outfit', 'Segoe UI', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+                // Specific font families for direct use
+                outfit: ['Outfit', 'Segoe UI', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+                inter: ['Inter', 'Segoe UI', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+                poppins: ['Poppins', 'Segoe UI', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+                playfair: ['"Playfair Display"', 'Georgia', '"Times New Roman"', 'serif'],
+                handwriting: ['"Architects Daughter"', '"Comic Sans MS"', 'cursive'],
             },
         },
     },

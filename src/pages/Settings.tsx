@@ -143,12 +143,37 @@ export function SettingsPage() {
     }, []);
 
     useEffect(() => {
-        // Load persist font
+        // Load persist font with proper font stack
         const savedFont = localStorage.getItem('app-font');
         if (savedFont) {
             setCurrentFont(savedFont);
-            document.documentElement.style.setProperty('--app-font', savedFont);
-            document.body.style.fontFamily = `"${savedFont}", sans-serif`;
+
+            // Build font stack with appropriate fallbacks based on font type
+            let fontStack: string;
+            switch (savedFont) {
+                case 'Playfair Display':
+                    fontStack = "'Playfair Display', 'Georgia', 'Times New Roman', serif";
+                    break;
+                case 'Architects Daughter':
+                    fontStack = "'Architects Daughter', 'Comic Sans MS', cursive";
+                    break;
+                case 'Inter':
+                    fontStack = "'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif";
+                    break;
+                case 'Poppins':
+                    fontStack = "'Poppins', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif";
+                    break;
+                case 'CustomFont':
+                    fontStack = "'CustomFont', 'Segoe UI', sans-serif";
+                    break;
+                case 'Outfit':
+                default:
+                    fontStack = "'Outfit', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif";
+                    break;
+            }
+
+            document.documentElement.style.setProperty('--app-font', fontStack);
+            document.body.style.fontFamily = fontStack;
         }
 
         checkAutoLaunch();
@@ -170,15 +195,15 @@ export function SettingsPage() {
         const provider = await window.ipcRenderer.invoke('get-ai-provider');
         // @ts-ignore
         const allProviderKeys = await window.ipcRenderer.invoke('get-all-provider-api-keys');
-        
+
         if (provider) {
             setAiProvider(provider);
         }
-        
+
         // Load all provider API keys
         if (allProviderKeys) {
             setProviderApiKeys(allProviderKeys);
-            
+
             // Load cached validation statuses for each provider
             const statuses: { gemini?: 'idle' | 'valid' | 'invalid'; openai?: 'idle' | 'valid' | 'invalid'; perplexity?: 'idle' | 'valid' | 'invalid'; openrouter?: 'idle' | 'valid' | 'invalid' } = {};
             (['gemini', 'openai', 'perplexity', 'openrouter'] as const).forEach(p => {
@@ -193,11 +218,11 @@ export function SettingsPage() {
             });
             setProviderKeyStatuses(statuses);
         }
-        
+
         // Set current provider's key as active
         const currentProviderKey = allProviderKeys?.[provider || 'gemini'] || key || '';
         setApiKey(currentProviderKey);
-        
+
         if (currentProviderKey) {
             // Check if we have a cached validation status (don't make API call)
             const cachedStatus = localStorage.getItem(`api_key_validated_${provider || 'gemini'}`);
@@ -214,7 +239,7 @@ export function SettingsPage() {
                 setKeyStatus('idle');
             }
         }
-        
+
         // Load multi-provider config
         await loadMultiProviderConfig();
     };
@@ -227,7 +252,7 @@ export function SettingsPage() {
             const configs = await window.ipcRenderer.invoke('get-provider-configs');
             // @ts-ignore
             const events = await window.ipcRenderer.invoke('get-fallback-events');
-            
+
             setMultiProviderEnabled(enabled || false);
             setProviderConfigs(configs || []);
             setFallbackEvents(events || []);
@@ -242,7 +267,7 @@ export function SettingsPage() {
             await window.ipcRenderer.invoke('set-multi-provider-enabled', multiProviderEnabled);
             // @ts-ignore
             await window.ipcRenderer.invoke('set-provider-configs', providerConfigs);
-            
+
             // Also save each provider's API key to the main storage
             for (const config of providerConfigs) {
                 if (config.apiKey) {
@@ -259,10 +284,10 @@ export function SettingsPage() {
         const newPriority = providerConfigs.length;
         const usedProviders = providerConfigs.map(c => c.provider);
         const availableProvider = (['gemini', 'openai', 'perplexity', 'openrouter'] as const).find(p => !usedProviders.includes(p)) || 'gemini';
-        
+
         // Use saved API key for this provider if available
         const savedKey = providerApiKeys[availableProvider] || '';
-        
+
         setProviderConfigs([
             ...providerConfigs,
             { provider: availableProvider, apiKey: savedKey, enabled: true, priority: newPriority }
@@ -275,10 +300,10 @@ export function SettingsPage() {
         if (providerConfigs.length === 0) {
             const newConfigs: ProviderConfig[] = [];
             let priority = 0;
-            
+
             // Add providers that have saved keys, starting with the active one
             const orderedProviders = [aiProvider, ...(['gemini', 'openai', 'perplexity', 'openrouter'] as const).filter(p => p !== aiProvider)];
-            
+
             orderedProviders.forEach(provider => {
                 const savedKey = providerApiKeys[provider];
                 if (savedKey) {
@@ -290,7 +315,7 @@ export function SettingsPage() {
                     });
                 }
             });
-            
+
             if (newConfigs.length > 0) {
                 setProviderConfigs(newConfigs);
             }
@@ -326,7 +351,7 @@ export function SettingsPage() {
     const updateProviderConfig = (index: number, updates: Partial<ProviderConfig>) => {
         const updatedConfigs = providerConfigs.map((c, i) => i === index ? { ...c, ...updates } : c);
         setProviderConfigs(updatedConfigs);
-        
+
         // If API key was updated, also update the main provider keys
         if (updates.apiKey !== undefined) {
             const config = updatedConfigs[index];
@@ -495,26 +520,26 @@ export function SettingsPage() {
             await window.ipcRenderer.invoke('set-provider-api-key', aiProvider, apiKey);
             setProviderApiKeys(prev => ({ ...prev, [aiProvider]: apiKey }));
         }
-        
+
         // Switch provider
         setAiProvider(provider);
         // @ts-ignore
         await window.ipcRenderer.invoke('set-ai-provider', provider);
-        
+
         // Load saved API key for the new provider
         const savedKey = providerApiKeys[provider] || '';
         setApiKey(savedKey);
-        
+
         // Also set this as the active API key
         // @ts-ignore
         await window.ipcRenderer.invoke('set-api-key', savedKey);
-        
+
         // Load cached validation status for this provider
         if (savedKey) {
             const cachedStatus = localStorage.getItem(`api_key_validated_${provider}`);
             const cachedKey = localStorage.getItem(`api_key_hash_${provider}`);
             const currentKeyHash = btoa(savedKey.substring(0, 10));
-            
+
             if (cachedStatus === 'true' && cachedKey === currentKeyHash) {
                 setKeyStatus('valid');
             } else {
@@ -668,7 +693,7 @@ export function SettingsPage() {
                 const fontFace = new FontFace('CustomFont', buffer);
                 const loadedFace = await fontFace.load();
                 document.fonts.add(loadedFace);
-                document.documentElement.style.setProperty('--app-font', 'CustomFont');
+                document.documentElement.style.setProperty('--app-font', "'CustomFont', 'Segoe UI', sans-serif");
                 setCurrentFont('CustomFont');
                 localStorage.setItem('app-font', 'CustomFont'); // Persist
                 setCustomFontFile(file);
@@ -682,9 +707,31 @@ export function SettingsPage() {
             }
         } else {
             console.log(`Applying font: ${fontName}`); // Log application
-            // Apply to both root and body to ensure immediate effect
-            document.documentElement.style.setProperty('--app-font', fontName);
-            document.body.style.fontFamily = `"${fontName}", sans-serif`;
+
+            // Build font stack with appropriate fallbacks based on font type
+            let fontStack: string;
+            switch (fontName) {
+                case 'Playfair Display':
+                    fontStack = "'Playfair Display', 'Georgia', 'Times New Roman', serif";
+                    break;
+                case 'Architects Daughter':
+                    fontStack = "'Architects Daughter', 'Comic Sans MS', cursive";
+                    break;
+                case 'Inter':
+                    fontStack = "'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif";
+                    break;
+                case 'Poppins':
+                    fontStack = "'Poppins', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif";
+                    break;
+                case 'Outfit':
+                default:
+                    fontStack = "'Outfit', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif";
+                    break;
+            }
+
+            // Apply to both root CSS variable and body for immediate effect
+            document.documentElement.style.setProperty('--app-font', fontStack);
+            document.body.style.fontFamily = fontStack;
             console.log(`Current body font family: ${document.body.style.fontFamily}`); // Verify application
 
             setCurrentFont(fontName);
@@ -935,7 +982,7 @@ export function SettingsPage() {
                                     ].map((provider) => {
                                         const isValid = providerKeyStatuses[provider.id as keyof typeof providerKeyStatuses] === 'valid';
                                         const isActive = aiProvider === provider.id;
-                                        
+
                                         return (
                                             <button
                                                 key={provider.id}
@@ -975,7 +1022,7 @@ export function SettingsPage() {
                                             const newValue = e.target.value;
                                             setApiKey(newValue);
                                             setKeyStatus('idle');
-                                            
+
                                             // Update local provider keys state
                                             setProviderApiKeys(prev => ({ ...prev, [aiProvider]: newValue }));
 
@@ -1580,22 +1627,28 @@ export function SettingsPage() {
                             <div className="flex-[1.5] flex flex-col">
                                 <p className="text-sm xl:text-lg font-medium text-gray-700 dark:text-gray-300 mb-4">Application Font</p>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 xl:gap-4">
-                                    {['Outfit', 'Inter', 'Roboto', 'Poppins', 'Lato'].map(font => (
+                                    {[
+                                        { name: 'Outfit', display: 'Outfit' },
+                                        { name: 'Inter', display: 'Inter' },
+                                        { name: 'Poppins', display: 'Poppins' },
+                                        { name: 'Playfair Display', display: 'Elegant' },
+                                        { name: 'Architects Daughter', display: 'Handwriting' },
+                                    ].map(font => (
                                         <button
-                                            key={font}
-                                            onClick={() => handleFontChange(font)}
+                                            key={font.name}
+                                            onClick={() => handleFontChange(font.name)}
                                             className={clsx(
                                                 "p-3 xl:p-4 rounded-xl border text-left transition-all flex flex-col justify-center",
-                                                currentFont === font
+                                                currentFont === font.name
                                                     ? "bg-blue-50 dark:bg-blue-900/20 border-blue-500 ring-1 ring-blue-500"
                                                     : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-blue-300"
                                             )}
                                         >
                                             <div className="flex items-center justify-between mb-1 xl:mb-2">
-                                                <span className="font-medium xl:text-2xl" style={{ fontFamily: font }}>{font}</span>
-                                                {currentFont === font && <Check className="w-4 h-4 xl:w-6 xl:h-6 text-blue-500" />}
+                                                <span className="font-medium xl:text-2xl" style={{ fontFamily: font.name }}>{font.display}</span>
+                                                {currentFont === font.name && <Check className="w-4 h-4 xl:w-6 xl:h-6 text-blue-500" />}
                                             </div>
-                                            <span className="text-xs xl:text-base text-gray-400" style={{ fontFamily: font }}>The quick brown fox jumps over the lazy dog.</span>
+                                            <span className="text-xs xl:text-base text-gray-400" style={{ fontFamily: font.name }}>The quick brown fox jumps over the lazy dog.</span>
                                         </button>
                                     ))}
                                     <label className={clsx(
@@ -1604,11 +1657,11 @@ export function SettingsPage() {
                                     )}>
                                         <div className="flex items-center justify-between mb-1 xl:mb-2">
                                             <span className="font-medium flex items-center gap-2 xl:text-2xl">
-                                                <Type className="w-4 h-4 xl:w-6 xl:h-6" /> Custom Font
+                                                <Type className="w-4 h-4 xl:w-6 xl:h-6" /> Custom
                                             </span>
                                             {currentFont === 'CustomFont' && <Check className="w-4 h-4 xl:w-6 xl:h-6 text-blue-500" />}
                                         </div>
-                                        <span className="text-xs xl:text-base text-gray-400 block mb-2">{customFontFile ? customFontFile.name : 'Click to select a font file (.ttf, .otf, .woff)'}</span>
+                                        <span className="text-xs xl:text-base text-gray-400 block mb-2">{customFontFile ? customFontFile.name : 'Upload .ttf, .otf, .woff'}</span>
                                         <input type="file" className="hidden" accept=".ttf,.otf,.woff,.woff2" onChange={(e) => {
                                             if (e.target.files?.[0]) handleFontChange('CustomFont', 'custom', e.target.files[0]);
                                         }} />
@@ -1617,7 +1670,6 @@ export function SettingsPage() {
                             </div>
                         </div>
 
-                        {/* Right Column: Theme Previews */}
                         {/* Right Column: Theme Previews */}
                         <div className="flex flex-col">
                             <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Theme Mode</p>
@@ -1660,556 +1712,560 @@ export function SettingsPage() {
                             </div>
                         </div>
                     </div>
-                </motion.div>
+            </motion.div>
 
-                {/* Dashboard Layout Section */}
-                <motion.div
-                    initial={{ y: -15, scale: 0.97 }}
-                    animate={{ y: 0, scale: 1 }}
-                    transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.375 }}
-                    className="mt-6 p-6 rounded-3xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50"
-                >
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400">
-                            <Target className="w-5 h-5" />
-                        </div>
-                        <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Dashboard Layout</h2>
-                    </div>
+            {/* Dashboard Layout Section */}
+            <motion.div
+        initial={{ y: -15, scale: 0.97 }}
+        animate={{ y: 0, scale: 1 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.375 }}
+        className="mt-6 p-6 rounded-3xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50"
+    >
+        <div className="flex items-center gap-3 mb-6">
+            <div className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400">
+                <Target className="w-5 h-5" />
+            </div>
+            <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Dashboard Layout</h2>
+        </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {/* Layout Selection */}
-                        <div>
-                            <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Layout Style</p>
-                            <div className="grid grid-cols-2 gap-4">
-                                {getAllLayoutTypes().map((type) => {
-                                    const config = LAYOUT_CONFIGS[type];
-                                    const isSelected = layoutType === type;
-                                    return (
-                                        <button
-                                            key={type}
-                                            onClick={() => setLayoutType(type)}
-                                            className={clsx(
-                                                "group relative p-3 rounded-xl border-2 transition-all text-left overflow-hidden",
-                                                isSelected
-                                                    ? "border-blue-500 bg-blue-50/50 dark:bg-blue-900/20"
-                                                    : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
-                                            )}
-                                        >
-                                            <div className="aspect-[4/3] w-full mb-3 rounded-lg overflow-hidden">
-                                                <LayoutPreview
-                                                    layoutType={type}
-                                                    isSelected={isSelected}
-                                                    isDark={theme === 'dark'}
-                                                    accentColor={accentColor}
-                                                />
-                                            </div>
-                                            <div className="flex items-center justify-between">
-                                                <div>
-                                                    <span className={clsx(
-                                                        "text-sm font-semibold block",
-                                                        isSelected ? "text-blue-700 dark:text-blue-300" : "text-gray-700 dark:text-gray-300"
-                                                    )}>
-                                                        {config.name}
-                                                    </span>
-                                                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                                                        {config.description}
-                                                    </span>
-                                                </div>
-                                                {isSelected && <Check className="w-4 h-4 text-blue-500 flex-shrink-0" />}
-                                            </div>
-                                            {config.forceIconOnlySidebar && (
-                                                <div className="mt-2 flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
-                                                    <SidebarIcon className="w-3 h-3" />
-                                                    <span>Icon-only sidebar</span>
-                                                </div>
-                                            )}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-
-                        {/* Sidebar Settings */}
-                        <div>
-                            <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Sidebar</p>
-                            <div className="space-y-4">
-                                {/* Icon-Only Toggle */}
-                                <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600">
-                                    <div className="flex items-center gap-3">
-                                        <SidebarIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                                        <div>
-                                            <span className="font-medium text-gray-800 dark:text-gray-200 block">Icon-Only Mode</span>
-                                            <span className="text-xs text-gray-500 dark:text-gray-400">
-                                                Show only icons in sidebar (hover for labels)
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <button
-                                        onClick={() => setSidebarIconOnly(!sidebarIconOnly)}
-                                        disabled={LAYOUT_CONFIGS[layoutType]?.forceIconOnlySidebar}
-                                        className={clsx(
-                                            "w-10 h-6 rounded-full p-1 transition-colors duration-300 focus:outline-none",
-                                            effectiveSidebarIconOnly ? "bg-blue-500" : "bg-gray-300 dark:bg-gray-600",
-                                            LAYOUT_CONFIGS[layoutType]?.forceIconOnlySidebar && "opacity-50 cursor-not-allowed"
-                                        )}
-                                    >
-                                        <motion.div
-                                            layout
-                                            className="w-4 h-4 rounded-full bg-white shadow-md"
-                                            animate={{ x: effectiveSidebarIconOnly ? 16 : 0 }}
-                                            transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                                        />
-                                    </button>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Layout Selection */}
+            <div>
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Layout Style</p>
+                <div className="grid grid-cols-2 gap-4">
+                    {getAllLayoutTypes().map((type) => {
+                        const config = LAYOUT_CONFIGS[type];
+                        const isSelected = layoutType === type;
+                        return (
+                            <button
+                                key={type}
+                                onClick={() => setLayoutType(type)}
+                                className={clsx(
+                                    "group relative p-3 rounded-xl border-2 transition-all text-left overflow-hidden",
+                                    isSelected
+                                        ? "border-blue-500 bg-blue-50/50 dark:bg-blue-900/20"
+                                        : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                                )}
+                            >
+                                <div className="aspect-[4/3] w-full mb-3 rounded-lg overflow-hidden">
+                                    <LayoutPreview
+                                        layoutType={type}
+                                        isSelected={isSelected}
+                                        isDark={theme === 'dark'}
+                                        accentColor={accentColor}
+                                    />
                                 </div>
-                                {LAYOUT_CONFIGS[layoutType]?.forceIconOnlySidebar && (
-                                    <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1.5 px-1">
-                                        <AlertCircle className="w-3.5 h-3.5" />
-                                        This layout requires icon-only sidebar for the minimalist experience
-                                    </p>
-                                )}
-
-                                {/* Focus-Centric Font Toggle */}
-                                {layoutType === 'focus-centric' && (
-                                    <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600">
-                                        <div className="flex items-center gap-3">
-                                            <Type className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                                            <div>
-                                                <span className="font-medium text-gray-800 dark:text-gray-200 block">Elegant Font</span>
-                                                <span className="text-xs text-gray-500 dark:text-gray-400">
-                                                    Use Playfair Display for a refined look
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <button
-                                            onClick={() => setFocusCentricFont(focusCentricFont === 'playfair' ? 'default' : 'playfair')}
-                                            className={clsx(
-                                                "w-10 h-6 rounded-full p-1 transition-colors duration-300 focus:outline-none",
-                                                focusCentricFont === 'playfair' ? "bg-blue-500" : "bg-gray-300 dark:bg-gray-600"
-                                            )}
-                                        >
-                                            <motion.div
-                                                layout
-                                                className="w-4 h-4 rounded-full bg-white shadow-md"
-                                                animate={{ x: focusCentricFont === 'playfair' ? 16 : 0 }}
-                                                transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                                            />
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                </motion.div>
-
-                {/* Feature Toggles - Moved to Bottom */}
-                <div
-                    className="mt-6 p-6 rounded-3xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50"
-                >
-                    <div className="flex items-center gap-3 mb-4">
-                        <div className="p-2.5 rounded-xl bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400">
-                            <LayoutDashboard className="w-5 h-5" />
-                        </div>
-                        <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Feature Toggles</h2>
-                    </div>
-
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                        Choose which features appear in your sidebar and dashboard.
-                    </p>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {/* Calendar Toggle */}
-                        <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600">
-                            <div className="flex items-center gap-3">
-                                <CalendarIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                                <span className="font-medium text-gray-800 dark:text-gray-200">Calendar</span>
-                            </div>
-                            <button
-                                onClick={() => toggleFeature('calendar')}
-                                className={clsx(
-                                    "w-10 h-6 rounded-full p-1 transition-colors duration-300 focus:outline-none",
-                                    enabledFeatures.calendar ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"
-                                )}
-                            >
-                                <motion.div
-                                    layout
-                                    className="w-4 h-4 rounded-full bg-white shadow-md"
-                                    animate={{ x: enabledFeatures.calendar ? 16 : 0 }}
-                                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                                />
-                            </button>
-                        </div>
-
-                        {/* Board Toggle */}
-                        <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600">
-                            <div className="flex items-center gap-3">
-                                <PenTool className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                                <span className="font-medium text-gray-800 dark:text-gray-200">Board</span>
-                            </div>
-                            <button
-                                onClick={() => toggleFeature('drawing')}
-                                className={clsx(
-                                    "w-10 h-6 rounded-full p-1 transition-colors duration-300 focus:outline-none",
-                                    enabledFeatures.drawing ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"
-                                )}
-                            >
-                                <motion.div
-                                    layout
-                                    className="w-4 h-4 rounded-full bg-white shadow-md"
-                                    animate={{ x: enabledFeatures.drawing ? 16 : 0 }}
-                                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                                />
-                            </button>
-                        </div>
-
-                        {/* Creator Stats Toggle */}
-                        <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600">
-                            <div className="flex items-center gap-3">
-                                <PieChart className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                                <span className="font-medium text-gray-800 dark:text-gray-200">Creator Stats</span>
-                            </div>
-                            <button
-                                onClick={() => toggleFeature('stats')}
-                                className={clsx(
-                                    "w-10 h-6 rounded-full p-1 transition-colors duration-300 focus:outline-none",
-                                    enabledFeatures.stats ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"
-                                )}
-                            >
-                                <motion.div
-                                    layout
-                                    className="w-4 h-4 rounded-full bg-white shadow-md"
-                                    animate={{ x: enabledFeatures.stats ? 16 : 0 }}
-                                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                                />
-                            </button>
-                        </div>
-
-                        {/* GitHub Toggle */}
-                        <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600">
-                            <div className="flex items-center gap-3">
-                                <Github className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                                <span className="font-medium text-gray-800 dark:text-gray-200">GitHub</span>
-                            </div>
-                            <button
-                                onClick={() => toggleFeature('github')}
-                                className={clsx(
-                                    "w-10 h-6 rounded-full p-1 transition-colors duration-300 focus:outline-none",
-                                    enabledFeatures.github ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"
-                                )}
-                            >
-                                <motion.div
-                                    layout
-                                    className="w-4 h-4 rounded-full bg-white shadow-md"
-                                    animate={{ x: enabledFeatures.github ? 16 : 0 }}
-                                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                                />
-                            </button>
-                        </div>
-
-                        {/* Timer Toggle */}
-                        <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600">
-                            <div className="flex items-center gap-3">
-                                <Timer className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                                <span className="font-medium text-gray-800 dark:text-gray-200">Timer</span>
-                            </div>
-                            <button
-                                onClick={() => toggleFeature('timer')}
-                                className={clsx(
-                                    "w-10 h-6 rounded-full p-1 transition-colors duration-300 focus:outline-none",
-                                    enabledFeatures.timer ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"
-                                )}
-                            >
-                                <motion.div
-                                    layout
-                                    className="w-4 h-4 rounded-full bg-white shadow-md"
-                                    animate={{ x: enabledFeatures.timer ? 16 : 0 }}
-                                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                                />
-                            </button>
-                        </div>
-                    </div>
-
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-4 italic">
-                        Note: Dashboard and Settings cannot be disabled.
-                    </p>
-                </div>
-
-                {/* Multi-Provider Configuration Modal */}
-                {showMultiProviderModal && (
-                    <div
-                        className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
-                        onClick={() => setShowMultiProviderModal(false)}
-                    >
-                        <div
-                            onClick={(e) => e.stopPropagation()}
-                            className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-lg w-full max-h-[85vh] flex flex-col border border-gray-100 dark:border-gray-700"
-                        >
-                                {/* Header */}
-                                <div className="p-5 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
+                                <div className="flex items-center justify-between">
                                     <div>
-                                        <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100">Multi-Provider Fallback</h3>
-                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Configure multiple AI providers with automatic fallback</p>
+                                        <span className={clsx(
+                                            "text-sm font-semibold block",
+                                            isSelected ? "text-blue-700 dark:text-blue-300" : "text-gray-700 dark:text-gray-300"
+                                        )}>
+                                            {config.name}
+                                        </span>
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                                            {config.description}
+                                        </span>
                                     </div>
-                                    <button
-                                        onClick={() => setShowMultiProviderModal(false)}
-                                        className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                                    >
-                                        <X className="w-5 h-5 text-gray-500" />
-                                    </button>
+                                    {isSelected && <Check className="w-4 h-4 text-blue-500 flex-shrink-0" />}
                                 </div>
+                                {config.forceIconOnlySidebar && (
+                                    <div className="mt-2 flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+                                        <SidebarIcon className="w-3 h-3" />
+                                        <span>Icon-only sidebar</span>
+                                    </div>
+                                )}
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
 
-                                {/* Content */}
-                                <div className="flex-1 overflow-y-auto p-5 space-y-4">
-                                    {/* Enable Toggle */}
-                                    <div className="flex items-center justify-between p-4 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/30">
-                                        <div className="flex flex-col">
-                                            <span className="font-medium text-gray-800 dark:text-gray-200">Enable Multi-Provider</span>
-                                            <span className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Auto-switch when a provider runs out of quota</span>
-                                        </div>
+            {/* Sidebar Settings */}
+            <div>
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Sidebar</p>
+                <div className="space-y-4">
+                    {/* Icon-Only Toggle */}
+                    <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600">
+                        <div className="flex items-center gap-3">
+                            <SidebarIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                            <div>
+                                <span className="font-medium text-gray-800 dark:text-gray-200 block">Icon-Only Mode</span>
+                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                    Show only icons in sidebar (hover for labels)
+                                </span>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => setSidebarIconOnly(!sidebarIconOnly)}
+                            disabled={LAYOUT_CONFIGS[layoutType]?.forceIconOnlySidebar}
+                            className={clsx(
+                                "w-10 h-6 rounded-full p-1 transition-colors duration-300 focus:outline-none",
+                                effectiveSidebarIconOnly ? "bg-blue-500" : "bg-gray-300 dark:bg-gray-600",
+                                LAYOUT_CONFIGS[layoutType]?.forceIconOnlySidebar && "opacity-50 cursor-not-allowed"
+                            )}
+                        >
+                            <motion.div
+                                layout
+                                className="w-4 h-4 rounded-full bg-white shadow-md"
+                                animate={{ x: effectiveSidebarIconOnly ? 16 : 0 }}
+                                transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                            />
+                        </button>
+                    </div>
+                    {LAYOUT_CONFIGS[layoutType]?.forceIconOnlySidebar && (
+                        <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1.5 px-1">
+                            <AlertCircle className="w-3.5 h-3.5" />
+                            This layout requires icon-only sidebar for the minimalist experience
+                        </p>
+                    )}
+
+                    {/* Focus-Centric Font Toggle */}
+                    {layoutType === 'focus-centric' && (
+                        <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600">
+                            <div className="flex items-center gap-3">
+                                <Type className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                                <div>
+                                    <span className="font-medium text-gray-800 dark:text-gray-200 block">Elegant Font</span>
+                                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                                        Use Playfair Display for a refined look
+                                    </span>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setFocusCentricFont(focusCentricFont === 'playfair' ? 'default' : 'playfair')}
+                                className={clsx(
+                                    "w-10 h-6 rounded-full p-1 transition-colors duration-300 focus:outline-none",
+                                    focusCentricFont === 'playfair' ? "bg-blue-500" : "bg-gray-300 dark:bg-gray-600"
+                                )}
+                            >
+                                <motion.div
+                                    layout
+                                    className="w-4 h-4 rounded-full bg-white shadow-md"
+                                    animate={{ x: focusCentricFont === 'playfair' ? 16 : 0 }}
+                                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                                />
+                            </button>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    </motion.div>
+
+    {/* Feature Toggles - Moved to Bottom */ }
+    <div
+        className="mt-6 p-6 rounded-3xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50"
+    >
+        <div className="flex items-center gap-3 mb-4">
+            <div className="p-2.5 rounded-xl bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400">
+                <LayoutDashboard className="w-5 h-5" />
+            </div>
+            <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Feature Toggles</h2>
+        </div>
+
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+            Choose which features appear in your sidebar and dashboard.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Calendar Toggle */}
+            <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600">
+                <div className="flex items-center gap-3">
+                    <CalendarIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                    <span className="font-medium text-gray-800 dark:text-gray-200">Calendar</span>
+                </div>
+                <button
+                    onClick={() => toggleFeature('calendar')}
+                    className={clsx(
+                        "w-10 h-6 rounded-full p-1 transition-colors duration-300 focus:outline-none",
+                        enabledFeatures.calendar ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"
+                    )}
+                >
+                    <motion.div
+                        layout
+                        className="w-4 h-4 rounded-full bg-white shadow-md"
+                        animate={{ x: enabledFeatures.calendar ? 16 : 0 }}
+                        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                    />
+                </button>
+            </div>
+
+            {/* Board Toggle */}
+            <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600">
+                <div className="flex items-center gap-3">
+                    <PenTool className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                    <span className="font-medium text-gray-800 dark:text-gray-200">Board</span>
+                </div>
+                <button
+                    onClick={() => toggleFeature('drawing')}
+                    className={clsx(
+                        "w-10 h-6 rounded-full p-1 transition-colors duration-300 focus:outline-none",
+                        enabledFeatures.drawing ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"
+                    )}
+                >
+                    <motion.div
+                        layout
+                        className="w-4 h-4 rounded-full bg-white shadow-md"
+                        animate={{ x: enabledFeatures.drawing ? 16 : 0 }}
+                        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                    />
+                </button>
+            </div>
+
+            {/* Creator Stats Toggle */}
+            <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600">
+                <div className="flex items-center gap-3">
+                    <PieChart className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                    <span className="font-medium text-gray-800 dark:text-gray-200">Creator Stats</span>
+                </div>
+                <button
+                    onClick={() => toggleFeature('stats')}
+                    className={clsx(
+                        "w-10 h-6 rounded-full p-1 transition-colors duration-300 focus:outline-none",
+                        enabledFeatures.stats ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"
+                    )}
+                >
+                    <motion.div
+                        layout
+                        className="w-4 h-4 rounded-full bg-white shadow-md"
+                        animate={{ x: enabledFeatures.stats ? 16 : 0 }}
+                        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                    />
+                </button>
+            </div>
+
+            {/* GitHub Toggle */}
+            <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600">
+                <div className="flex items-center gap-3">
+                    <Github className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                    <span className="font-medium text-gray-800 dark:text-gray-200">GitHub</span>
+                </div>
+                <button
+                    onClick={() => toggleFeature('github')}
+                    className={clsx(
+                        "w-10 h-6 rounded-full p-1 transition-colors duration-300 focus:outline-none",
+                        enabledFeatures.github ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"
+                    )}
+                >
+                    <motion.div
+                        layout
+                        className="w-4 h-4 rounded-full bg-white shadow-md"
+                        animate={{ x: enabledFeatures.github ? 16 : 0 }}
+                        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                    />
+                </button>
+            </div>
+
+            {/* Timer Toggle */}
+            <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600">
+                <div className="flex items-center gap-3">
+                    <Timer className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                    <span className="font-medium text-gray-800 dark:text-gray-200">Timer</span>
+                </div>
+                <button
+                    onClick={() => toggleFeature('timer')}
+                    className={clsx(
+                        "w-10 h-6 rounded-full p-1 transition-colors duration-300 focus:outline-none",
+                        enabledFeatures.timer ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"
+                    )}
+                >
+                    <motion.div
+                        layout
+                        className="w-4 h-4 rounded-full bg-white shadow-md"
+                        animate={{ x: enabledFeatures.timer ? 16 : 0 }}
+                        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                    />
+                </button>
+            </div>
+        </div>
+
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-4 italic">
+            Note: Dashboard and Settings cannot be disabled.
+        </p>
+    </div>
+
+    {/* Multi-Provider Configuration Modal */ }
+    {
+        showMultiProviderModal && (
+            <div
+                className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
+                onClick={() => setShowMultiProviderModal(false)}
+            >
+                <div
+                    onClick={(e) => e.stopPropagation()}
+                    className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-lg w-full max-h-[85vh] flex flex-col border border-gray-100 dark:border-gray-700"
+                >
+                    {/* Header */}
+                    <div className="p-5 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
+                        <div>
+                            <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100">Multi-Provider Fallback</h3>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Configure multiple AI providers with automatic fallback</p>
+                        </div>
+                        <button
+                            onClick={() => setShowMultiProviderModal(false)}
+                            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        >
+                            <X className="w-5 h-5 text-gray-500" />
+                        </button>
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 overflow-y-auto p-5 space-y-4">
+                        {/* Enable Toggle */}
+                        <div className="flex items-center justify-between p-4 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/30">
+                            <div className="flex flex-col">
+                                <span className="font-medium text-gray-800 dark:text-gray-200">Enable Multi-Provider</span>
+                                <span className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Auto-switch when a provider runs out of quota</span>
+                            </div>
+                            <button
+                                onClick={() => setMultiProviderEnabled(!multiProviderEnabled)}
+                                className={clsx(
+                                    "w-10 h-6 rounded-full p-1 transition-colors duration-300 focus:outline-none",
+                                    multiProviderEnabled ? "bg-purple-500" : "bg-gray-300 dark:bg-gray-600"
+                                )}
+                            >
+                                <motion.div
+                                    layout
+                                    className="w-4 h-4 rounded-full bg-white shadow-md"
+                                    animate={{ x: multiProviderEnabled ? 16 : 0 }}
+                                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                                />
+                            </button>
+                        </div>
+
+                        {multiProviderEnabled && (
+                            <>
+                                {/* Provider List */}
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Providers (in priority order)</label>
                                         <button
-                                            onClick={() => setMultiProviderEnabled(!multiProviderEnabled)}
-                                            className={clsx(
-                                                "w-10 h-6 rounded-full p-1 transition-colors duration-300 focus:outline-none",
-                                                multiProviderEnabled ? "bg-purple-500" : "bg-gray-300 dark:bg-gray-600"
-                                            )}
+                                            onClick={addProviderConfig}
+                                            disabled={providerConfigs.length >= 3}
+                                            className="flex items-center gap-1 text-xs font-medium text-purple-600 dark:text-purple-400 hover:text-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
-                                            <motion.div
-                                                layout
-                                                className="w-4 h-4 rounded-full bg-white shadow-md"
-                                                animate={{ x: multiProviderEnabled ? 16 : 0 }}
-                                                transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                                            />
+                                            <Plus className="w-3.5 h-3.5" /> Add Provider
                                         </button>
                                     </div>
 
-                                    {multiProviderEnabled && (
-                                        <>
-                                            {/* Provider List */}
-                                            <div className="space-y-2">
-                                                <div className="flex items-center justify-between">
-                                                    <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Providers (in priority order)</label>
+                                    {providerConfigs.length === 0 && (
+                                        <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-dashed border-gray-200 dark:border-gray-600 text-center">
+                                            <p className="text-sm text-gray-500 dark:text-gray-400">No providers configured. Add one to get started.</p>
+                                        </div>
+                                    )}
+
+                                    {providerConfigs.map((config, index) => (
+                                        <div key={index} className="p-3 rounded-xl bg-gray-50 dark:bg-gray-700/30 border border-gray-100 dark:border-gray-600 space-y-3">
+                                            <div className="flex items-center gap-2">
+                                                {/* Priority indicator */}
+                                                <div className="flex flex-col gap-0.5">
                                                     <button
-                                                        onClick={addProviderConfig}
-                                                        disabled={providerConfigs.length >= 3}
-                                                        className="flex items-center gap-1 text-xs font-medium text-purple-600 dark:text-purple-400 hover:text-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                        onClick={() => moveProviderUp(index)}
+                                                        disabled={index === 0}
+                                                        className="p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
                                                     >
-                                                        <Plus className="w-3.5 h-3.5" /> Add Provider
+                                                        <ChevronUp className="w-3.5 h-3.5 text-gray-500" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => moveProviderDown(index)}
+                                                        disabled={index === providerConfigs.length - 1}
+                                                        className="p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                                                    >
+                                                        <ChevronDown className="w-3.5 h-3.5 text-gray-500" />
                                                     </button>
                                                 </div>
 
-                                                {providerConfigs.length === 0 && (
-                                                    <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-dashed border-gray-200 dark:border-gray-600 text-center">
-                                                        <p className="text-sm text-gray-500 dark:text-gray-400">No providers configured. Add one to get started.</p>
-                                                    </div>
-                                                )}
+                                                <span className="text-xs font-bold text-gray-400 w-4">#{index + 1}</span>
 
-                                                {providerConfigs.map((config, index) => (
-                                                    <div key={index} className="p-3 rounded-xl bg-gray-50 dark:bg-gray-700/30 border border-gray-100 dark:border-gray-600 space-y-3">
-                                                        <div className="flex items-center gap-2">
-                                                            {/* Priority indicator */}
-                                                            <div className="flex flex-col gap-0.5">
-                                                                <button
-                                                                    onClick={() => moveProviderUp(index)}
-                                                                    disabled={index === 0}
-                                                                    className="p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
-                                                                >
-                                                                    <ChevronUp className="w-3.5 h-3.5 text-gray-500" />
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => moveProviderDown(index)}
-                                                                    disabled={index === providerConfigs.length - 1}
-                                                                    className="p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
-                                                                >
-                                                                    <ChevronDown className="w-3.5 h-3.5 text-gray-500" />
-                                                                </button>
-                                                            </div>
-
-                                                            <span className="text-xs font-bold text-gray-400 w-4">#{index + 1}</span>
-
-                                                            {/* Provider select */}
-                                                            <select
-                                                                value={config.provider}
-                                                                onChange={(e) => updateProviderConfig(index, { provider: e.target.value as any })}
-                                                                className="flex-1 px-3 py-1.5 rounded-lg bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-sm outline-none focus:ring-2 focus:ring-purple-500/20"
-                                                            >
-                                                                <option value="gemini">Gemini (Free tier)</option>
-                                                                {/* <option value="openai">OpenAI (Paid)</option> */}
-                                                                <option value="perplexity">Perplexity (Paid)</option>
-                                                                {/* <option value="openrouter">OpenRouter (Free tier)</option> */}
-                                                            </select>
-
-                                                            {/* Enable toggle */}
-                                                            <button
-                                                                onClick={() => updateProviderConfig(index, { enabled: !config.enabled })}
-                                                                className={clsx(
-                                                                    "w-8 h-5 rounded-full p-0.5 transition-colors duration-300 focus:outline-none shrink-0",
-                                                                    config.enabled ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"
-                                                                )}
-                                                            >
-                                                                <motion.div
-                                                                    layout
-                                                                    className="w-4 h-4 rounded-full bg-white shadow-md"
-                                                                    animate={{ x: config.enabled ? 12 : 0 }}
-                                                                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                                                                />
-                                                            </button>
-
-                                                            {/* Delete button */}
-                                                            <button
-                                                                onClick={() => removeProviderConfig(index)}
-                                                                className="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-500 transition-colors"
-                                                            >
-                                                                <Trash2 className="w-4 h-4" />
-                                                            </button>
-                                                        </div>
-
-                                                        {/* API Key input */}
-                                                        <input
-                                                            type="password"
-                                                            value={config.apiKey}
-                                                            onChange={(e) => updateProviderConfig(index, { apiKey: e.target.value })}
-                                                            placeholder={`${config.provider === 'gemini' ? 'Gemini' : config.provider === 'openai' ? 'OpenAI' : config.provider === 'perplexity' ? 'Perplexity' : 'OpenRouter'} API Key`}
-                                                            className="w-full px-3 py-2 rounded-lg bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-sm outline-none focus:ring-2 focus:ring-purple-500/20"
-                                                        />
-                                                    </div>
-                                                ))}
-                                            </div>
-
-                                            {/* Fallback History */}
-                                            <div className="pt-2">
-                                                <button
-                                                    onClick={() => setShowFallbackHistory(!showFallbackHistory)}
-                                                    className="flex items-center gap-2 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                                                {/* Provider select */}
+                                                <select
+                                                    value={config.provider}
+                                                    onChange={(e) => updateProviderConfig(index, { provider: e.target.value as any })}
+                                                    className="flex-1 px-3 py-1.5 rounded-lg bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-sm outline-none focus:ring-2 focus:ring-purple-500/20"
                                                 >
-                                                    <History className="w-3.5 h-3.5" />
-                                                    Fallback History ({fallbackEvents.length})
-                                                    {showFallbackHistory ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                                                    <option value="gemini">Gemini (Free tier)</option>
+                                                    {/* <option value="openai">OpenAI (Paid)</option> */}
+                                                    <option value="perplexity">Perplexity (Paid)</option>
+                                                    {/* <option value="openrouter">OpenRouter (Free tier)</option> */}
+                                                </select>
+
+                                                {/* Enable toggle */}
+                                                <button
+                                                    onClick={() => updateProviderConfig(index, { enabled: !config.enabled })}
+                                                    className={clsx(
+                                                        "w-8 h-5 rounded-full p-0.5 transition-colors duration-300 focus:outline-none shrink-0",
+                                                        config.enabled ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"
+                                                    )}
+                                                >
+                                                    <motion.div
+                                                        layout
+                                                        className="w-4 h-4 rounded-full bg-white shadow-md"
+                                                        animate={{ x: config.enabled ? 12 : 0 }}
+                                                        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                                                    />
                                                 </button>
 
-                                                <AnimatePresence>
-                                                    {showFallbackHistory && (
-                                                        <motion.div
-                                                            initial={{ height: 0, opacity: 0 }}
-                                                            animate={{ height: 'auto', opacity: 1 }}
-                                                            exit={{ height: 0, opacity: 0 }}
-                                                            className="mt-2 space-y-1 overflow-hidden"
-                                                        >
-                                                            {fallbackEvents.length === 0 ? (
-                                                                <p className="text-xs text-gray-400 dark:text-gray-500 py-2">No fallback events yet</p>
-                                                            ) : (
-                                                                <>
-                                                                    {fallbackEvents.slice().reverse().slice(0, 10).map((event, i) => (
-                                                                        <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/30">
-                                                                            <AlertCircle className="w-3.5 h-3.5 text-amber-500 mt-0.5 shrink-0" />
-                                                                            <div className="flex-1 min-w-0">
-                                                                                <p className="text-xs text-gray-700 dark:text-gray-300">
-                                                                                    <span className="font-medium">{event.fromProvider}</span> → <span className="font-medium">{event.toProvider}</span>
-                                                                                </p>
-                                                                                <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate">{event.reason}</p>
-                                                                                <p className="text-[10px] text-gray-400 dark:text-gray-500">{new Date(event.timestamp).toLocaleString()}</p>
-                                                                            </div>
-                                                                        </div>
-                                                                    ))}
-                                                                    {fallbackEvents.length > 10 && (
-                                                                        <p className="text-[10px] text-gray-400 text-center py-1">+ {fallbackEvents.length - 10} more events</p>
-                                                                    )}
-                                                                </>
-                                                            )}
-                                                        </motion.div>
-                                                    )}
-                                                </AnimatePresence>
+                                                {/* Delete button */}
+                                                <button
+                                                    onClick={() => removeProviderConfig(index)}
+                                                    className="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-500 transition-colors"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
                                             </div>
-                                        </>
-                                    )}
 
-                                    {/* Info note */}
-                                    <div className="flex items-start gap-2 p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/30">
-                                        <Info className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
-                                        <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
-                                            When enabled, if the first provider fails (rate limit, quota, etc.), the app automatically tries the next provider. Great for mixing free Gemini with paid providers as backup.
-                                        </p>
-                                    </div>
+                                            {/* API Key input */}
+                                            <input
+                                                type="password"
+                                                value={config.apiKey}
+                                                onChange={(e) => updateProviderConfig(index, { apiKey: e.target.value })}
+                                                placeholder={`${config.provider === 'gemini' ? 'Gemini' : config.provider === 'openai' ? 'OpenAI' : config.provider === 'perplexity' ? 'Perplexity' : 'OpenRouter'} API Key`}
+                                                className="w-full px-3 py-2 rounded-lg bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-sm outline-none focus:ring-2 focus:ring-purple-500/20"
+                                            />
+                                        </div>
+                                    ))}
                                 </div>
 
-                                {/* Footer */}
-                                <div className="p-5 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 rounded-b-2xl flex justify-end gap-3">
+                                {/* Fallback History */}
+                                <div className="pt-2">
                                     <button
-                                        onClick={() => setShowMultiProviderModal(false)}
-                                        className="px-4 py-2 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 font-medium transition-colors"
+                                        onClick={() => setShowFallbackHistory(!showFallbackHistory)}
+                                        className="flex items-center gap-2 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
                                     >
-                                        Cancel
+                                        <History className="w-3.5 h-3.5" />
+                                        Fallback History ({fallbackEvents.length})
+                                        {showFallbackHistory ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                                     </button>
-                                    <button
-                                        onClick={async () => {
-                                            try {
-                                                await saveMultiProviderConfig();
-                                            } catch (error) {
-                                                console.error('Save error:', error);
-                                            } finally {
-                                                setShowMultiProviderModal(false);
-                                            }
-                                        }}
-                                        className="px-6 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold shadow-lg shadow-purple-500/30 transition-all"
-                                    >
-                                        Save Configuration
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                )}
 
-                {/* Error Modal */}
-                {showErrorModal && (
-                    <div
-                        className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
-                        onClick={() => setShowErrorModal(false)}
-                    >
-                        <div
-                            onClick={(e) => e.stopPropagation()}
-                            className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full border border-gray-100 dark:border-gray-700"
-                        >
-                            <div className="p-5 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3">
-                                <div className="p-2 rounded-xl bg-red-100 dark:bg-red-900/30">
-                                    <AlertCircle className="w-5 h-5 text-red-500" />
+                                    <AnimatePresence>
+                                        {showFallbackHistory && (
+                                            <motion.div
+                                                initial={{ height: 0, opacity: 0 }}
+                                                animate={{ height: 'auto', opacity: 1 }}
+                                                exit={{ height: 0, opacity: 0 }}
+                                                className="mt-2 space-y-1 overflow-hidden"
+                                            >
+                                                {fallbackEvents.length === 0 ? (
+                                                    <p className="text-xs text-gray-400 dark:text-gray-500 py-2">No fallback events yet</p>
+                                                ) : (
+                                                    <>
+                                                        {fallbackEvents.slice().reverse().slice(0, 10).map((event, i) => (
+                                                            <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/30">
+                                                                <AlertCircle className="w-3.5 h-3.5 text-amber-500 mt-0.5 shrink-0" />
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className="text-xs text-gray-700 dark:text-gray-300">
+                                                                        <span className="font-medium">{event.fromProvider}</span> → <span className="font-medium">{event.toProvider}</span>
+                                                                    </p>
+                                                                    <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate">{event.reason}</p>
+                                                                    <p className="text-[10px] text-gray-400 dark:text-gray-500">{new Date(event.timestamp).toLocaleString()}</p>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                        {fallbackEvents.length > 10 && (
+                                                            <p className="text-[10px] text-gray-400 text-center py-1">+ {fallbackEvents.length - 10} more events</p>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
                                 </div>
-                                <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100">{errorModalContent.title}</h3>
-                            </div>
-                            <div className="p-5 space-y-3">
-                                <p className="text-sm text-gray-700 dark:text-gray-300">{errorModalContent.message}</p>
-                                {errorModalContent.details && (
-                                    <details className="text-xs">
-                                        <summary className="cursor-pointer text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">Technical details</summary>
-                                        <pre className="mt-2 p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 overflow-x-auto whitespace-pre-wrap">{errorModalContent.details}</pre>
-                                    </details>
-                                )}
-                            </div>
-                            <div className="p-5 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 rounded-b-2xl flex justify-end">
-                                <button
-                                    onClick={() => setShowErrorModal(false)}
-                                    className="px-6 py-2 rounded-xl bg-gray-600 hover:bg-gray-500 text-white font-bold transition-all"
-                                >
-                                    Close
-                                </button>
-                            </div>
+                            </>
+                        )}
+
+                        {/* Info note */}
+                        <div className="flex items-start gap-2 p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/30">
+                            <Info className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
+                            <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
+                                When enabled, if the first provider fails (rate limit, quota, etc.), the app automatically tries the next provider. Great for mixing free Gemini with paid providers as backup.
+                            </p>
                         </div>
                     </div>
-                )}
 
-                <ImportModal
-                    isOpen={showImportModal}
-                    onClose={() => {
-                        setShowImportModal(false);
-                        setImportedEvents([]);
-                    }}
-                    events={importedEvents}
-                    selectedIndices={selectedImportIndices}
-                    toggleIndex={(i) => {
-                        setSelectedImportIndices(prev =>
-                            prev.includes(i) ? prev.filter(idx => idx !== i) : [...prev, i]
-                        );
-                    }}
-                    onConfirm={confirmImport}
-                />
+                    {/* Footer */}
+                    <div className="p-5 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 rounded-b-2xl flex justify-end gap-3">
+                        <button
+                            onClick={() => setShowMultiProviderModal(false)}
+                            className="px-4 py-2 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 font-medium transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={async () => {
+                                try {
+                                    await saveMultiProviderConfig();
+                                } catch (error) {
+                                    console.error('Save error:', error);
+                                } finally {
+                                    setShowMultiProviderModal(false);
+                                }
+                            }}
+                            className="px-6 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold shadow-lg shadow-purple-500/30 transition-all"
+                        >
+                            Save Configuration
+                        </button>
+                    </div>
+                </div>
             </div>
+        )
+    }
+
+    {/* Error Modal */ }
+    {
+        showErrorModal && (
+            <div
+                className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
+                onClick={() => setShowErrorModal(false)}
+            >
+                <div
+                    onClick={(e) => e.stopPropagation()}
+                    className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full border border-gray-100 dark:border-gray-700"
+                >
+                    <div className="p-5 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3">
+                        <div className="p-2 rounded-xl bg-red-100 dark:bg-red-900/30">
+                            <AlertCircle className="w-5 h-5 text-red-500" />
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100">{errorModalContent.title}</h3>
+                    </div>
+                    <div className="p-5 space-y-3">
+                        <p className="text-sm text-gray-700 dark:text-gray-300">{errorModalContent.message}</p>
+                        {errorModalContent.details && (
+                            <details className="text-xs">
+                                <summary className="cursor-pointer text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">Technical details</summary>
+                                <pre className="mt-2 p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 overflow-x-auto whitespace-pre-wrap">{errorModalContent.details}</pre>
+                            </details>
+                        )}
+                    </div>
+                    <div className="p-5 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 rounded-b-2xl flex justify-end">
+                        <button
+                            onClick={() => setShowErrorModal(false)}
+                            className="px-6 py-2 rounded-xl bg-gray-600 hover:bg-gray-500 text-white font-bold transition-all"
+                        >
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
+    <ImportModal
+        isOpen={showImportModal}
+        onClose={() => {
+            setShowImportModal(false);
+            setImportedEvents([]);
+        }}
+        events={importedEvents}
+        selectedIndices={selectedImportIndices}
+        toggleIndex={(i) => {
+            setSelectedImportIndices(prev =>
+                prev.includes(i) ? prev.filter(idx => idx !== i) : [...prev, i]
+            );
+        }}
+        onConfirm={confirmImport}
+    />
+            </div >
         </div >
     );
 }
