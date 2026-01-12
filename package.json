@@ -130,6 +130,7 @@
     "directories": {
       "output": "release"
     },
-    "compression": "maximum"
+    "compression": "maximum",
+    "asar": false
   }
 }
