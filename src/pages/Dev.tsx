@@ -156,6 +156,35 @@ export function DevPage({ isMockMode, toggleMockMode, onForceSetup, onForceSnaps
                         )}
                     </div>
 
+                    {/* Region Restriction Simulator */}
+                    <div className="bg-white/50 dark:bg-gray-800/50 rounded-xl p-4 md:p-6 border border-white/20 dark:border-gray-700/30 shadow-sm">
+                        <div className="flex items-center justify-between mb-4">
+                            <div>
+                                <h2 className="text-xl font-semibold">Simulate Region Block</h2>
+                                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                    Test Gemini region restrictions without VPN.
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    const current = localStorage.getItem('dev_simulate_region_block') === 'true';
+                                    localStorage.setItem('dev_simulate_region_block', (!current).toString());
+                                    window.location.reload();
+                                }}
+                                className="transition-colors hover:opacity-80"
+                                style={{ color: localStorage.getItem('dev_simulate_region_block') === 'true' ? accentColor : 'inherit' }}
+                            >
+                                {localStorage.getItem('dev_simulate_region_block') === 'true' ? <ToggleRight size={40} /> : <ToggleLeft size={40} className="text-gray-400" />}
+                            </button>
+                        </div>
+                        {localStorage.getItem('dev_simulate_region_block') === 'true' && (
+                            <div className="p-3 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 rounded-lg text-sm flex items-center gap-2">
+                                <AlertTriangle size={16} />
+                                Gemini API will fail with region error. Perplexity will work normally.
+                            </div>
+                        )}
+                    </div>
+
                     {/* Danger Zone */}
                     <div className="bg-red-50 dark:bg-red-900/10 rounded-xl p-4 md:p-6 border border-red-200 dark:border-red-800/30 shadow-sm">
                         <h2 className="text-xl font-semibold mb-4 text-red-600 dark:text-red-400">Danger Zone</h2>

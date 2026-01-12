@@ -720,6 +720,20 @@ function setupIpcHandlers() {
             if (!key) return { valid: false, error: 'Please enter an API key.' };
             const cleanKey = key.trim();
 
+            // DEV MODE: Simulate region block for Gemini (but not Perplexity)
+            const devSimulateRegionBlock = await win?.webContents.executeJavaScript(
+                `localStorage.getItem('dev_simulate_region_block') === 'true'`
+            ).catch(() => false);
+            
+            if (devSimulateRegionBlock && provider === 'gemini') {
+                console.log('🧪 DEV MODE: Simulating Gemini region restriction');
+                return { 
+                    valid: false, 
+                    error: 'Google Gemini is not available in your region. Please use Perplexity instead.',
+                    isRegionRestricted: true
+                };
+            }
+
             // Validate based on provider
             if (provider === 'openai' || provider === 'perplexity' || provider === 'openrouter') {
                 try {
@@ -739,11 +753,39 @@ function setupIpcHandlers() {
                 return { valid: true };
             } catch (e: any) {
                 console.error("Validation failed:", e);
+                const errorMessage = e.message || e.toString() || '';
+                
+                // Check if it's a region-specific error
+                const isRegionError = errorMessage.includes('User location is not supported') || 
+                                      errorMessage.includes('not supported for the API use') ||
+                                      errorMessage.includes('location');
+                
+                if (isRegionError) {
+                    return { 
+                        valid: false, 
+                        error: 'Google Gemini is not available in your region. Please use Perplexity instead.',
+                        isRegionRestricted: true
+                    };
+                }
+                
                 return { valid: false, error: e.message || 'Invalid API Key' };
             }
         } catch (error: any) {
             console.error("API Key Validation Error:", error);
-            return { valid: false, error: getFriendlyErrorMessage(error, 'gemini') };
+            const errorMessage = error.message || error.toString() || '';
+            const isRegionError = errorMessage.includes('User location is not supported') || 
+                                  errorMessage.includes('not supported for the API use') ||
+                                  errorMessage.includes('location');
+            
+            if (isRegionError) {
+                return { 
+                    valid: false, 
+                    error: 'Google Gemini is not available in your region. Please use Perplexity instead.',
+                    isRegionRestricted: true
+                };
+            }
+            
+            return { valid: false, error: getFriendlyErrorMessage(error, provider) };
         }
     });
 
@@ -816,7 +858,7 @@ ${notesStr}
             if (!deviceSettings.apiKey) {
                 return {
                     error: 'API_KEY_MISSING',
-                    message: 'Please configure your AI API key in Settings'
+                    message: 'Please configure your AI API key in Settings. Perplexity works worldwide.'
                 };
             }
 
@@ -1401,7 +1443,10 @@ function getFriendlyErrorMessage(error: any, provider: AIProvider): string {
     
     // Geographic restrictions (Gemini specific)
     if (message.includes('User location is not supported') || message.includes('not supported for the API use')) {
-        return `${provider === 'gemini' ? 'Google Gemini' : 'This AI service'} is not available in your region. Try using a different AI provider (OpenAI or Perplexity) or use a VPN.`;
+        if (provider === 'gemini') {
+            return 'Google Gemini is not available in your region. Please use Perplexity instead.';
+        }
+        return 'This AI service is not available in your region. Please try a different provider.';
     }
     
     // Rate limiting
@@ -1484,6 +1529,16 @@ async function generateWithOpenAI(apiKey: string, prompt: string, provider: 'ope
 
 // Helper function to try multiple Gemini models
 async function generateWithGemini(genAI: GoogleGenerativeAI, prompt: string): Promise<string> {
+    // DEV MODE: Simulate region block for Gemini
+    const devSimulateRegionBlock = await win?.webContents.executeJavaScript(
+        `localStorage.getItem('dev_simulate_region_block') === 'true'`
+    ).catch(() => false);
+    
+    if (devSimulateRegionBlock) {
+        console.log('🧪 DEV MODE: Simulating Gemini region restriction in content generation');
+        throw new Error('User location is not supported for the API use');
+    }
+
     // Use Gemini 2.5 models available on the free tier
     const models = [
         "gemini-2.5-flash",

@@ -87,12 +87,18 @@ export function AiQuickAddModal({ isOpen, onClose, onSave }: AiQuickAddModalProp
             const result = await Promise.race([resultPromise, timeoutPromise]);
 
             if (result?.error === 'API_KEY_MISSING') {
-                setErrorMessage('Please configure your Gemini API key in Settings to use AI features.');
+                setErrorMessage('Please configure your AI API key in Settings. Go to Settings → AI Configuration and select a provider (Perplexity works worldwide).');
                 return;
             }
 
             if (result?.error) {
-                setErrorMessage(result.message || 'Failed to generate note. Please check your API key and try again.');
+                const errorMsg = result.message || 'Failed to generate note. Please check your API key and try again.';
+                // Check if it's a region error
+                if (errorMsg.includes('region') || errorMsg.includes('location') || errorMsg.includes('not available')) {
+                    setErrorMessage('This AI service is not available in your region. Please switch to Perplexity in Settings → AI Configuration.');
+                } else {
+                    setErrorMessage(errorMsg);
+                }
                 return;
             }
 

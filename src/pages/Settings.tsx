@@ -45,6 +45,7 @@ export function SettingsPage() {
     const [aiProvider, setAiProvider] = useState<'gemini' | 'openai' | 'perplexity' | 'openrouter'>('gemini');
     const [keyStatus, setKeyStatus] = useState<'idle' | 'validating' | 'valid' | 'invalid'>('idle');
     const [validationMsg, setValidationMsg] = useState('');
+    const [showProviderConfig, setShowProviderConfig] = useState(false); // Track if config section should be visible
     // Store API keys per provider so they persist when switching tabs
     const [providerApiKeys, setProviderApiKeys] = useState<{ gemini?: string; openai?: string; perplexity?: string; openrouter?: string }>({});
     const [providerKeyStatuses, setProviderKeyStatuses] = useState<{ gemini?: 'idle' | 'valid' | 'invalid'; openai?: 'idle' | 'valid' | 'invalid'; perplexity?: 'idle' | 'valid' | 'invalid'; openrouter?: 'idle' | 'valid' | 'invalid' }>({});
@@ -531,6 +532,7 @@ export function SettingsPage() {
 
         // Switch provider
         setAiProvider(provider);
+        setShowProviderConfig(true); // Show the configuration section
         // @ts-ignore
         await window.ipcRenderer.invoke('set-ai-provider', provider);
 
@@ -597,11 +599,25 @@ export function SettingsPage() {
                 localStorage.removeItem('dashboard_events_hash');
             } else {
                 setKeyStatus('invalid');
-                setValidationMsg(result.error || 'Invalid API Key');
+                // Use more helpful message for region-restricted errors
+                let errorMsg = result.error || 'Invalid API Key';
+                if (result.isRegionRestricted && aiProvider === 'gemini') {
+                    errorMsg = 'Google Gemini is not available in your region. Please try Perplexity instead.';
+                }
+                setValidationMsg(errorMsg);
                 setProviderKeyStatuses(prev => ({ ...prev, [aiProvider]: 'invalid' }));
                 // Clear cache on failure
                 localStorage.removeItem(`api_key_validated_${aiProvider}`);
                 localStorage.removeItem(`api_key_hash_${aiProvider}`);
+                
+                // Auto-suggest switching to Perplexity if Gemini is region-blocked
+                if (result.isRegionRestricted && aiProvider === 'gemini') {
+                    addNotification({
+                        id: Date.now().toString(),
+                        type: 'info',
+                        message: 'Tip: Switch to the Perplexity tab to use AI features in your region.'
+                    });
+                }
             }
         } catch (error) {
             setKeyStatus('invalid');
@@ -976,179 +992,239 @@ export function SettingsPage() {
                         </p>
 
                         <div className="space-y-4">
+                            {/* Region Restriction Warning - Always visible at top */}
+                            <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                className="p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 flex items-start gap-2"
+                            >
+                                <Info className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                                <div className="text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
+                                    <strong>Region Notice:</strong> Google Gemini is not available in all regions. If you encounter errors, please use Perplexity instead.
+                                </div>
+                            </motion.div>
+
+                            {/* Current Provider Status */}
+                            <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
+                                <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Current AI Provider:</span>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm font-bold text-gray-800 dark:text-gray-200">
+                                        {aiProvider === 'gemini' ? 'Gemini' : aiProvider === 'perplexity' ? 'Perplexity' : 'None'}
+                                    </span>
+                                    {providerKeyStatuses[aiProvider] === 'valid' && (
+                                        <Check className="w-3.5 h-3.5 text-green-500" />
+                                    )}
+                                </div>
+                            </div>
+
                             {/* AI Provider Selection */}
                             <div>
-                                <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2 block truncate">AI Provider</label>
+                                <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2 block truncate">Select & Configure Provider</label>
                                 <div className="grid grid-cols-2 gap-2">
                                     {[
                                         { id: 'gemini', name: 'Gemini', color: 'purple' },
-                                        // { id: 'openai', name: 'OpenAI', color: 'green' },
                                         { id: 'perplexity', name: 'Perplexity', color: 'blue' },
-                                        // { id: 'openrouter', name: 'OpenRouter', color: 'orange' }
                                     ].map((provider) => {
                                         const isValid = providerKeyStatuses[provider.id as keyof typeof providerKeyStatuses] === 'valid';
-                                        const isActive = aiProvider === provider.id;
+                                        const isExpanded = showProviderConfig && aiProvider === provider.id;
 
                                         return (
                                             <button
                                                 key={provider.id}
                                                 onClick={() => handleProviderChange(provider.id as 'gemini' | 'openai' | 'perplexity' | 'openrouter')}
                                                 className={clsx(
-                                                    "relative px-3 py-3 rounded-xl text-sm font-semibold transition-all border-2 flex flex-col items-center justify-center min-h-[52px] overflow-hidden",
-                                                    isActive
-                                                        ? provider.color === 'purple'
-                                                            ? "bg-purple-100 dark:bg-purple-900/40 border-purple-400 dark:border-purple-600 text-purple-700 dark:text-purple-300"
-                                                            : provider.color === 'green'
-                                                                ? "bg-green-100 dark:bg-green-900/40 border-green-400 dark:border-green-600 text-green-700 dark:text-green-300"
-                                                                : provider.color === 'blue'
-                                                                    ? "bg-blue-100 dark:bg-blue-900/40 border-blue-400 dark:border-blue-600 text-blue-700 dark:text-blue-300"
-                                                                    : "bg-orange-100 dark:bg-orange-900/40 border-orange-400 dark:border-orange-600 text-orange-700 dark:text-orange-300"
-                                                        : "bg-gray-50 dark:bg-gray-700/50 border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                                    "relative px-3 py-3 rounded-xl text-sm font-medium transition-all border-2 flex items-center justify-between gap-2 hover:border-gray-300 dark:hover:border-gray-500",
+                                                    "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300"
                                                 )}
                                             >
                                                 <span className="flex items-center gap-1.5">
                                                     {provider.name}
                                                     {isValid && <Check className="w-3.5 h-3.5 text-green-500" />}
                                                 </span>
-                                                {isActive && (
-                                                    <span className="text-[10px] font-bold uppercase tracking-wider opacity-60 mt-0.5">Active</span>
-                                                )}
+                                                <ChevronDown 
+                                                    className={clsx(
+                                                        "w-4 h-4 transition-transform text-gray-400",
+                                                        isExpanded && "rotate-180"
+                                                    )}
+                                                />
                                             </button>
                                         );
                                     })}
                                 </div>
                             </div>
 
-                            <div className="flex gap-2 items-start">
-                                <div className="relative flex-1">
-                                    <input
-                                        type="password"
-                                        value={apiKey}
-                                        onChange={async (e) => {
-                                            const newValue = e.target.value;
-                                            setApiKey(newValue);
-                                            setKeyStatus('idle');
-
-                                            // Update local provider keys state
-                                            setProviderApiKeys(prev => ({ ...prev, [aiProvider]: newValue }));
-
-                                            // If user clears the field, immediately delete from backend
-                                            if (!newValue.trim()) {
-                                                // @ts-ignore
-                                                await window.ipcRenderer.invoke('set-api-key', '');
-                                                // @ts-ignore
-                                                await window.ipcRenderer.invoke('set-provider-api-key', aiProvider, '');
-                                                localStorage.removeItem(`api_key_validated_${aiProvider}`);
-                                                localStorage.removeItem(`api_key_hash_${aiProvider}`);
-                                                setKeyStatus('idle');
-                                                setValidationMsg('');
-                                                setProviderKeyStatuses(prev => ({ ...prev, [aiProvider]: 'idle' }));
-                                            }
-                                        }}
-                                        onBlur={async () => {
-                                            // Auto-save the key on blur (even if not validated yet)
-                                            if (apiKey.trim()) {
-                                                // @ts-ignore
-                                                await window.ipcRenderer.invoke('set-provider-api-key', aiProvider, apiKey);
-                                            }
-                                        }}
-                                        placeholder={`Paste your ${aiProvider === 'gemini' ? 'Gemini' : aiProvider === 'openai' ? 'OpenAI' : aiProvider === 'perplexity' ? 'Perplexity' : 'OpenRouter'} API Key`}
-                                        className={clsx(
-                                            "w-full pl-4 pr-12 py-3 rounded-xl bg-gray-50 dark:bg-gray-700/50 border transition-all outline-none text-sm",
-                                            keyStatus === 'invalid'
-                                                ? "border-red-500 dark:border-red-500 focus:ring-2 focus:ring-red-500/20"
-                                                : keyStatus === 'valid'
-                                                    ? "border-green-500 dark:border-green-500 focus:ring-2 focus:ring-green-500/20"
-                                                    : "border-gray-200 dark:border-gray-600 focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
-                                        )}
-                                    />
-                                    {!apiKey && (
-                                        <button
-                                            onClick={handlePasteKey}
-                                            className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                                            title="Paste from clipboard"
-                                        >
-                                            <Clipboard className="w-4 h-4" />
-                                        </button>
-                                    )}
-                                </div>
-                                <button
-                                    onClick={validateAndSaveKey}
-                                    disabled={keyStatus === 'validating' || !apiKey}
-                                    className={clsx(
-                                        "px-4 py-3 rounded-xl font-medium text-sm transition-all flex items-center gap-2 shadow-md shrink-0",
-                                        keyStatus === 'valid'
-                                            ? "bg-green-500 text-white shadow-green-500/20"
-                                            : "bg-purple-600 hover:bg-purple-700 text-white shadow-purple-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    )}
-                                >
-                                    {keyStatus === 'validating' ? (
-                                        <RefreshCw className="w-5 h-5 animate-spin" />
-                                    ) : keyStatus === 'valid' ? (
-                                        <Check className="w-5 h-5" />
-                                    ) : (
-                                        <>Verify</>
-                                    )}
-                                </button>
-                            </div>
-
+                            {/* Provider Configuration - Only shown when provider is selected */}
                             <AnimatePresence mode="wait">
-                                {keyStatus === 'invalid' && (
+                                {showProviderConfig && aiProvider && (
                                     <motion.div
-                                        initial={{ opacity: 0, height: 0 }}
-                                        animate={{ opacity: 1, height: 'auto' }}
-                                        exit={{ opacity: 0, height: 0 }}
-                                        className="flex items-start gap-2 text-red-500 text-xs pl-1"
+                                        key={aiProvider}
+                                        initial={{ opacity: 0, y: -10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -10 }}
+                                        className="space-y-3 p-4 rounded-xl bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700"
                                     >
-                                        <AlertCircle className="w-3 h-3 mt-0.5 shrink-0" />
-                                        <span className="leading-relaxed">{validationMsg}</span>
-                                    </motion.div>
-                                )}
-                                {keyStatus === 'valid' && (
-                                    <motion.div
-                                        initial={{ opacity: 0, height: 0 }}
-                                        animate={{ opacity: 1, height: 'auto' }}
-                                        exit={{ opacity: 0, height: 0 }}
-                                        className="flex items-center gap-2 text-green-500 text-xs pl-1"
-                                    >
-                                        <Check className="w-3 h-3" />
-                                        <span>Key verified and saved!</span>
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <div className={clsx(
+                                                "w-2 h-2 rounded-full",
+                                                aiProvider === 'gemini' ? "bg-purple-500" : "bg-blue-500"
+                                            )} />
+                                            <span className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                                                {aiProvider === 'gemini' ? 'Gemini' : 'Perplexity'} Configuration
+                                            </span>
+                                        </div>
+
+                                        <div className="flex gap-2 items-start">
+                                            <div className="relative flex-1">
+                                                <input
+                                                    type="password"
+                                                    value={apiKey}
+                                                    onChange={async (e) => {
+                                                        const newValue = e.target.value;
+                                                        setApiKey(newValue);
+                                                        setKeyStatus('idle');
+
+                                                        // Update local provider keys state
+                                                        setProviderApiKeys(prev => ({ ...prev, [aiProvider]: newValue }));
+
+                                                        // If user clears the field, immediately delete from backend
+                                                        if (!newValue.trim()) {
+                                                            // @ts-ignore
+                                                            await window.ipcRenderer.invoke('set-api-key', '');
+                                                            // @ts-ignore
+                                                            await window.ipcRenderer.invoke('set-provider-api-key', aiProvider, '');
+                                                            localStorage.removeItem(`api_key_validated_${aiProvider}`);
+                                                            localStorage.removeItem(`api_key_hash_${aiProvider}`);
+                                                            setKeyStatus('idle');
+                                                            setValidationMsg('');
+                                                            setProviderKeyStatuses(prev => ({ ...prev, [aiProvider]: 'idle' }));
+                                                        }
+                                                    }}
+                                                    onBlur={async () => {
+                                                        // Auto-save the key on blur (even if not validated yet)
+                                                        if (apiKey.trim()) {
+                                                            // @ts-ignore
+                                                            await window.ipcRenderer.invoke('set-provider-api-key', aiProvider, apiKey);
+                                                        }
+                                                    }}
+                                                    placeholder={`Paste your ${aiProvider === 'gemini' ? 'Gemini' : 'Perplexity'} API Key`}
+                                                    className={clsx(
+                                                        "w-full pl-4 pr-12 py-3 rounded-xl bg-white dark:bg-gray-800 border transition-all outline-none text-sm",
+                                                        keyStatus === 'invalid'
+                                                            ? "border-red-500 dark:border-red-500 focus:ring-2 focus:ring-red-500/20"
+                                                            : keyStatus === 'valid'
+                                                                ? "border-green-500 dark:border-green-500 focus:ring-2 focus:ring-green-500/20"
+                                                                : "border-gray-200 dark:border-gray-600 focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                                                    )}
+                                                />
+                                                {!apiKey && (
+                                                    <button
+                                                        onClick={handlePasteKey}
+                                                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                                                        title="Paste from clipboard"
+                                                    >
+                                                        <Clipboard className="w-4 h-4" />
+                                                    </button>
+                                                )}
+                                            </div>
+                                            <button
+                                                onClick={validateAndSaveKey}
+                                                disabled={keyStatus === 'validating' || !apiKey}
+                                                className={clsx(
+                                                    "px-4 py-3 rounded-xl font-medium text-sm transition-all flex items-center gap-2 shadow-md shrink-0",
+                                                    keyStatus === 'valid'
+                                                        ? "bg-green-500 text-white shadow-green-500/20"
+                                                        : "bg-purple-600 hover:bg-purple-700 text-white shadow-purple-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                )}
+                                            >
+                                                {keyStatus === 'validating' ? (
+                                                    <RefreshCw className="w-5 h-5 animate-spin" />
+                                                ) : keyStatus === 'valid' ? (
+                                                    <Check className="w-5 h-5" />
+                                                ) : (
+                                                    <>Verify</>
+                                                )}
+                                            </button>
+                                        </div>
+
+                                        <AnimatePresence mode="wait">
+                                            {keyStatus === 'invalid' && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, height: 0 }}
+                                                    animate={{ opacity: 1, height: 'auto' }}
+                                                    exit={{ opacity: 0, height: 0 }}
+                                                    className="flex items-start gap-2 text-red-500 text-xs pl-1"
+                                                >
+                                                    <AlertCircle className="w-3 h-3 mt-0.5 shrink-0" />
+                                                    <span className="leading-relaxed">{validationMsg}</span>
+                                                </motion.div>
+                                            )}
+                                            {keyStatus === 'valid' && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, height: 0 }}
+                                                    animate={{ opacity: 1, height: 'auto' }}
+                                                    exit={{ opacity: 0, height: 0 }}
+                                                    className="flex items-center gap-2 text-green-500 text-xs pl-1"
+                                                >
+                                                    <Check className="w-3 h-3" />
+                                                    <span>Key verified and saved!</span>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+
+                                        {/* Dynamic API key link based on provider */}
+                                        <div className="flex flex-col gap-1 pt-2">
+                                            {aiProvider === 'gemini' && (
+                                                <>
+                                                    <button
+                                                        onClick={() => openExternalLink('https://aistudio.google.com/app/apikey')}
+                                                        className="flex items-center gap-1.5 text-xs font-medium text-purple-600 dark:text-purple-400 hover:underline cursor-pointer w-fit"
+                                                    >
+                                                        Get a free Google Studio API key <ExternalLink className="w-3 h-3" />
+                                                    </button>
+                                                    <p className="text-[10px] text-gray-400 dark:text-gray-500 leading-relaxed">
+                                                        Free tier available. Not available in all regions.
+                                                    </p>
+                                                </>
+                                            )}
+                                            {aiProvider === 'perplexity' && (
+                                                <>
+                                                    <button
+                                                        onClick={() => openExternalLink('https://www.perplexity.ai/settings/api')}
+                                                        className="flex items-center gap-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline cursor-pointer w-fit"
+                                                    >
+                                                        Get a Perplexity API key <ExternalLink className="w-3 h-3" />
+                                                    </button>
+                                                    <p className="text-[10px] text-gray-400 dark:text-gray-500 leading-relaxed">
+                                                        Pay-per-use pricing. Available worldwide.
+                                                    </p>
+                                                </>
+                                            )}
+                                        </div>
                                     </motion.div>
                                 )}
                             </AnimatePresence>
 
-                            {/* Dynamic API key link based on provider */}
-                            <div className="flex flex-col gap-1 pt-2">
-                                {aiProvider === 'gemini' && (
-                                    <>
-                                        <button
-                                            onClick={() => openExternalLink('https://aistudio.google.com/app/apikey')}
-                                            className="flex items-center gap-1.5 text-xs font-medium text-purple-600 dark:text-purple-400 hover:underline cursor-pointer w-fit"
-                                        >
-                                            Get a free Google Studio API key <ExternalLink className="w-3 h-3" />
-                                        </button>
-                                        <p className="text-[10px] text-gray-400 dark:text-gray-500 leading-relaxed">
-                                            Free tier available. Not available in all regions.
-                                        </p>
-                                    </>
+                            {/* Advanced Multi-Provider Configuration - Always visible */}
+                            <button
+                                onClick={() => {
+                                    syncProviderKeysOnModalOpen();
+                                    setShowMultiProviderModal(true);
+                                }}
+                                title="Want multiple keys activated at once? Configure automatic fallback between providers."
+                                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all border border-gray-200 dark:border-gray-600 text-sm font-medium"
+                            >
+                                <Settings2 className="w-4 h-4" />
+                                <span>Advanced: Multi-Provider Fallback</span>
+                                {multiProviderEnabled && (
+                                    <span className="ml-auto flex items-center gap-1 text-[10px] px-2 py-0.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-full font-bold shadow-sm">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                                        ENABLED
+                                    </span>
                                 )}
-                                {aiProvider === 'perplexity' && (
-                                    <>
-                                        <button
-                                            onClick={() => openExternalLink('https://www.perplexity.ai/settings/api')}
-                                            className="flex items-center gap-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline cursor-pointer w-fit"
-                                        >
-                                            Get a Perplexity API key <ExternalLink className="w-3 h-3" />
-                                        </button>
-                                        <p className="text-[10px] text-gray-400 dark:text-gray-500 leading-relaxed">
-                                            Pay-per-use pricing. Available worldwide.
-                                        </p>
-                                    </>
-                                )}
-                            </div>
+                            </button>
 
                             {/* AI Descriptions Toggle */}
-                            <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/30 mt-4">
+                            <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/30">
                                 <div className="flex flex-col min-w-0 flex-1">
                                     <span className="font-medium text-gray-800 dark:text-gray-200">AI Note Descriptions</span>
                                     <span className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Generate detailed descriptions when creating notes with AI</span>
@@ -1204,24 +1280,6 @@ export function SettingsPage() {
                                     </button>
                                 </div>
                             )}
-
-                            {/* Advanced Multi-Provider Configuration Button */}
-                            <button
-                                onClick={() => {
-                                    syncProviderKeysOnModalOpen();
-                                    setShowMultiProviderModal(true);
-                                }}
-                                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all border border-gray-200 dark:border-gray-600 text-sm font-medium mt-3"
-                            >
-                                <Settings2 className="w-4 h-4" />
-                                <span>Advanced: Multi-Provider Fallback</span>
-                                {multiProviderEnabled && (
-                                    <span className="ml-auto flex items-center gap-1 text-[10px] px-2 py-0.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-full font-bold shadow-sm">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                                        ENABLED
-                                    </span>
-                                )}
-                            </button>
                         </div>
                     </motion.div>
 
