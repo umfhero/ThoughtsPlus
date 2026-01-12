@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Folder, Palette, Sparkles, Check, ExternalLink, Clipboard, AlertCircle, LayoutDashboard, PieChart, Github, PenTool, Calendar as CalendarIcon, Code, RefreshCw, Bell, BellOff, Type, Upload, FileUp, Timer, Heart, Target, Sidebar as SidebarIcon, Settings2, X, Trash2, Plus, ChevronDown, ChevronUp, History, Info, Globe, Save } from 'lucide-react';
+import { Folder, Palette, Sparkles, Check, ExternalLink, Clipboard, AlertCircle, LayoutDashboard, PieChart, Github, PenTool, Calendar as CalendarIcon, Code, RefreshCw, Bell, BellOff, Type, Upload, FileUp, Timer, Heart, Target, Sidebar as SidebarIcon, Settings2, X, Trash2, Plus, ChevronDown, ChevronUp, History, Info, Save } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import clsx from 'clsx';
 import { useTheme } from '../contexts/ThemeContext';
@@ -9,7 +9,6 @@ import { useDashboardLayout } from '../contexts/DashboardLayoutContext';
 import { LayoutPreview } from '../components/LayoutPreview';
 import { LAYOUT_CONFIGS, getAllLayoutTypes } from '../utils/dashboardLayouts';
 import { Contributor, fetchGithubContributors } from '../utils/github';
-import { LanguageSelector } from '../components/LanguageSelector';
 import { CustomThemeEditor } from '../components/CustomThemeEditor';
 import { SavedThemesList } from '../components/SavedThemesList';
 import { ThemePreview } from '../components/ThemePreview';
@@ -92,7 +91,6 @@ export function SettingsPage() {
 
     // Font State
     const [currentFont, setCurrentFont] = useState('Outfit');
-    const [customFontFile, setCustomFontFile] = useState<File | null>(null);
 
     // Custom Theme State
     const [customThemeName, setCustomThemeName] = useState('');
@@ -613,7 +611,7 @@ export function SettingsPage() {
                 // Auto-suggest switching to Perplexity if Gemini is region-blocked
                 if (result.isRegionRestricted && aiProvider === 'gemini') {
                     addNotification({
-                        id: Date.now().toString(),
+                        title: 'Region Restricted',
                         type: 'info',
                         message: 'Tip: Switch to the Perplexity tab to use AI features in your region.'
                     });
@@ -652,7 +650,8 @@ export function SettingsPage() {
         }
     };
 
-    // Updated Mini App Preview Component
+    // Updated Mini App Preview Component (Currently unused)
+    /*
     const AppPreview = ({ mode, accent, font }: { mode: 'light' | 'dark', accent: string, font: string }) => {
         const isDark = mode === 'dark';
         const bg = isDark ? '#1f2937' : '#ffffff';
@@ -667,7 +666,6 @@ export function SettingsPage() {
         return (
             <div className="w-full h-full min-h-[140px] rounded-xl overflow-hidden border shadow-sm flex transition-all"
                 style={{ backgroundColor: bg, borderColor: border, fontFamily: fontFamily }}>
-                {/* Sidebar */}
                 <div className="w-[80px] h-full border-r p-3 flex flex-col gap-3" style={{ backgroundColor: sidebarBg, borderColor: border }}>
                     <div className="flex items-center gap-2 mb-2">
                         <div className="w-3 h-3 rounded-full" style={{ backgroundColor: accent }} />
@@ -676,7 +674,6 @@ export function SettingsPage() {
                         <div key={i} className="h-2 w-12 rounded-full opacity-50" style={{ backgroundColor: textMuted }} />
                     ))}
                 </div>
-                {/* Content */}
                 <div className="flex-1 p-4 flex flex-col gap-3">
                     <div className="flex justify-between items-center mb-1">
                         <div className="h-3 w-24 rounded-full" style={{ backgroundColor: textMain, opacity: 0.8 }} />
@@ -700,6 +697,7 @@ export function SettingsPage() {
             </div>
         );
     };
+    */
 
     // ... handleFontChange ...
 
@@ -720,7 +718,6 @@ export function SettingsPage() {
                 document.documentElement.style.setProperty('--app-font', "'CustomFont', 'Segoe UI', sans-serif");
                 setCurrentFont('CustomFont');
                 localStorage.setItem('app-font', 'CustomFont'); // Persist
-                setCustomFontFile(file);
                 // We cannot persist file objects easily in localStorage, 
                 // so custom fonts might reset on reload unless we store the binary or path (Electron specific).
                 // For now, we'll notify.

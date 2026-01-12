@@ -4,6 +4,26 @@ Track all new features, fixes, and changes for each version.
 
 ---
 
+## v5.7.1
+
+> **Release Date**: January 12, 2026 - Microsoft Store Certification Fix
+
+### 🛠️ Fixes
+
+- **AI Region Handling**: Improved error messaging for Gemini region restrictions
+- **Settings UX**: Redesigned AI Configuration section with collapsible provider menus
+- **User Guidance**: Added clear warnings and helpful messages directing users to Perplexity in restricted regions
+
+
+### 🎨 UI/UX Improvements
+
+- Cleaner AI provider selection with dropdown indicators
+- Current provider status display
+- Tooltip hints for advanced features
+- Better visual hierarchy in Settings
+
+---
+
 ## v6.1.0
 
 > **Future Concept** - Ecosystem Expansion
@@ -46,13 +66,21 @@ Track all new features, fixes, and changes for each version.
 - **Context Awareness**: Drag & drop Files (PDFs, Coursework) into a notebook to power the AI context and Quiz generation.
 - **Visual Module Selector**: A beautiful gallery view to choose your note type, complete with simplified visual diagrams explaining each structure.
 - **Knowledge Graph**:
+
   - **Interactive Node View**: Visualize connections between your notes based on shared tags (Obsidian-style).
   - **Dashboard Widget**: A new mini-graph widget to see your knowledge network at a glance.
   - **Multi-Tagging**: Notes can hold multiple tags to create complex web-like relationships.
 
----
-
-## v5.7.1
+- **Language Selection Infrastructure**: Framework for multi-language support
+  - Language context with 10 supported languages (en, es, fr, de, pt, ja, zh, ko, it, ru)
+  - Language preference persistence to storage
+  - Language selector UI component (currently disabled)
+    **TODO - Language Feature:**
+- Add translation JSON files for each supported language
+- Implement actual translation lookup in `t()` function
+- Replace emoji flags with SVG flag icons (emoji flags don't render properly on Windows)
+- Wrap all UI text throughout the app with `t('key')` translation calls
+- Re-enable Language section in Settings once translations are ready
 
 > **Upcoming** - Power User & Quick Capture
 
@@ -60,11 +88,12 @@ Track all new features, fixes, and changes for each version.
   - **Auto-Save**: Automatically saves to your board/inbox when you hit Esc or close it.
   - **Game Mode Friendly**: Designed to be lightweight and non-intrusive.
 - **Global Hotkeys**: Configurable system-wide shortcuts for other app functions
+
+---
+
+## v5.7.1
+
 - **Settings**: Added "Check for Updates" button linking to Microsoft Store
-
-### Settings Enhancements (Partial)
-
-**Completed:**
 - **Custom Theme System**: Create, save, load, and manage personalized themes
   - Custom color pickers for background, text, sidebar, border, and card colors
   - Save unlimited custom themes with names
@@ -72,17 +101,6 @@ Track all new features, fixes, and changes for each version.
   - Live preview of custom theme changes
   - Automatic fallback to Light theme when deleting active custom theme
   - Theme persistence across app restarts
-- **Language Selection Infrastructure**: Framework for multi-language support
-  - Language context with 10 supported languages (en, es, fr, de, pt, ja, zh, ko, it, ru)
-  - Language preference persistence to storage
-  - Language selector UI component (currently disabled)
-
-**TODO - Language Feature:**
-- Add translation JSON files for each supported language
-- Implement actual translation lookup in `t()` function
-- Replace emoji flags with SVG flag icons (emoji flags don't render properly on Windows)
-- Wrap all UI text throughout the app with `t('key')` translation calls
-- Re-enable Language section in Settings once translations are ready
 
 ## v5.7.0
 
@@ -97,8 +115,6 @@ Auto-Fallback System – Automatic failover when one provider runs out of quota
 Enhanced Error Messages – User-friendly messages for AI issues including geographic restrictions
 
 Note: Upgrading automatically migrates API keys to encrypted storage.
-
-
 
 ---
 
