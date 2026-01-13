@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Folder, Palette, Sparkles, Check, ExternalLink, Clipboard, AlertCircle, LayoutDashboard, PieChart, Github, PenTool, Calendar as CalendarIcon, Code, RefreshCw, Bell, BellOff, Type, Upload, FileUp, Timer, Heart, Sidebar as SidebarIcon, Settings2, X, Trash2, Plus, ChevronDown, ChevronUp, History, Info, Save } from 'lucide-react';
+import { Folder, Palette, Sparkles, Check, ExternalLink, Clipboard, AlertCircle, LayoutDashboard, PieChart, Github, PenTool, Calendar as CalendarIcon, Code, RefreshCw, Bell, BellOff, Type, Upload, FileUp, Timer, Heart, Sidebar as SidebarIcon, Settings2, X, Trash2, Plus, ChevronDown, ChevronUp, History, Info, Save, Bug } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import clsx from 'clsx';
 import { useTheme } from '../contexts/ThemeContext';
@@ -13,6 +13,7 @@ import { CustomThemeEditor } from '../components/CustomThemeEditor';
 import { SavedThemesList } from '../components/SavedThemesList';
 import { ThemePreview } from '../components/ThemePreview';
 import { KeyboardShortcuts } from '../components/KeyboardShortcuts';
+
 
 // Types for multi-provider configuration
 interface ProviderConfig {
@@ -892,7 +893,8 @@ export function SettingsPage() {
                                         <RefreshCw className="w-4 h-4 group-hover:rotate-180 transition-transform duration-500" />
                                     </button>
                                 </div>
-                            </div>                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 font-medium">
+                            </div>
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 font-medium">
                                 Keep your nerdy thoughts organised
                             </p>
 
@@ -903,6 +905,22 @@ export function SettingsPage() {
                                 >
                                     <Heart className="w-4 h-4 fill-white animate-pulse" />
                                     Donate
+                                </button>
+
+                                <button
+                                    onClick={() => openExternalLink('https://github.com/umfhero/ThoughtsPlus/issues')}
+                                    className="p-2.5 rounded-xl bg-white/70 dark:bg-gray-700/70 border border-gray-200 dark:border-gray-600 hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-200 dark:hover:border-red-800 transition-all group relative"
+                                    title="Report a Bug"
+                                >
+                                    <Bug className="w-5 h-5 text-gray-600 dark:text-gray-300 group-hover:text-red-500 dark:group-hover:text-red-400" />
+                                </button>
+
+                                <button
+                                    onClick={() => openExternalLink('https://github.com/umfhero/ThoughtsPlus')}
+                                    className="p-2.5 rounded-xl bg-white/70 dark:bg-gray-700/70 border border-gray-200 dark:border-gray-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 hover:border-yellow-200 dark:hover:border-yellow-800 transition-all group relative"
+                                    title="Star on GitHub"
+                                >
+                                    <Github className="w-5 h-5 text-gray-600 dark:text-gray-300 group-hover:text-yellow-600 dark:group-hover:text-yellow-400" />
                                 </button>
 
                                 <button
@@ -1705,18 +1723,39 @@ export function SettingsPage() {
                                             </p>
                                         </div>
                                     </div>
-                                    <div className="flex flex-wrap gap-1.5">
-                                        {['#3b82f6', '#8b5cf6', '#22c55e', '#ec4899', '#f97316', '#ef4444', '#06b6d4', '#eab308', '#6366f1', '#14b8a6', '#f43f5e', '#84cc16', '#d946ef', '#0ea5e9', '#f59e0b', '#64748b'].map((color) => (
+                                    <div className="grid grid-cols-8 sm:grid-cols-10 gap-1.5">
+                                        {[
+                                            '#ef4444', // Red
+                                            '#f97316', // Orange
+                                            '#f59e0b', // Amber
+                                            '#eab308', // Yellow
+                                            '#84cc16', // Lime
+                                            '#22c55e', // Green
+                                            '#10b981', // Emerald
+                                            '#14b8a6', // Teal
+                                            '#06b6d4', // Cyan
+                                            '#0ea5e9', // Sky
+                                            '#3b82f6', // Blue
+                                            '#6366f1', // Indigo
+                                            '#8b5cf6', // Violet
+                                            '#a855f7', // Purple
+                                            '#d946ef', // Fuchsia
+                                            '#ec4899', // Pink
+                                            '#f43f5e', // Rose
+                                            '#64748b', // Slate
+                                            '#71717a', // Zinc
+                                            '#737373', // Neutral
+                                        ].map((color) => (
                                             <button
                                                 key={color}
                                                 onClick={() => setAccentColor(color)}
-                                                className="w-8 h-8 rounded-md transition-all hover:scale-110 hover:shadow-md relative border border-transparent hover:border-gray-300 dark:hover:border-gray-500 shrink-0"
+                                                className="w-full aspect-square rounded-full transition-all hover:scale-110 hover:shadow-md relative border border-transparent hover:border-gray-300 dark:hover:border-gray-500 shrink-0"
                                                 style={{ backgroundColor: color }}
                                                 title={color}
                                             >
                                                 {accentColor === color && (
                                                     <div className="absolute inset-0 flex items-center justify-center">
-                                                        <div className="w-1.5 h-1.5 rounded-full bg-white shadow-sm" />
+                                                        <div className="w-2.5 h-2.5 rounded-full bg-white shadow-sm" />
                                                     </div>
                                                 )}
                                             </button>
@@ -1740,14 +1779,14 @@ export function SettingsPage() {
                                             key={font.name}
                                             onClick={() => handleFontChange(font.name)}
                                             className={clsx(
-                                                "shrink-0 px-4 py-2 rounded-lg border text-left transition-all min-w-[100px]",
+                                                "shrink-0 px-5 py-3 rounded-lg border text-left transition-all min-w-[120px]",
                                                 currentFont === font.name
                                                     ? "bg-blue-50 dark:bg-blue-900/20 border-blue-500"
                                                     : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-blue-300"
                                             )}
                                         >
                                             <div className="flex flex-col items-center gap-1">
-                                                <span className="text-lg font-medium" style={{ fontFamily: font.name }}>Aa</span>
+                                                <span className="text-xl font-medium" style={{ fontFamily: font.name }}>Aa</span>
                                                 <span className="text-xs font-medium truncate w-full text-center" style={{ fontFamily: font.name }}>{font.display}</span>
                                             </div>
                                             {currentFont === font.name && (
@@ -2000,6 +2039,8 @@ export function SettingsPage() {
                         )}
                     </div>
                 </motion.div>
+
+
 
 
 
