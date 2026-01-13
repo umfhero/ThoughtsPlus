@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Folder, Palette, Sparkles, Check, ExternalLink, Clipboard, AlertCircle, LayoutDashboard, PieChart, Github, PenTool, Calendar as CalendarIcon, Code, RefreshCw, Bell, BellOff, Type, Upload, FileUp, Timer, Heart, Target, Sidebar as SidebarIcon, Settings2, X, Trash2, Plus, ChevronDown, ChevronUp, History, Info, Save } from 'lucide-react';
+import { Folder, Palette, Sparkles, Check, ExternalLink, Clipboard, AlertCircle, LayoutDashboard, PieChart, Github, PenTool, Calendar as CalendarIcon, Code, RefreshCw, Bell, BellOff, Type, Upload, FileUp, Timer, Heart, Sidebar as SidebarIcon, Settings2, X, Trash2, Plus, ChevronDown, ChevronUp, History, Info, Save } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import clsx from 'clsx';
 import { useTheme } from '../contexts/ThemeContext';
@@ -102,12 +102,6 @@ export function SettingsPage() {
     const [showImportModal, setShowImportModal] = useState(false);
     const [selectedImportIndices, setSelectedImportIndices] = useState<number[]>([]);
 
-    // Quick Capture State
-    const [quickCaptureEnabled, setQuickCaptureEnabled] = useState(true);
-    const [quickCaptureHotkey, setQuickCaptureHotkey] = useState('CommandOrControl+Shift+N');
-    const [isRecordingHotkey, setIsRecordingHotkey] = useState(false);
-    const [hotkeyError, setHotkeyError] = useState('');
-
     const { theme, accentColor, setTheme, setAccentColor, customThemeColors, setCustomThemeColors, savedThemes, saveCurrentTheme, loadTheme, deleteTheme, updateTheme } = useTheme();
     const { addNotification, isSuppressed, toggleSuppression } = useNotification();
     const { layoutType, setLayoutType, sidebarIconOnly, setSidebarIconOnly, effectiveSidebarIconOnly, focusCentricFont, setFocusCentricFont } = useDashboardLayout();
@@ -123,7 +117,6 @@ export function SettingsPage() {
         loadCurrentVersion();
         loadContributors();
         loadMultiProviderConfig();
-        loadQuickCaptureSettings();
 
         // Listen for feature toggle changes from other components (e.g., Quick Note modal)
         const handleFeatureToggleChange = (event: CustomEvent) => {
@@ -488,67 +481,7 @@ export function SettingsPage() {
         window.dispatchEvent(new CustomEvent('feature-toggles-changed', { detail: newFeatures }));
     };
 
-    // Quick Capture Settings Functions
-    const loadQuickCaptureSettings = async () => {
-        try {
-            // @ts-ignore
-            const enabled = await window.ipcRenderer.invoke('get-quick-capture-enabled');
-            // @ts-ignore
-            const hotkey = await window.ipcRenderer.invoke('get-quick-capture-hotkey');
-            setQuickCaptureEnabled(enabled);
-            setQuickCaptureHotkey(hotkey || 'CommandOrControl+Shift+N');
-        } catch (err) {
-            console.error('Failed to load quick capture settings:', err);
-        }
-    };
 
-    const toggleQuickCaptureEnabled = async () => {
-        const newEnabled = !quickCaptureEnabled;
-        setQuickCaptureEnabled(newEnabled);
-        try {
-            // @ts-ignore
-            await window.ipcRenderer.invoke('set-quick-capture-enabled', newEnabled);
-            addNotification({
-                title: newEnabled ? 'Quick Capture Enabled' : 'Quick Capture Disabled',
-                message: newEnabled ? `Press ${formatHotkey(quickCaptureHotkey)} anywhere to capture notes.` : 'Global hotkey has been disabled.',
-                type: 'success',
-                duration: 3000
-            });
-        } catch (err) {
-            console.error('Failed to toggle quick capture:', err);
-        }
-    };
-
-    const saveQuickCaptureHotkey = async (hotkey: string) => {
-        setHotkeyError('');
-        try {
-            // @ts-ignore
-            const result = await window.ipcRenderer.invoke('set-quick-capture-hotkey', hotkey);
-            if (result.success) {
-                setQuickCaptureHotkey(hotkey);
-                addNotification({
-                    title: 'Hotkey Saved',
-                    message: `Quick Capture hotkey set to ${formatHotkey(hotkey)}`,
-                    type: 'success',
-                    duration: 3000
-                });
-            } else {
-                setHotkeyError(result.error || 'Failed to register hotkey');
-            }
-        } catch (err: any) {
-            console.error('Failed to save hotkey:', err);
-            setHotkeyError(err.message || 'Failed to save hotkey');
-        }
-        setIsRecordingHotkey(false);
-    };
-
-    // Format hotkey for display (e.g., "CommandOrControl+Shift+N" -> "Ctrl+Shift+N")
-    const formatHotkey = (hotkey: string) => {
-        return hotkey
-            .replace('CommandOrControl', 'Ctrl')
-            .replace('Command', 'Cmd')
-            .replace('Control', 'Ctrl');
-    };
 
     const handleSelectFolder = async () => {
         // @ts-ignore
@@ -1350,95 +1283,11 @@ export function SettingsPage() {
                         </div>
                     </motion.div>
 
-                    {/* Keyboard Shortcuts */}
-                    <motion.div
-                        initial={{ y: -15, scale: 0.97 }}
-                        animate={{ y: 0, scale: 1 }}
-                        transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.05 }}
-                        className="p-6 rounded-3xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50 overflow-hidden"
-                    >
-                        <KeyboardShortcuts />
-                    </motion.div>
-
-                    {/* GitHub Configuration */}
-                    <motion.div
-                        initial={{ y: -15, scale: 0.97 }}
-                        animate={{ y: 0, scale: 1 }}
-                        transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.1 }}
-                        className="p-6 rounded-3xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50 overflow-hidden"
-                    >
-                        <div className="flex items-center gap-3 mb-4 min-w-0">
-                            <div className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-900/30 text-gray-600 dark:text-gray-400 shrink-0">
-                                <Github className="w-5 h-5" />
-                            </div>
-                            <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 truncate">GitHub Integration</h2>
-                        </div>
-
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 line-clamp-2">
-                            Connect your GitHub profile (optional).
-                        </p>
-
-                        <div className="space-y-3">
-                            <div>
-                                <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5 block truncate">GitHub Username</label>
-                                <input
-                                    type="text"
-                                    value={githubUsername}
-                                    onChange={(e) => {
-                                        setGithubUsername(e.target.value);
-                                        setGithubSaved(false);
-                                    }}
-                                    placeholder="yourusername"
-                                    className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 focus:ring-2 focus:ring-gray-500/20 focus:border-gray-500 outline-none text-sm"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5 block truncate">
-                                    Personal Access Token <span className="text-gray-400">(optional)</span>
-                                </label>
-                                <input
-                                    type="password"
-                                    value={githubToken}
-                                    onChange={(e) => {
-                                        setGithubToken(e.target.value);
-                                        setGithubSaved(false);
-                                    }}
-                                    placeholder="ghp_xxxxxxxxxxxx"
-                                    className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 focus:ring-2 focus:ring-gray-500/20 focus:border-gray-500 outline-none text-sm"
-                                />
-                                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5 line-clamp-2">
-                                    Required only for private repos
-                                </p>
-                            </div>
-
-                            <div className="flex justify-end pt-2">
-                                <button
-                                    onClick={saveGithubConfig}
-                                    disabled={!githubUsername.trim()}
-                                    className={clsx(
-                                        "px-4 py-2 rounded-lg font-medium text-sm transition-all flex items-center gap-2 shadow-md",
-                                        githubSaved
-                                            ? "bg-green-500 text-white shadow-green-500/20"
-                                            : "bg-gray-600 hover:bg-gray-700 text-white shadow-gray-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    )}
-                                >
-                                    {githubSaved ? (
-                                        <>Saved <Check className="w-4 h-4" /></>
-                                    ) : (
-                                        <>Save</>
-                                    )}
-                                </button>
-                            </div>
-                        </div>
-                    </motion.div>
-
-
                     {/* Data Storage */}
                     <motion.div
                         initial={{ y: -15, scale: 0.97 }}
                         animate={{ y: 0, scale: 1 }}
-                        transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.15 }}
+                        transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.1 }}
                         className="p-6 rounded-3xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50 flex-1 overflow-hidden"
                     >
                         <div className="flex items-center gap-3 mb-4 min-w-0">
@@ -1578,11 +1427,162 @@ export function SettingsPage() {
                         </div>
                     </motion.div>
 
-                    {/* Fortnite Creator Codes */}
+                    {/* GitHub Integration */}
+                    <motion.div
+                        initial={{ y: -15, scale: 0.97 }}
+                        animate={{ y: 0, scale: 1 }}
+                        transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.12 }}
+                        className="p-6 rounded-3xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50 overflow-hidden"
+                    >
+                        <div className="flex items-center gap-3 mb-4 min-w-0">
+                            <div className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-900/30 text-gray-600 dark:text-gray-400 shrink-0">
+                                <Github className="w-5 h-5" />
+                            </div>
+                            <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 truncate">GitHub Integration</h2>
+                        </div>
+
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 line-clamp-2">
+                            Connect your GitHub profile (optional).
+                        </p>
+
+                        <div className="space-y-3">
+                            <div>
+                                <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5 block truncate">GitHub Username</label>
+                                <input
+                                    type="text"
+                                    value={githubUsername}
+                                    onChange={(e) => {
+                                        setGithubUsername(e.target.value);
+                                        setGithubSaved(false);
+                                    }}
+                                    placeholder="yourusername"
+                                    className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 focus:ring-2 focus:ring-gray-500/20 focus:border-gray-500 outline-none text-sm"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5 block truncate">
+                                    Personal Access Token <span className="text-gray-400">(optional)</span>
+                                </label>
+                                <input
+                                    type="password"
+                                    value={githubToken}
+                                    onChange={(e) => {
+                                        setGithubToken(e.target.value);
+                                        setGithubSaved(false);
+                                    }}
+                                    placeholder="ghp_xxxxxxxxxxxx"
+                                    className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 focus:ring-2 focus:ring-gray-500/20 focus:border-gray-500 outline-none text-sm"
+                                />
+                                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5 line-clamp-2">
+                                    Required only for private repos
+                                </p>
+                            </div>
+
+                            <div className="flex justify-end pt-2">
+                                <button
+                                    onClick={saveGithubConfig}
+                                    disabled={!githubUsername.trim()}
+                                    className={clsx(
+                                        "px-4 py-2 rounded-lg font-medium text-sm transition-all flex items-center gap-2 shadow-md",
+                                        githubSaved
+                                            ? "bg-green-500 text-white shadow-green-500/20"
+                                            : "bg-gray-600 hover:bg-gray-700 text-white shadow-gray-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    )}
+                                >
+                                    {githubSaved ? (
+                                        <>Saved <Check className="w-4 h-4" /></>
+                                    ) : (
+                                        <>Save</>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    </motion.div>
+
+                    {/* Keyboard Shortcuts */}
+                    <motion.div
+                        initial={{ y: -15, scale: 0.97 }}
+                        animate={{ y: 0, scale: 1 }}
+                        transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.15 }}
+                        className="md:col-span-2 xl:col-span-3 p-6 rounded-3xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50 overflow-hidden"
+                    >
+                        <KeyboardShortcuts />
+                    </motion.div>
+
+
+
+
+                    {/* Notifications */}
                     <motion.div
                         initial={{ y: -15, scale: 0.97 }}
                         animate={{ y: 0, scale: 1 }}
                         transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.2 }}
+                        className="p-6 rounded-3xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50 overflow-hidden"
+                    >
+                        <div className="flex items-center gap-3 mb-4 min-w-0">
+                            <div className="p-2.5 rounded-xl bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 shrink-0">
+                                {isSuppressed ? <BellOff className="w-5 h-5" /> : <Bell className="w-5 h-5" />}
+                            </div>
+                            <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 truncate">Notifications</h2>
+                        </div>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 line-clamp-2">
+                            Manage application notifications and alerts.
+                        </p>
+                        <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600 min-w-0">
+                            <div className="flex items-center gap-3 min-w-0 flex-1">
+                                <span className="font-medium text-gray-800 dark:text-gray-200 truncate">Stop All Notifications</span>
+                            </div>
+                            <button
+                                onClick={() => toggleSuppression(!isSuppressed)}
+                                className={clsx(
+                                    "w-10 h-6 rounded-full p-1 transition-colors duration-300 focus:outline-none shrink-0",
+                                    isSuppressed ? "bg-red-500" : "bg-gray-300 dark:bg-gray-600"
+                                )}
+                            >
+                                <motion.div
+                                    layout
+                                    className="w-4 h-4 rounded-full bg-white shadow-md"
+                                    animate={{ x: isSuppressed ? 16 : 0 }}
+                                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                                />
+                            </button>
+                        </div>
+                    </motion.div>
+
+
+
+
+                    {/* Calendar Import */}
+                    <motion.div
+                        initial={{ y: -15, scale: 0.97 }}
+                        animate={{ y: 0, scale: 1 }}
+                        transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.3 }}
+                        className="p-6 rounded-3xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50 overflow-hidden"
+                    >
+                        <div className="flex items-center gap-3 mb-4 min-w-0">
+                            <div className="p-2.5 rounded-xl bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 shrink-0">
+                                <FileUp className="w-5 h-5" />
+                            </div>
+                            <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 truncate">Import Calendar</h2>
+                        </div>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 line-clamp-2">
+                            Import events from .ics files.
+                        </p>
+                        <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl cursor-pointer bg-gray-50 dark:bg-gray-700/30 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors overflow-hidden">
+                            <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                <Upload className="w-6 h-6 text-gray-400 mb-2" />
+                                <p className="text-sm text-gray-500 dark:text-gray-400 truncate"><span className="font-semibold">Click to upload</span> .ics file</p>
+                            </div>
+                            <input type="file" className="hidden" accept=".ics" onChange={handleImportCalendar} />
+                        </label>
+                    </motion.div>
+
+                    {/* Fortnite Creator Codes */}
+                    <motion.div
+                        initial={{ y: -15, scale: 0.97 }}
+                        animate={{ y: 0, scale: 1 }}
+                        transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.35 }}
                         className="p-6 rounded-3xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50 overflow-hidden"
                     >
                         <div className="flex items-center gap-3 mb-4 min-w-0">
@@ -1632,69 +1632,6 @@ export function SettingsPage() {
                                 </button>
                             </div>
                         </div>
-                    </motion.div>
-
-
-                    {/* Notifications */}
-                    <motion.div
-                        initial={{ y: -15, scale: 0.97 }}
-                        animate={{ y: 0, scale: 1 }}
-                        transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.25 }}
-                        className="p-6 rounded-3xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50 overflow-hidden"
-                    >
-                        <div className="flex items-center gap-3 mb-4 min-w-0">
-                            <div className="p-2.5 rounded-xl bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 shrink-0">
-                                {isSuppressed ? <BellOff className="w-5 h-5" /> : <Bell className="w-5 h-5" />}
-                            </div>
-                            <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 truncate">Notifications</h2>
-                        </div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 line-clamp-2">
-                            Manage application notifications and alerts.
-                        </p>
-                        <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600 min-w-0">
-                            <div className="flex items-center gap-3 min-w-0 flex-1">
-                                <span className="font-medium text-gray-800 dark:text-gray-200 truncate">Stop All Notifications</span>
-                            </div>
-                            <button
-                                onClick={() => toggleSuppression(!isSuppressed)}
-                                className={clsx(
-                                    "w-10 h-6 rounded-full p-1 transition-colors duration-300 focus:outline-none shrink-0",
-                                    isSuppressed ? "bg-red-500" : "bg-gray-300 dark:bg-gray-600"
-                                )}
-                            >
-                                <motion.div
-                                    layout
-                                    className="w-4 h-4 rounded-full bg-white shadow-md"
-                                    animate={{ x: isSuppressed ? 16 : 0 }}
-                                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                                />
-                            </button>
-                        </div>
-                    </motion.div>
-
-                    {/* Calendar Import */}
-                    <motion.div
-                        initial={{ y: -15, scale: 0.97 }}
-                        animate={{ y: 0, scale: 1 }}
-                        transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.3 }}
-                        className="p-6 rounded-3xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50 overflow-hidden"
-                    >
-                        <div className="flex items-center gap-3 mb-4 min-w-0">
-                            <div className="p-2.5 rounded-xl bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 shrink-0">
-                                <FileUp className="w-5 h-5" />
-                            </div>
-                            <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 truncate">Import Calendar</h2>
-                        </div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 line-clamp-2">
-                            Import events from .ics files.
-                        </p>
-                        <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl cursor-pointer bg-gray-50 dark:bg-gray-700/30 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors overflow-hidden">
-                            <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                <Upload className="w-6 h-6 text-gray-400 mb-2" />
-                                <p className="text-sm text-gray-500 dark:text-gray-400 truncate"><span className="font-semibold">Click to upload</span> .ics file</p>
-                            </div>
-                            <input type="file" className="hidden" accept=".ics" onChange={handleImportCalendar} />
-                        </label>
                     </motion.div>
                 </div>
 
@@ -1788,10 +1725,10 @@ export function SettingsPage() {
                                 </div>
                             </div>
 
-                            {/* Font Selection - Compact */}
+                            {/* Font Selection - Horizontal Scroll */}
                             <div className="min-w-0">
                                 <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 truncate">Application Font</p>
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-600 px-0.5">
                                     {[
                                         { name: 'Outfit', display: 'Outfit' },
                                         { name: 'Inter', display: 'Inter' },
@@ -1803,31 +1740,33 @@ export function SettingsPage() {
                                             key={font.name}
                                             onClick={() => handleFontChange(font.name)}
                                             className={clsx(
-                                                "p-2 rounded-lg border text-left transition-all min-h-[44px]",
+                                                "shrink-0 px-4 py-2 rounded-lg border text-left transition-all min-w-[100px]",
                                                 currentFont === font.name
                                                     ? "bg-blue-50 dark:bg-blue-900/20 border-blue-500"
                                                     : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-blue-300"
                                             )}
                                         >
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-sm font-medium truncate" style={{ fontFamily: font.name }}>{font.display}</span>
-                                                {currentFont === font.name && <Check className="w-3 h-3 text-blue-500 shrink-0" />}
+                                            <div className="flex flex-col items-center gap-1">
+                                                <span className="text-lg font-medium" style={{ fontFamily: font.name }}>Aa</span>
+                                                <span className="text-xs font-medium truncate w-full text-center" style={{ fontFamily: font.name }}>{font.display}</span>
                                             </div>
+                                            {currentFont === font.name && (
+                                                <div className="flex justify-center mt-1">
+                                                    <Check className="w-3 h-3 text-blue-500" />
+                                                </div>
+                                            )}
                                         </button>
                                     ))}
                                     <label className={clsx(
-                                        "p-2 rounded-lg border text-left transition-all cursor-pointer bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-blue-300 min-h-[44px]",
+                                        "shrink-0 px-4 py-2 rounded-lg border text-left transition-all cursor-pointer bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-blue-300 min-w-[100px] flex flex-col items-center justify-center gap-1",
                                         currentFont === 'CustomFont' && "border-blue-500"
                                     )}>
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-sm font-medium flex items-center gap-1 truncate">
-                                                <Type className="w-3 h-3 shrink-0" /> Custom
-                                            </span>
-                                            {currentFont === 'CustomFont' && <Check className="w-3 h-3 text-blue-500 shrink-0" />}
-                                        </div>
+                                        <Type className="w-5 h-5 text-gray-500" />
+                                        <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Custom</span>
                                         <input type="file" className="hidden" accept=".ttf,.otf,.woff,.woff2" onChange={(e) => {
                                             if (e.target.files?.[0]) handleFontChange('CustomFont', 'custom', e.target.files[0]);
                                         }} />
+                                        {currentFont === 'CustomFont' && <Check className="w-3 h-3 text-blue-500 mt-1" />}
                                     </label>
                                 </div>
                             </div>
@@ -1836,63 +1775,99 @@ export function SettingsPage() {
                         {/* Right Column: Theme Mode with Custom Option */}
                         <div className="flex flex-col min-w-0">
                             <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 truncate">Theme Mode</p>
-                            <div className="grid grid-cols-3 gap-3 mb-4">
+                            <div className="grid grid-cols-3 gap-4 mb-4">
                                 {/* Light Mode */}
                                 <button
                                     onClick={() => setTheme('light')}
-                                    className={clsx(
-                                        "group relative p-2 rounded-xl border-2 transition-all text-left overflow-hidden min-w-0",
-                                        theme === 'light'
-                                            ? "border-blue-500 bg-blue-50/50 dark:bg-blue-900/10"
-                                            : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
-                                    )}
+                                    className="group flex flex-col gap-2 cursor-pointer"
                                 >
-                                    <div className="aspect-[4/3] w-full mb-2 rounded-lg overflow-hidden">
-                                        <ThemePreview mode="light" accent={accentColor} font={currentFont} />
+                                    <div className={clsx(
+                                        "relative w-full aspect-[4/3] rounded-xl border-2 transition-all overflow-hidden",
+                                        theme === 'light'
+                                            ? "border-blue-500 ring-2 ring-blue-500/20"
+                                            : "border-gray-200 dark:border-gray-700 group-hover:border-gray-300 dark:group-hover:border-gray-600"
+                                    )}>
+                                        <ThemePreview mode="light" accent={accentColor} font={currentFont} sidebarIconOnly={sidebarIconOnly} />
+                                        {theme === 'light' && (
+                                            <div className="absolute inset-0 ring-1 ring-inset ring-blue-500/10 rounded-xl" />
+                                        )}
                                     </div>
-                                    <div className="flex items-center justify-between px-1 min-w-0">
-                                        <span className={clsx("text-xs font-semibold truncate", theme === 'light' ? "text-blue-700 dark:text-blue-300" : "text-gray-600 dark:text-gray-400")}>Light</span>
-                                        {theme === 'light' && <Check className="w-3 h-3 text-blue-500 shrink-0" />}
+                                    <div className="flex items-center justify-center gap-1.5">
+                                        <span className={clsx("text-xs font-semibold", theme === 'light' ? "text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-400")}>Light</span>
+                                        {theme === 'light' && <Check className="w-3 h-3 text-blue-500" />}
                                     </div>
                                 </button>
 
                                 {/* Dark Mode */}
                                 <button
                                     onClick={() => setTheme('dark')}
-                                    className={clsx(
-                                        "group relative p-2 rounded-xl border-2 transition-all text-left overflow-hidden",
-                                        theme === 'dark'
-                                            ? "border-purple-500 bg-purple-50/50 dark:bg-purple-900/10"
-                                            : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
-                                    )}
+                                    className="group flex flex-col gap-2 cursor-pointer"
                                 >
-                                    <div className="aspect-[4/3] w-full mb-2 rounded-lg overflow-hidden">
-                                        <ThemePreview mode="dark" accent={accentColor} font={currentFont} />
+                                    <div className={clsx(
+                                        "relative w-full aspect-[4/3] rounded-xl border-2 transition-all overflow-hidden",
+                                        theme === 'dark'
+                                            ? "border-purple-500 ring-2 ring-purple-500/20"
+                                            : "border-gray-200 dark:border-gray-700 group-hover:border-gray-300 dark:group-hover:border-gray-600"
+                                    )}>
+                                        <ThemePreview mode="dark" accent={accentColor} font={currentFont} sidebarIconOnly={sidebarIconOnly} />
                                     </div>
-                                    <div className="flex items-center justify-between px-1">
-                                        <span className={clsx("text-xs font-semibold truncate", theme === 'dark' ? "text-purple-400" : "text-gray-600 dark:text-gray-400")}>Dark</span>
-                                        {theme === 'dark' && <Check className="w-3 h-3 text-purple-500 shrink-0" />}
+                                    <div className="flex items-center justify-center gap-1.5">
+                                        <span className={clsx("text-xs font-semibold", theme === 'dark' ? "text-purple-500" : "text-gray-600 dark:text-gray-400")}>Dark</span>
+                                        {theme === 'dark' && <Check className="w-3 h-3 text-purple-500" />}
                                     </div>
                                 </button>
 
                                 {/* Custom Mode */}
                                 <button
                                     onClick={() => setTheme('custom')}
-                                    className={clsx(
-                                        "group relative p-2 rounded-xl border-2 transition-all text-left overflow-hidden",
-                                        theme === 'custom'
-                                            ? "border-pink-500 bg-pink-50/50 dark:bg-pink-900/10"
-                                            : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
-                                    )}
+                                    className="group flex flex-col gap-2 cursor-pointer"
                                 >
-                                    <div className="aspect-[4/3] w-full mb-2 rounded-lg overflow-hidden">
-                                        <ThemePreview mode="custom" accent={accentColor} colors={customThemeColors} font={currentFont} />
+                                    <div className={clsx(
+                                        "relative w-full aspect-[4/3] rounded-xl border-2 transition-all overflow-hidden",
+                                        theme === 'custom'
+                                            ? "border-pink-500 ring-2 ring-pink-500/20"
+                                            : "border-gray-200 dark:border-gray-700 group-hover:border-gray-300 dark:group-hover:border-gray-600"
+                                    )}>
+                                        <ThemePreview mode="custom" accent={accentColor} colors={customThemeColors} font={currentFont} sidebarIconOnly={sidebarIconOnly} />
                                     </div>
-                                    <div className="flex items-center justify-between px-1">
-                                        <span className={clsx("text-xs font-semibold truncate", theme === 'custom' ? "text-pink-500" : "text-gray-600 dark:text-gray-400")}>Custom</span>
-                                        {theme === 'custom' && <Check className="w-3 h-3 text-pink-500 shrink-0" />}
+                                    <div className="flex items-center justify-center gap-1.5">
+                                        <span className={clsx("text-xs font-semibold", theme === 'custom' ? "text-pink-500" : "text-gray-600 dark:text-gray-400")}>Custom</span>
+                                        {theme === 'custom' && <Check className="w-3 h-3 text-pink-500" />}
                                     </div>
                                 </button>
+                            </div>
+
+                            {/* Sidebar Icon Mode */}
+                            <div className="mb-4">
+                                <button
+                                    onClick={() => setSidebarIconOnly(!sidebarIconOnly)}
+                                    disabled={LAYOUT_CONFIGS[layoutType]?.forceIconOnlySidebar}
+                                    className={clsx(
+                                        "w-full p-2 rounded-xl border-2 transition-all text-left flex items-center justify-between",
+                                        effectiveSidebarIconOnly
+                                            ? "border-blue-500 bg-blue-50/50 dark:bg-blue-900/10"
+                                            : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600",
+                                        LAYOUT_CONFIGS[layoutType]?.forceIconOnlySidebar && "opacity-50 cursor-not-allowed"
+                                    )}
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <SidebarIcon className={clsx("w-4 h-4", effectiveSidebarIconOnly ? "text-blue-500" : "text-gray-500")} />
+                                        <div className="flex flex-col">
+                                            <span className={clsx("text-xs font-semibold", effectiveSidebarIconOnly ? "text-blue-700 dark:text-blue-300" : "text-gray-600 dark:text-gray-400")}>Icon-Only Sidebar</span>
+                                        </div>
+                                    </div>
+                                    <div className={clsx(
+                                        "w-8 h-4 rounded-full p-0.5 transition-colors duration-300",
+                                        effectiveSidebarIconOnly ? "bg-blue-500" : "bg-gray-300 dark:bg-gray-600"
+                                    )}>
+                                        <div className={clsx("w-3 h-3 rounded-full bg-white shadow-sm transition-transform duration-300", effectiveSidebarIconOnly ? "translate-x-4" : "translate-x-0")} />
+                                    </div>
+                                </button>
+                                {LAYOUT_CONFIGS[layoutType]?.forceIconOnlySidebar && (
+                                    <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 pl-1">
+                                        Required by current layout
+                                    </p>
+                                )}
                             </div>
 
                             {/* Custom Theme Editor - Only shown when Custom is selected */}
@@ -1959,146 +1934,75 @@ export function SettingsPage() {
                             </AnimatePresence>
                         </div>
                     </div>
-                </motion.div>
 
-                {/* Dashboard Layout Section */}
-                <motion.div
-                    initial={{ y: -15, scale: 0.97 }}
-                    animate={{ y: 0, scale: 1 }}
-                    transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.375 }}
-                    className="mt-6 p-6 rounded-3xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50 overflow-hidden"
-                >
-                    <div className="flex items-center gap-3 mb-6 min-w-0">
-                        <div className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 shrink-0">
-                            <Target className="w-5 h-5" />
-                        </div>
-                        <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 truncate">Dashboard Layout</h2>
-                    </div>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {/* Layout Selection */}
-                        <div className="min-w-0">
-                            <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4 truncate">Layout Style</p>
-                            <div className="grid grid-cols-2 gap-4">
-                                {getAllLayoutTypes().map((type) => {
-                                    const config = LAYOUT_CONFIGS[type];
-                                    const isSelected = layoutType === type;
-                                    return (
-                                        <button
-                                            key={type}
-                                            onClick={() => setLayoutType(type)}
-                                            className={clsx(
-                                                "group relative p-3 rounded-xl border-2 transition-all text-left overflow-hidden min-w-0",
-                                                isSelected
-                                                    ? "border-blue-500 bg-blue-50/50 dark:bg-blue-900/20"
-                                                    : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
-                                            )}
-                                        >
-                                            <div className="aspect-[4/3] w-full mb-3 rounded-lg overflow-hidden">
-                                                <LayoutPreview
-                                                    layoutType={type}
-                                                    isSelected={isSelected}
-                                                    isDark={theme === 'dark'}
-                                                    accentColor={accentColor}
-                                                />
-                                            </div>
-                                            <div className="flex items-center justify-between min-w-0">
-                                                <div className="min-w-0 flex-1">
-                                                    <span className={clsx(
-                                                        "text-sm font-semibold block truncate",
-                                                        isSelected ? "text-blue-700 dark:text-blue-300" : "text-gray-700 dark:text-gray-300"
-                                                    )}>
-                                                        {config.name}
-                                                    </span>
-                                                    <span className="text-xs text-gray-500 dark:text-gray-400 truncate block">
-                                                        {config.description}
-                                                    </span>
-                                                </div>
-                                                {isSelected && <Check className="w-4 h-4 text-blue-500 flex-shrink-0 ml-2" />}
-                                            </div>
-                                            {config.forceIconOnlySidebar && (
-                                                <div className="mt-2 flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
-                                                    <SidebarIcon className="w-3 h-3" />
-                                                    <span>Icon-only sidebar</span>
-                                                </div>
-                                            )}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-
-                        {/* Sidebar Settings */}
-                        <div>
-                            <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Sidebar</p>
-                            <div className="space-y-4">
-                                {/* Icon-Only Toggle */}
-                                <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600">
-                                    <div className="flex items-center gap-3">
-                                        <SidebarIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                                        <div>
-                                            <span className="font-medium text-gray-800 dark:text-gray-200 block">Icon-Only Mode</span>
-                                            <span className="text-xs text-gray-500 dark:text-gray-400">
-                                                Show only icons in sidebar (hover for labels)
-                                            </span>
-                                        </div>
-                                    </div>
+                    {/* Dashboard Layouts - Horizontal Scroll */}
+                    <div className="mt-6">
+                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 truncate">Dashboard Layout</p>
+                        <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600">
+                            {getAllLayoutTypes().map((type) => {
+                                const config = LAYOUT_CONFIGS[type];
+                                const isSelected = layoutType === type;
+                                return (
                                     <button
-                                        onClick={() => setSidebarIconOnly(!sidebarIconOnly)}
-                                        disabled={LAYOUT_CONFIGS[layoutType]?.forceIconOnlySidebar}
+                                        key={type}
+                                        onClick={() => setLayoutType(type)}
                                         className={clsx(
-                                            "w-10 h-6 rounded-full p-1 transition-colors duration-300 focus:outline-none",
-                                            effectiveSidebarIconOnly ? "bg-blue-500" : "bg-gray-300 dark:bg-gray-600",
-                                            LAYOUT_CONFIGS[layoutType]?.forceIconOnlySidebar && "opacity-50 cursor-not-allowed"
+                                            "group relative p-2 rounded-xl border-2 transition-all text-left overflow-hidden min-w-[200px] flex-shrink-0",
+                                            isSelected
+                                                ? "border-blue-500 bg-blue-50/50 dark:bg-blue-900/20"
+                                                : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
                                         )}
                                     >
-                                        <motion.div
-                                            layout
-                                            className="w-4 h-4 rounded-full bg-white shadow-md"
-                                            animate={{ x: effectiveSidebarIconOnly ? 16 : 0 }}
-                                            transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                                        />
-                                    </button>
-                                </div>
-                                {LAYOUT_CONFIGS[layoutType]?.forceIconOnlySidebar && (
-                                    <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1.5 px-1">
-                                        <AlertCircle className="w-3.5 h-3.5" />
-                                        This layout requires icon-only sidebar for the minimalist experience
-                                    </p>
-                                )}
-
-                                {/* Focus-Centric Font Toggle */}
-                                {layoutType === 'focus-centric' && (
-                                    <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600">
-                                        <div className="flex items-center gap-3">
-                                            <Type className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                                            <div>
-                                                <span className="font-medium text-gray-800 dark:text-gray-200 block">Elegant Font</span>
-                                                <span className="text-xs text-gray-500 dark:text-gray-400">
-                                                    Use Playfair Display for a refined look
+                                        <div className="aspect-[16/9] w-full mb-2 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+                                            <LayoutPreview
+                                                layoutType={type}
+                                                isSelected={isSelected}
+                                                isDark={theme === 'dark'}
+                                                accentColor={accentColor}
+                                            />
+                                        </div>
+                                        <div className="flex items-center justify-between min-w-0">
+                                            <div className="min-w-0 flex-1">
+                                                <span className={clsx(
+                                                    "text-sm font-semibold block truncate",
+                                                    isSelected ? "text-blue-700 dark:text-blue-300" : "text-gray-700 dark:text-gray-300"
+                                                )}>
+                                                    {config.name}
                                                 </span>
                                             </div>
+                                            {isSelected && <Check className="w-4 h-4 text-blue-500 flex-shrink-0 ml-2" />}
                                         </div>
-                                        <button
-                                            onClick={() => setFocusCentricFont(focusCentricFont === 'playfair' ? 'default' : 'playfair')}
-                                            className={clsx(
-                                                "w-10 h-6 rounded-full p-1 transition-colors duration-300 focus:outline-none",
-                                                focusCentricFont === 'playfair' ? "bg-blue-500" : "bg-gray-300 dark:bg-gray-600"
-                                            )}
-                                        >
-                                            <motion.div
-                                                layout
-                                                className="w-4 h-4 rounded-full bg-white shadow-md"
-                                                animate={{ x: focusCentricFont === 'playfair' ? 16 : 0 }}
-                                                transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                                            />
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
+                                    </button>
+                                );
+                            })}
                         </div>
+
+                        {/* Focus-Centric Font Toggle */}
+                        {layoutType === 'focus-centric' && (
+                            <div className="mt-4 flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600 w-fit">
+                                <Type className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                                <span className="text-sm font-medium text-gray-800 dark:text-gray-200">Elegant Font (Playfair Display)</span>
+                                <button
+                                    onClick={() => setFocusCentricFont(focusCentricFont === 'playfair' ? 'default' : 'playfair')}
+                                    className={clsx(
+                                        "w-8 h-4 rounded-full p-0.5 transition-colors duration-300 focus:outline-none ml-2",
+                                        focusCentricFont === 'playfair' ? "bg-blue-500" : "bg-gray-300 dark:bg-gray-600"
+                                    )}
+                                >
+                                    <motion.div
+                                        layout
+                                        className="w-3 h-3 rounded-full bg-white shadow-md"
+                                        animate={{ x: focusCentricFont === 'playfair' ? 16 : 0 }}
+                                        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                                    />
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </motion.div>
+
+
+
 
                 {/* Feature Toggles - Moved to Bottom */}
                 <div

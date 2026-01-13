@@ -3,6 +3,7 @@ import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import clsx from 'clsx';
 import { useState, useEffect } from 'react';
 import { Page, NotesData } from '../types';
+import { DEFAULT_SHORTCUTS, ShortcutConfig } from './KeyboardShortcuts';
 import logoPng from '../assets/Thoughts+.png';
 import { useDashboardLayout } from '../contexts/DashboardLayoutContext';
 
@@ -99,6 +100,41 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
         github: true,
         timer: true
     });
+
+    // Shortcuts state
+    const [shortcuts, setShortcuts] = useState<ShortcutConfig[]>(DEFAULT_SHORTCUTS);
+
+    // Load shortcuts and listen for changes
+    useEffect(() => {
+        const loadShortcuts = () => {
+            const saved = localStorage.getItem('keyboard-shortcuts');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    // Merge with defaults
+                    const merged = DEFAULT_SHORTCUTS.map(def => {
+                        const found = parsed.find((s: ShortcutConfig) => s.id === def.id);
+                        return found ? { ...def, ...found } : def;
+                    });
+                    setShortcuts(merged);
+                } catch {
+                    setShortcuts(DEFAULT_SHORTCUTS);
+                }
+            } else {
+                setShortcuts(DEFAULT_SHORTCUTS);
+            }
+        };
+
+        loadShortcuts();
+
+        const handleShortcutsChanged = (e: CustomEvent) => {
+            setShortcuts(e.detail);
+        };
+
+        window.addEventListener('shortcuts-changed', handleShortcutsChanged as EventListener);
+        return () => window.removeEventListener('shortcuts-changed', handleShortcutsChanged as EventListener);
+    }, []);
+
     const [order, setOrder] = useState<string[]>([]);
 
     // Sync Order
@@ -131,6 +167,13 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
         }
     }, [enabledFeatures]);
 
+    // Helper to get shortcut string
+    const getShortcutString = (id: string) => {
+        const s = shortcuts.find(s => s.id === id);
+        if (!s || !s.enabled) return '';
+        return `${s.modifier}+${s.key}`;
+    };
+
     // Save order when it changes
     useEffect(() => {
         if (order.length > 0) {
@@ -162,19 +205,26 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
     }, []);
 
     // Handle keyboard shortcuts
+    // Handle keyboard shortcuts
     useEffect(() => {
         let timeoutId: NodeJS.Timeout;
 
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.ctrlKey) {
-                if (!e.repeat && currentPage !== 'drawing') {
-                    setShowShortcuts(true);
-                    if (timeoutId) clearTimeout(timeoutId);
-                    timeoutId = setTimeout(() => {
-                        setShowShortcuts(false);
-                    }, 3000);
-                }
+            const isCtrl = e.ctrlKey || e.metaKey; // Support Meta for Mac if needed, though mostly Windows focused
+            const isShift = e.shiftKey;
+            const isAlt = e.altKey;
 
+            // Show visual hints on Ctrl press
+            if (e.key === 'Control' && !e.repeat && currentPage !== 'drawing') {
+                setShowShortcuts(true);
+                if (timeoutId) clearTimeout(timeoutId);
+                timeoutId = setTimeout(() => {
+                    setShowShortcuts(false);
+                }, 3000);
+            }
+
+            // Arrow Navigation (Ctrl + Up/Down)
+            if (isCtrl && !isShift && !isAlt && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
                 // Build dynamic pages array based on sidebar order and enabled features
                 const pages: Page[] = order.filter(id => {
                     if (id === 'dashboard' || id === 'progress' || id === 'notebook') return true;
@@ -185,84 +235,63 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                     if (id === 'github') return enabledFeatures.github;
                     return false;
                 }) as Page[];
-                // Add settings at the end (it's always last, not in reorderable list)
-                pages.push('settings');
+                pages.push('settings'); // Always last
 
                 const currentIndex = pages.indexOf(currentPage);
+                e.preventDefault();
 
-                // Disable global navigation shortcuts when on drawing page to allow local shortcuts
-                // BUT allow page navigation (ArrowUp/ArrowDown)
-                if (currentPage === 'drawing' && !['arrowup', 'arrowdown'].includes(e.key.toLowerCase())) return;
+                if (e.key === 'ArrowUp') {
+                    if (currentIndex > 0) setPage(pages[currentIndex - 1]);
+                    else setPage(pages[pages.length - 1]);
+                } else {
+                    if (currentIndex < pages.length - 1) setPage(pages[currentIndex + 1]);
+                    else setPage(pages[0]);
+                }
+                return;
+            }
 
-                switch (e.key.toLowerCase()) {
-                    case 'd':
-                        e.preventDefault();
-                        setPage('dashboard');
+            // Find matching shortcut
+            const matchingShortcut = shortcuts.find(s => {
+                const keyMatch = s.key.toLowerCase() === e.key.toLowerCase();
+                let modMatch = false;
+                if (s.modifier === 'Ctrl') modMatch = isCtrl && !isShift && !isAlt;
+                else if (s.modifier === 'Ctrl+Shift') modMatch = isCtrl && isShift && !isAlt;
+                else if (s.modifier === 'Ctrl+Alt') modMatch = isCtrl && !isShift && isAlt;
+
+                return s.enabled && !s.isGlobal && keyMatch && modMatch;
+            });
+
+            if (matchingShortcut) {
+                // Disable ID-based shortcuts on drawing page (except specific ones if needed)
+                if (currentPage === 'drawing') return;
+
+                e.preventDefault();
+                switch (matchingShortcut.id) {
+                    case 'dashboard': setPage('dashboard'); break;
+                    case 'calendar': if (enabledFeatures.calendar) setPage('calendar'); break;
+                    case 'timer': if (enabledFeatures.timer) setPage('timer'); break;
+                    case 'board': if (enabledFeatures.drawing) setPage('drawing'); break;
+                    case 'github': if (enabledFeatures.github) setPage('github'); break;
+                    case 'progress': setPage('progress'); break;
+                    case 'notebook': setPage('notebook'); break;
+                    case 'settings': setPage('settings'); break;
+                    case 'ai-quick-add':
+                        window.dispatchEvent(new CustomEvent('open-ai-quick-add'));
                         break;
-                    case 'c':
-                        if (enabledFeatures.calendar) {
-                            e.preventDefault();
-                            setPage('calendar');
-                        }
-                        break;
-                    case 't':
-                        if (enabledFeatures.timer) {
-                            e.preventDefault();
-                            setPage('timer');
-                        }
-                        break;
-                    case 'b':
-                        if (enabledFeatures.drawing) {
-                            e.preventDefault();
-                            setPage('drawing');
-                        }
-                        break;
-                    case 'g':
-                        if (enabledFeatures.github) {
-                            e.preventDefault();
-                            setPage('github');
-                        }
-                        break;
-                    case 'p':
-                        e.preventDefault();
-                        setPage('progress');
-                        break;
-                    case 'n':
-                        e.preventDefault();
-                        setPage('notebook');
-                        break;
-                    case 's':
-                        e.preventDefault();
-                        setPage('settings');
-                        break;
-                    case 'escape':
-                        e.preventDefault();
-                        if (!isCollapsed) toggleSidebar();
-                        break;
-                    case 'arrowup':
-                        e.preventDefault();
-                        if (currentIndex > 0) {
-                            setPage(pages[currentIndex - 1]);
-                        } else {
-                            // Wrap around to last item (settings)
-                            setPage(pages[pages.length - 1]);
-                        }
-                        break;
-                    case 'arrowdown':
-                        e.preventDefault();
-                        if (currentIndex < pages.length - 1) {
-                            setPage(pages[currentIndex + 1]);
-                        } else {
-                            // Wrap around to first item
-                            setPage(pages[0]);
-                        }
+                    case 'quick-timer':
+                        window.dispatchEvent(new CustomEvent('open-quick-timer'));
                         break;
                 }
+            } else if (isCtrl && e.key.toLowerCase() === 'escape') {
+                // Handle Ctrl+Escape for Sidebar toggle (legacy support, or if we want to keep it hardcoded)
+                // Keeping it valid if no other shortcut claimed it
+                e.preventDefault();
+                if (!isCollapsed) toggleSidebar();
             }
         };
 
         const handleKeyUp = (e: KeyboardEvent) => {
-            if (!e.ctrlKey && currentPage !== 'drawing') {
+            if (e.key === 'Control') {
                 setShowShortcuts(false);
                 if (timeoutId) clearTimeout(timeoutId);
             }
@@ -276,7 +305,7 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
             window.removeEventListener('keyup', handleKeyUp);
             if (timeoutId) clearTimeout(timeoutId);
         };
-    }, [toggleSidebar, setPage, currentPage, isCollapsed, enabledFeatures, order]);
+    }, [toggleSidebar, setPage, currentPage, isCollapsed, enabledFeatures, order, shortcuts]);
 
     // Auto-minimize calendar dropdown if not on calendar page
     useEffect(() => {
@@ -513,9 +542,11 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                                                                             transition={{ type: "spring", stiffness: 500, damping: 14 }}
                                                                             className="absolute left-[-16px] top-0 bottom-0 w-[48px] flex items-center justify-center z-20"
                                                                         >
-                                                                            <span className="text-[10px] font-bold bg-black text-white px-2 py-1 rounded-md whitespace-nowrap border border-gray-700 flex items-center justify-center shadow-lg">
-                                                                                Ctrl+D
-                                                                            </span>
+                                                                            {getShortcutString('dashboard') && (
+                                                                                <span className="text-[10px] font-bold bg-black text-white px-2 py-1 rounded-md whitespace-nowrap border border-gray-700 flex items-center justify-center shadow-lg">
+                                                                                    {getShortcutString('dashboard')}
+                                                                                </span>
+                                                                            )}
                                                                         </motion.div>
                                                                     )}
                                                                 </AnimatePresence>
@@ -597,9 +628,11 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                                                                             transition={{ type: "spring", stiffness: 500, damping: 14 }}
                                                                             className="absolute left-[-16px] top-0 bottom-0 w-[48px] flex items-center justify-center z-20"
                                                                         >
-                                                                            <span className="text-[10px] font-bold bg-black text-white px-2 py-1 rounded-md whitespace-nowrap border border-gray-700 flex items-center justify-center shadow-lg">
-                                                                                Ctrl+P
-                                                                            </span>
+                                                                            {getShortcutString('progress') && (
+                                                                                <span className="text-[10px] font-bold bg-black text-white px-2 py-1 rounded-md whitespace-nowrap border border-gray-700 flex items-center justify-center shadow-lg">
+                                                                                    {getShortcutString('progress')}
+                                                                                </span>
+                                                                            )}
                                                                         </motion.div>
                                                                     )}
                                                                 </AnimatePresence>
@@ -680,9 +713,11 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                                                                             transition={{ type: "spring", stiffness: 500, damping: 14 }}
                                                                             className="absolute left-[-16px] top-0 bottom-0 w-[48px] flex items-center justify-center z-20"
                                                                         >
-                                                                            <span className="text-[10px] font-bold bg-black text-white px-2 py-1 rounded-md whitespace-nowrap border border-gray-700 flex items-center justify-center shadow-lg">
-                                                                                Ctrl+N
-                                                                            </span>
+                                                                            {getShortcutString('notebook') && (
+                                                                                <span className="text-[10px] font-bold bg-black text-white px-2 py-1 rounded-md whitespace-nowrap border border-gray-700 flex items-center justify-center shadow-lg">
+                                                                                    {getShortcutString('notebook')}
+                                                                                </span>
+                                                                            )}
                                                                         </motion.div>
                                                                     )}
                                                                 </AnimatePresence>
@@ -785,9 +820,11 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                                                                         transition={{ type: "spring", stiffness: 500, damping: 14 }}
                                                                         className="absolute left-[-16px] top-0 bottom-0 w-[48px] flex items-center justify-center z-20"
                                                                     >
-                                                                        <span className="text-[10px] font-bold bg-black text-white px-2 py-1 rounded-md whitespace-nowrap border border-gray-700 flex items-center justify-center shadow-lg">
-                                                                            Ctrl+C
-                                                                        </span>
+                                                                        {getShortcutString('calendar') && (
+                                                                            <span className="text-[10px] font-bold bg-black text-white px-2 py-1 rounded-md whitespace-nowrap border border-gray-700 flex items-center justify-center shadow-lg">
+                                                                                {getShortcutString('calendar')}
+                                                                            </span>
+                                                                        )}
                                                                     </motion.div>
                                                                 )}
                                                             </AnimatePresence>
@@ -905,9 +942,11 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                                                                             transition={{ type: "spring", stiffness: 500, damping: 14 }}
                                                                             className="absolute left-[-16px] top-0 bottom-0 w-[48px] flex items-center justify-center z-20"
                                                                         >
-                                                                            <span className="text-[10px] font-bold bg-black text-white px-2 py-1 rounded-md whitespace-nowrap border border-gray-700 flex items-center justify-center shadow-lg">
-                                                                                Ctrl+B
-                                                                            </span>
+                                                                            {getShortcutString('board') && (
+                                                                                <span className="text-[10px] font-bold bg-black text-white px-2 py-1 rounded-md whitespace-nowrap border border-gray-700 flex items-center justify-center shadow-lg">
+                                                                                    {getShortcutString('board')}
+                                                                                </span>
+                                                                            )}
                                                                         </motion.div>
                                                                     )}
                                                                 </AnimatePresence>
@@ -1039,9 +1078,11 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                                                                             transition={{ type: "spring", stiffness: 500, damping: 14 }}
                                                                             className="absolute left-[-16px] top-0 bottom-0 w-[48px] flex items-center justify-center z-20"
                                                                         >
-                                                                            <span className="text-[10px] font-bold bg-black text-white px-2 py-1 rounded-md whitespace-nowrap border border-gray-700 flex items-center justify-center shadow-lg">
-                                                                                Ctrl+G
-                                                                            </span>
+                                                                            {getShortcutString('github') && (
+                                                                                <span className="text-[10px] font-bold bg-black text-white px-2 py-1 rounded-md whitespace-nowrap border border-gray-700 flex items-center justify-center shadow-lg">
+                                                                                    {getShortcutString('github')}
+                                                                                </span>
+                                                                            )}
                                                                         </motion.div>
                                                                     )}
                                                                 </AnimatePresence>
@@ -1122,9 +1163,11 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                                                                             transition={{ type: "spring", stiffness: 500, damping: 14 }}
                                                                             className="absolute left-[-16px] top-0 bottom-0 w-[48px] flex items-center justify-center z-20"
                                                                         >
-                                                                            <span className="text-[10px] font-bold bg-black text-white px-2 py-1 rounded-md whitespace-nowrap border border-gray-700 flex items-center justify-center shadow-lg">
-                                                                                Ctrl+T
-                                                                            </span>
+                                                                            {getShortcutString('timer') && (
+                                                                                <span className="text-[10px] font-bold bg-black text-white px-2 py-1 rounded-md whitespace-nowrap border border-gray-700 flex items-center justify-center shadow-lg">
+                                                                                    {getShortcutString('timer')}
+                                                                                </span>
+                                                                            )}
                                                                         </motion.div>
                                                                     )}
                                                                 </AnimatePresence>
@@ -1276,9 +1319,11 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                                                         transition={{ type: "spring", stiffness: 500, damping: 14 }}
                                                         className="absolute left-[-16px] top-0 bottom-0 w-[48px] flex items-center justify-center z-20"
                                                     >
-                                                        <span className="text-[10px] font-bold bg-black text-white px-2 py-1 rounded-md whitespace-nowrap border border-gray-700 flex items-center justify-center shadow-lg">
-                                                            Ctrl+S
-                                                        </span>
+                                                        {getShortcutString('settings') && (
+                                                            <span className="text-[10px] font-bold bg-black text-white px-2 py-1 rounded-md whitespace-nowrap border border-gray-700 flex items-center justify-center shadow-lg">
+                                                                {getShortcutString('settings')}
+                                                            </span>
+                                                        )}
                                                     </motion.div>
                                                 )}
                                             </AnimatePresence>

@@ -5,9 +5,13 @@ interface ThemePreviewProps {
     accent: string;
     colors?: CustomThemeColors;
     font: string;
+    sidebarIconOnly?: boolean;
 }
 
-export function ThemePreview({ mode, accent, colors, font }: ThemePreviewProps) {
+// Need clsx for dynamic classes
+import clsx from 'clsx';
+
+export function ThemePreview({ mode, accent, colors, font, sidebarIconOnly = false }: ThemePreviewProps) {
     // Determine colors based on mode
     let bg: string;
     let textMain: string;
@@ -51,8 +55,13 @@ export function ThemePreview({ mode, accent, colors, font }: ThemePreviewProps) 
         >
             {/* Sidebar */}
             <div
-                className="w-[80px] h-full border-r p-3 flex flex-col gap-3"
-                style={{ backgroundColor: sidebarBg, borderColor: border }}
+                className="h-full border-r p-3 flex flex-col gap-3 transition-all"
+                style={{
+                    backgroundColor: sidebarBg,
+                    borderColor: border,
+                    width: sidebarIconOnly ? '40px' : '80px',
+                    alignItems: sidebarIconOnly ? 'center' : 'flex-start'
+                }}
             >
                 <div className="flex items-center gap-2 mb-2">
                     <div
@@ -63,7 +72,10 @@ export function ThemePreview({ mode, accent, colors, font }: ThemePreviewProps) 
                 {[1, 2, 3].map((i) => (
                     <div
                         key={i}
-                        className="h-2 w-12 rounded-full opacity-50"
+                        className={clsx(
+                            "h-2 rounded-full opacity-50",
+                            sidebarIconOnly ? "w-2" : "w-12"
+                        )}
                         style={{ backgroundColor: textMuted }}
                     />
                 ))}
