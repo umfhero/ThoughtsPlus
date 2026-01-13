@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { Github, Star, GitFork, ExternalLink, Code, Loader } from 'lucide-react';
+import { Github, Star, GitFork, ExternalLink, Code, Loader, Box, LayoutGrid } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { ActivityCalendar, Activity } from 'react-activity-calendar';
 import { useTheme } from '../contexts/ThemeContext';
 import { fetchGithubContributions } from '../utils/github';
+import { GithubActivity3D } from '../components/GithubActivity3D';
 import clsx from 'clsx';
 
 function hexToRgb(hex: string) {
@@ -49,6 +50,13 @@ export function GithubPage({ isMockMode, isSidebarCollapsed = false }: { isMockM
     const { accentColor, theme } = useTheme();
     const [blockSize, setBlockSize] = useState(12);
     const githubContributionsRef = useRef<HTMLDivElement>(null);
+    const [viewMode, setViewMode] = useState<'2d' | '3d'>(() => {
+        return (localStorage.getItem('githubViewMode') as '2d' | '3d') || '2d';
+    });
+
+    useEffect(() => {
+        localStorage.setItem('githubViewMode', viewMode);
+    }, [viewMode]);
 
     const [isMobile, setIsMobile] = useState(false);
 
@@ -351,7 +359,29 @@ export function GithubPage({ isMockMode, isSidebarCollapsed = false }: { isMockM
                     {/* Contributions Graph */}
                     <div className="mb-2">
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-4">
-                            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Contributions</h2>
+                            <div className="flex items-center gap-4">
+                                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Contributions</h2>
+                                <div className="bg-gray-100 dark:bg-gray-700 p-1 rounded-lg flex items-center">
+                                    <button
+                                        onClick={() => setViewMode('2d')}
+                                        className={clsx("p-1.5 rounded-md transition-all", viewMode === '2d'
+                                            ? 'bg-white dark:bg-gray-600 shadow-sm text-blue-500'
+                                            : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300')}
+                                        title="2D View"
+                                    >
+                                        <LayoutGrid className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                        onClick={() => setViewMode('3d')}
+                                        className={clsx("p-1.5 rounded-md transition-all", viewMode === '3d'
+                                            ? 'bg-white dark:bg-gray-600 shadow-sm text-blue-500'
+                                            : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300')}
+                                        title="3D Skyline View"
+                                    >
+                                        <Box className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            </div>
                             <div className="flex flex-wrap gap-2">
                                 {years.map(year => (
                                     <button
@@ -368,34 +398,47 @@ export function GithubPage({ isMockMode, isSidebarCollapsed = false }: { isMockM
                                 ))}
                             </div>
                         </div>
-                        <div ref={githubContributionsRef} className="overflow-x-auto thin-scrollbar pb-2 rounded-xl bg-white dark:bg-gray-800 p-4 border border-gray-100 dark:border-gray-700 min-h-[160px]">
-                            {contributions.length > 0 ? (
-                                <div className="flex justify-center min-w-full p-4">
-                                    <ActivityCalendar
-                                        data={contributions}
-                                        colorScheme={theme === 'custom' ? 'light' : theme}
-                                        theme={(() => {
-                                            const rgb = hexToRgb(accentColor);
-                                            if (!rgb) return undefined;
-                                            const { r, g, b } = rgb;
-                                            return {
-                                                light: ['#ebedf0', `rgba(${r}, ${g}, ${b}, 0.4)`, `rgba(${r}, ${g}, ${b}, 0.6)`, `rgba(${r}, ${g}, ${b}, 0.8)`, `rgba(${r}, ${g}, ${b}, 1)`],
-                                                dark: ['#161b22', `rgba(${r}, ${g}, ${b}, 0.4)`, `rgba(${r}, ${g}, ${b}, 0.6)`, `rgba(${r}, ${g}, ${b}, 0.8)`, `rgba(${r}, ${g}, ${b}, 1)`],
-                                            };
-                                        })()}
-                                        blockSize={blockSize}
-                                        blockMargin={4}
-                                        fontSize={12}
-                                        showWeekdayLabels
-                                    />
-                                </div>
-                            ) : (
-                                <div className="flex items-center justify-center text-gray-400 dark:text-gray-500">
-                                    <Loader className="w-6 h-6 animate-spin mr-2" />
-                                    <span>Loading contributions...</span>
-                                </div>
-                            )}
-                        </div>
+                        {viewMode === '3d' ? (
+                            <div className="overflow-hidden rounded-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700">
+                                {contributions.length > 0 ? (
+                                    <GithubActivity3D data={contributions} theme={theme as any} accentColor={accentColor} />
+                                ) : (
+                                    <div className="flex items-center justify-center p-12 text-gray-400 dark:text-gray-500">
+                                        <Loader className="w-6 h-6 animate-spin mr-2" />
+                                        <span>Loading contributions...</span>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <div ref={githubContributionsRef} className="overflow-x-auto thin-scrollbar pb-2 rounded-xl bg-white dark:bg-gray-800 p-4 border border-gray-100 dark:border-gray-700 min-h-[160px]">
+                                {contributions.length > 0 ? (
+                                    <div className="flex justify-center min-w-full p-4">
+                                        <ActivityCalendar
+                                            data={contributions}
+                                            colorScheme={theme === 'custom' ? 'light' : theme}
+                                            theme={(() => {
+                                                const rgb = hexToRgb(accentColor);
+                                                if (!rgb) return undefined;
+                                                const { r, g, b } = rgb;
+                                                return {
+                                                    light: ['#ebedf0', `rgba(${r}, ${g}, ${b}, 0.4)`, `rgba(${r}, ${g}, ${b}, 0.6)`, `rgba(${r}, ${g}, ${b}, 0.8)`, `rgba(${r}, ${g}, ${b}, 1)`],
+                                                    dark: ['#161b22', `rgba(${r}, ${g}, ${b}, 0.4)`, `rgba(${r}, ${g}, ${b}, 0.6)`, `rgba(${r}, ${g}, ${b}, 0.8)`, `rgba(${r}, ${g}, ${b}, 1)`],
+                                                };
+                                            })()}
+                                            blockSize={blockSize}
+                                            blockMargin={4}
+                                            fontSize={12}
+                                            showWeekdayLabels
+                                        />
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center justify-center text-gray-400 dark:text-gray-500">
+                                        <Loader className="w-6 h-6 animate-spin mr-2" />
+                                        <span>Loading contributions...</span>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                         {contributions.length > 0 && (
                             <div className="flex items-center justify-between mt-2 px-4">
                                 <span className="text-sm text-gray-600 dark:text-gray-400">

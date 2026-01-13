@@ -3,7 +3,7 @@ import { AddCustomWidgetModal } from '../components/AddCustomWidgetModal';
 import { getWidgetConfigs, deleteWidgetConfig } from '../utils/customWidgetManager';
 import { CustomWidgetConfig } from '../types';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
-import { ArrowUpRight, Loader, Circle, Search, Filter, Activity as ActivityIcon, CheckCircle2, Sparkles, X, Plus, MousePointerClick, Merge, Trash2, Repeat, Folder, Clock, XCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowUpRight, Loader, Circle, Search, Filter, Activity as ActivityIcon, CheckCircle2, Sparkles, X, Plus, MousePointerClick, Merge, Trash2, Repeat, Folder, Clock, XCircle, ChevronLeft, ChevronRight, Box, LayoutGrid } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, addMonths, subMonths } from 'date-fns';
 import { NotesData, Note } from '../types';
@@ -11,6 +11,7 @@ import clsx from 'clsx';
 import TaskTrendChart from '../components/TaskTrendChart';
 import { useNotification } from '../contexts/NotificationContext';
 import { ActivityCalendar, Activity } from 'react-activity-calendar';
+import { GithubActivity3D } from '../components/GithubActivity3D';
 import { useTheme } from '../contexts/ThemeContext';
 import { fetchGithubContributions } from '../utils/github';
 import confetti from 'canvas-confetti';
@@ -61,6 +62,16 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
         github: true,
         aiDescriptions: !import.meta.env.DEV // false in dev, true in production
     });
+
+    // Github View Mode State
+    const [githubViewMode, setGithubViewMode] = useState<'2d' | '3d'>(() => {
+        return (localStorage.getItem('githubViewMode') as '2d' | '3d') || '2d';
+    });
+
+    useEffect(() => {
+        localStorage.setItem('githubViewMode', githubViewMode);
+    }, [githubViewMode]);
+
     const { isSuppressed } = useNotification();
     const [blockSize, setBlockSize] = useState(12);
     const githubContributionsRef = useRef<HTMLDivElement>(null);
@@ -1748,50 +1759,81 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                                 <div className="w-1 h-4 rounded-full" style={{ backgroundColor: accentColor }}></div>
                                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400">GitHub activity</p>
                             </div>
-                            <div className="p-2.5 rounded-xl" style={{ backgroundColor: `${accentColor}15`, color: accentColor }}>
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+
+                            <div className="flex items-center gap-3">
+                                {/* Toggle Control */}
+                                <div className="bg-gray-100 dark:bg-gray-700 p-1 rounded-lg flex items-center scale-90">
+                                    <button
+                                        onClick={() => setGithubViewMode('2d')}
+                                        className={clsx("p-1.5 rounded-md transition-all", githubViewMode === '2d'
+                                            ? 'bg-white dark:bg-gray-600 shadow-sm text-blue-500'
+                                            : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300')}
+                                        title="2D View"
+                                    >
+                                        <LayoutGrid className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                        onClick={() => setGithubViewMode('3d')}
+                                        className={clsx("p-1.5 rounded-md transition-all", githubViewMode === '3d'
+                                            ? 'bg-white dark:bg-gray-600 shadow-sm text-blue-500'
+                                            : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300')}
+                                        title="3D Skyline View"
+                                    >
+                                        <Box className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                                <div className="p-2.5 rounded-xl" style={{ backgroundColor: `${accentColor}15`, color: accentColor }}>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+                                </div>
                             </div>
                         </div>
-                        <div
-                            ref={githubContributionsRef}
-                            className="overflow-x-auto overflow-y-hidden rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 min-h-[156px] thin-scrollbar flex-shrink-0"
-                            style={{
-                                WebkitOverflowScrolling: 'touch'
-                            }}
-                        >
-                            {!githubUsername ? (
-                                <div className="flex flex-col items-center justify-center text-center py-6">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-12 h-12 text-gray-300 dark:text-gray-600 mb-3"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
-                                    <p className="text-gray-500 dark:text-gray-400 text-sm mb-2">GitHub not configured</p>
-                                    <p className="text-xs text-gray-400 dark:text-gray-500">Add your GitHub username in Settings to view contributions</p>
-                                </div>
-                            ) : contributions.length > 0 ? (
-                                <div className="flex justify-center min-w-full px-4 pt-4 pb-2">
-                                    <ActivityCalendar
-                                        data={contributions}
-                                        colorScheme={theme === 'custom' ? 'light' : theme}
-                                        theme={(() => {
-                                            const rgb = hexToRgb(accentColor);
-                                            if (!rgb) return undefined;
-                                            const { r, g, b } = rgb;
-                                            return {
-                                                light: ['#ebedf0', `rgba(${r}, ${g}, ${b}, 0.4)`, `rgba(${r}, ${g}, ${b}, 0.6)`, `rgba(${r}, ${g}, ${b}, 0.8)`, `rgba(${r}, ${g}, ${b}, 1)`],
-                                                dark: ['#161b22', `rgba(${r}, ${g}, ${b}, 0.4)`, `rgba(${r}, ${g}, ${b}, 0.6)`, `rgba(${r}, ${g}, ${b}, 0.8)`, `rgba(${r}, ${g}, ${b}, 1)`],
-                                            };
-                                        })()}
-                                        blockSize={blockSize}
-                                        blockMargin={4}
-                                        fontSize={12}
-                                        showWeekdayLabels
-                                    />
-                                </div>
-                            ) : (
-                                <div className="flex items-center justify-center text-gray-400 dark:text-gray-500">
-                                    <Loader className="w-6 h-6 animate-spin mr-2" />
-                                    <span>Loading contributions...</span>
-                                </div>
-                            )}
-                        </div>
+
+                        {!githubUsername ? (
+                            <div className="flex flex-col items-center justify-center text-center py-6 border border-dashed border-gray-200 dark:border-gray-700 rounded-xl">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-12 h-12 text-gray-300 dark:text-gray-600 mb-3"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+                                <p className="text-gray-500 dark:text-gray-400 text-sm mb-2">GitHub not configured</p>
+                                <p className="text-xs text-gray-400 dark:text-gray-500">Add your GitHub username in Settings to view contributions</p>
+                            </div>
+                        ) : (
+                            <div
+                                ref={githubContributionsRef}
+                                className="overflow-x-auto overflow-y-hidden rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 min-h-[156px] thin-scrollbar flex-shrink-0"
+                                style={{
+                                    WebkitOverflowScrolling: 'touch'
+                                }}
+                            >
+                                {contributions.length > 0 ? (
+                                    githubViewMode === '3d' ? (
+                                        <GithubActivity3D data={contributions} theme={theme as any} accentColor={accentColor} />
+                                    ) : (
+                                        <div className="flex justify-center min-w-full px-4 pt-4 pb-2">
+                                            <ActivityCalendar
+                                                data={contributions}
+                                                colorScheme={theme === 'custom' ? 'light' : theme}
+                                                theme={(() => {
+                                                    const rgb = hexToRgb(accentColor);
+                                                    if (!rgb) return undefined;
+                                                    const { r, g, b } = rgb;
+                                                    return {
+                                                        light: ['#ebedf0', `rgba(${r}, ${g}, ${b}, 0.4)`, `rgba(${r}, ${g}, ${b}, 0.6)`, `rgba(${r}, ${g}, ${b}, 0.8)`, `rgba(${r}, ${g}, ${b}, 1)`],
+                                                        dark: ['#161b22', `rgba(${r}, ${g}, ${b}, 0.4)`, `rgba(${r}, ${g}, ${b}, 0.6)`, `rgba(${r}, ${g}, ${b}, 0.8)`, `rgba(${r}, ${g}, ${b}, 1)`],
+                                                    };
+                                                })()}
+                                                blockSize={blockSize}
+                                                blockMargin={4}
+                                                fontSize={12}
+                                                showWeekdayLabels
+                                            />
+                                        </div>
+                                    )
+                                ) : (
+                                    <div className="flex items-center justify-center text-gray-400 dark:text-gray-500 py-12">
+                                        <Loader className="w-6 h-6 animate-spin mr-2" />
+                                        <span>Loading contributions...</span>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                         {contributions.length > 0 && githubUsername && (
                             <div className="flex items-center justify-between mt-2 px-4">
                                 <span className="text-sm text-gray-600 dark:text-gray-400">
