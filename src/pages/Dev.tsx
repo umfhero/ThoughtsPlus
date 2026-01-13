@@ -269,10 +269,59 @@ export function DevPage({ isMockMode, toggleMockMode, onForceSetup, onForceSnaps
                     </div>
                 </div>
 
-                {/* Dashboard Tools */}
-                <div className="bg-blue-50 dark:bg-blue-900/10 rounded-xl p-4 md:p-6 border border-blue-200 dark:border-blue-800/30 shadow-sm h-fit">
-                    <h2 className="text-xl font-semibold mb-4 text-blue-600 dark:text-blue-400">Dashboard Tools</h2>
+                {/* Feature Flags */}
+                <div className="bg-purple-50 dark:bg-purple-900/10 rounded-xl p-4 md:p-6 border border-purple-200 dark:border-purple-800/30 shadow-sm h-fit">
+                    <h2 className="text-xl font-semibold mb-4 text-purple-600 dark:text-purple-400">Feature Flags</h2>
                     <div className="space-y-4">
+                        {/* Creator Stats Toggle */}
+                        <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                            <div className="flex flex-col min-w-0 pr-2">
+                                <span className="font-medium text-gray-800 dark:text-gray-200 truncate">Creator Stats</span>
+                                <span className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+                                    Enable the 'Stats' page for content creators
+                                </span>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    const saved = localStorage.getItem('feature-toggles');
+                                    const features = saved ? JSON.parse(saved) : {};
+                                    const newValue = !features.stats;
+                                    const newFeatures = { ...features, stats: newValue };
+
+                                    localStorage.setItem('feature-toggles', JSON.stringify(newFeatures));
+                                    window.dispatchEvent(new CustomEvent('feature-toggles-changed', { detail: newFeatures }));
+
+                                    addNotification({
+                                        title: newValue ? 'Stats Enabled' : 'Stats Disabled',
+                                        message: newValue ? 'Creator Stats page is now visible in the sidebar.' : 'Creator Stats page has been hidden.',
+                                        type: 'info',
+                                        duration: 2000
+                                    });
+                                    // Force re-render of this component to update button state
+                                    window.dispatchEvent(new Event('storage'));
+                                }}
+                                className={clsx(
+                                    "w-10 h-6 rounded-full p-1 transition-colors duration-300 flex-shrink-0",
+                                    (() => {
+                                        const saved = localStorage.getItem('feature-toggles');
+                                        const features = saved ? JSON.parse(saved) : {};
+                                        return features.stats;
+                                    })()
+                                        ? "bg-purple-500"
+                                        : "bg-gray-300 dark:bg-gray-600"
+                                )}
+                            >
+                                <div className={clsx(
+                                    "w-4 h-4 rounded-full bg-white shadow-md transition-transform",
+                                    (() => {
+                                        const saved = localStorage.getItem('feature-toggles');
+                                        const features = saved ? JSON.parse(saved) : {};
+                                        return features.stats;
+                                    })() ? "translate-x-4" : ""
+                                )} />
+                            </button>
+                        </div>
+
                         {/* Companion Mode Toggle */}
                         <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
                             <div className="flex flex-col min-w-0 pr-2">
@@ -307,8 +356,14 @@ export function DevPage({ isMockMode, toggleMockMode, onForceSetup, onForceSnaps
                                 )} />
                             </button>
                         </div>
+                    </div>
+                </div>
 
-                        {/* Add this in the Dev Tools settings section */}
+                {/* Dashboard Tools */}
+                <div className="bg-blue-50 dark:bg-blue-900/10 rounded-xl p-4 md:p-6 border border-blue-200 dark:border-blue-800/30 shadow-sm h-fit">
+                    <h2 className="text-xl font-semibold mb-4 text-blue-600 dark:text-blue-400">Dashboard Tools</h2>
+                    <div className="space-y-4">
+                        {/* Auto-Generate Briefing */}
                         <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
                             <div className="flex flex-col min-w-0 pr-2">
                                 <span className="font-medium text-gray-800 dark:text-gray-200 truncate">Auto-Generate Briefing</span>

@@ -1,4 +1,4 @@
-import { Home, Calendar as CalendarIcon, PieChart, Settings, ChevronDown, ChevronRight, PanelLeftClose, PanelLeftOpen, PenTool, Github, Code, Timer, TrendingUp, BookOpen } from 'lucide-react';
+import { Home, Calendar as CalendarIcon, PieChart, Settings, ChevronDown, ChevronRight, PanelLeftClose, PanelLeftOpen, Github, Code, Timer, TrendingUp, BookOpen } from 'lucide-react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import clsx from 'clsx';
 import { useState, useEffect } from 'react';
@@ -95,7 +95,8 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
     const [showShortcuts, setShowShortcuts] = useState(false);
     const [enabledFeatures, setEnabledFeatures] = useState({
         calendar: true,
-        drawing: true,
+        notebook: true,
+        progress: true,
         stats: false,
         github: true,
         timer: true
@@ -140,7 +141,7 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
     // Sync Order
     useEffect(() => {
         const savedOrder = localStorage.getItem('sidebar-order');
-        const defaultItems = ['dashboard', 'progress', 'notebook', 'calendar', 'timer', 'drawing', 'stats', 'github'];
+        const defaultItems = ['dashboard', 'progress', 'notebook', 'calendar', 'timer', 'stats', 'github'];
 
         let newOrder: string[] = [];
 
@@ -184,9 +185,25 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
     // Load feature toggles from localStorage
     useEffect(() => {
         const loadFeatureToggles = () => {
+            const defaultFeatures = {
+                calendar: true,
+                notebook: true,
+                progress: true,
+                stats: false,
+                github: true,
+                timer: true
+            };
             const saved = localStorage.getItem('feature-toggles');
             if (saved) {
-                setEnabledFeatures(JSON.parse(saved));
+                try {
+                    const parsed = JSON.parse(saved);
+                    // Merge saved with defaults to handle new keys (like progress)
+                    setEnabledFeatures({ ...defaultFeatures, ...parsed });
+                } catch {
+                    setEnabledFeatures(defaultFeatures);
+                }
+            } else {
+                setEnabledFeatures(defaultFeatures);
             }
         };
 
@@ -227,10 +244,11 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
             if (isCtrl && !isShift && !isAlt && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
                 // Build dynamic pages array based on sidebar order and enabled features
                 const pages: Page[] = order.filter(id => {
-                    if (id === 'dashboard' || id === 'progress' || id === 'notebook') return true;
+                    if (id === 'dashboard') return true;
+                    if (id === 'progress') return enabledFeatures.progress;
+                    if (id === 'notebook') return enabledFeatures.notebook;
                     if (id === 'calendar') return enabledFeatures.calendar;
                     if (id === 'timer') return enabledFeatures.timer;
-                    if (id === 'drawing') return enabledFeatures.drawing;
                     if (id === 'stats') return enabledFeatures.stats;
                     if (id === 'github') return enabledFeatures.github;
                     return false;
@@ -270,9 +288,9 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                     case 'dashboard': setPage('dashboard'); break;
                     case 'calendar': if (enabledFeatures.calendar) setPage('calendar'); break;
                     case 'timer': if (enabledFeatures.timer) setPage('timer'); break;
-                    case 'board': if (enabledFeatures.drawing) setPage('drawing'); break;
+                    case 'board': if (enabledFeatures.notebook) setPage('notebook'); break;
                     case 'github': if (enabledFeatures.github) setPage('github'); break;
-                    case 'progress': setPage('progress'); break;
+                    case 'progress': if (enabledFeatures.progress) setPage('progress'); break;
                     case 'notebook': setPage('notebook'); break;
                     case 'settings': setPage('settings'); break;
                     case 'ai-quick-add':
@@ -356,10 +374,10 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                         <div className="pointer-events-auto flex items-center gap-2 px-4 py-3 rounded-2xl bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl border border-white/20 dark:border-gray-700/30 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50">
                             {/* Navigation Items */}
                             {order.filter(id => {
-                                if (id === 'dashboard' || id === 'progress' || id === 'notebook') return true;
+                                if (id === 'dashboard' || id === 'progress') return true;
+                                if (id === 'notebook') return enabledFeatures.notebook;
                                 if (id === 'calendar') return enabledFeatures.calendar;
                                 if (id === 'timer') return enabledFeatures.timer;
-                                if (id === 'drawing') return enabledFeatures.drawing;
                                 if (id === 'stats') return enabledFeatures.stats;
                                 if (id === 'github') return enabledFeatures.github;
                                 return false;
@@ -374,7 +392,6 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                                     case 'notebook': Icon = BookOpen; label = 'Notebook'; page = 'notebook'; break;
                                     case 'calendar': Icon = CalendarIcon; label = 'Calendar'; page = 'calendar'; break;
                                     case 'timer': Icon = Timer; label = 'Timer'; page = 'timer'; break;
-                                    case 'drawing': Icon = PenTool; label = 'Board'; page = 'drawing'; break;
                                     case 'stats': Icon = PieChart; label = 'Stats'; page = 'stats'; break;
                                     case 'github': Icon = Github; label = 'GitHub'; page = 'github'; break;
                                 }
@@ -582,7 +599,7 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                                         }
 
                                         // Progress
-                                        if (id === 'progress') {
+                                        if (id === 'progress' && enabledFeatures.progress) {
                                             return (
                                                 <Reorder.Item key={id} value={id} dragListener={isEditMode} className="relative overflow-visible">
                                                     <IconTooltip label="Progress" show={isIconOnly}>
@@ -667,7 +684,7 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                                         }
 
                                         // Notebook
-                                        if (id === 'notebook') {
+                                        if (id === 'notebook' && enabledFeatures.notebook) {
                                             return (
                                                 <Reorder.Item key={id} value={id} dragListener={isEditMode} className="relative overflow-visible">
                                                     <IconTooltip label="Notebook" show={isIconOnly}>
@@ -891,91 +908,6 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                                                             )}
                                                         </AnimatePresence>
                                                     </div>
-                                                </Reorder.Item>
-                                            );
-                                        }
-
-                                        // Drawing
-                                        if (id === 'drawing' && enabledFeatures.drawing) {
-                                            return (
-                                                <Reorder.Item key={id} value={id} dragListener={isEditMode} className="relative">
-                                                    <IconTooltip label="Board" show={isIconOnly}>
-                                                        <button
-                                                            onClick={() => setPage('drawing')}
-                                                            className={clsx(
-                                                                isIconOnly
-                                                                    ? "w-12 h-12 flex items-center justify-center rounded-full transition-colors duration-300 relative"
-                                                                    : "w-full flex items-center justify-start p-3 rounded-xl transition-colors duration-300 group relative",
-                                                                currentPage === 'drawing'
-                                                                    ? isIconOnly ? "" : "text-white shadow-lg shadow-gray-900/20 dark:shadow-gray-950/30"
-                                                                    : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100"
-                                                            )}
-                                                        >
-                                                            {currentPage === 'drawing' && (
-                                                                isIconOnly ? (
-                                                                    <motion.div
-                                                                        layoutId="activeCircle"
-                                                                        className="absolute inset-0 rounded-full bg-gray-100 dark:bg-gray-700/60"
-                                                                        transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                                                                    />
-                                                                ) : (
-                                                                    <motion.div
-                                                                        layoutId="activeBg"
-                                                                        className="absolute bg-gray-900 dark:bg-gray-700 rounded-xl top-0 bottom-0"
-                                                                        initial={{ left: 0, width: "100%" }}
-                                                                        animate={{
-                                                                            left: showShortcuts ? -24 : 0,
-                                                                            width: showShortcuts ? "calc(100% + 24px)" : "100%"
-                                                                        }}
-                                                                        transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                                                                    />
-                                                                )
-                                                            )}
-
-                                                            {!isIconOnly && (
-                                                                <AnimatePresence>
-                                                                    {showShortcuts && currentPage !== 'drawing' && (
-                                                                        <motion.div
-                                                                            initial={{ opacity: 0, x: -20 }}
-                                                                            animate={{ opacity: 1, x: 0 }}
-                                                                            exit={{ opacity: 0, x: -20, transition: { duration: 0.1 } }}
-                                                                            transition={{ type: "spring", stiffness: 500, damping: 14 }}
-                                                                            className="absolute left-[-16px] top-0 bottom-0 w-[48px] flex items-center justify-center z-20"
-                                                                        >
-                                                                            {getShortcutString('board') && (
-                                                                                <span className="text-[10px] font-bold bg-black text-white px-2 py-1 rounded-md whitespace-nowrap border border-gray-700 flex items-center justify-center shadow-lg">
-                                                                                    {getShortcutString('board')}
-                                                                                </span>
-                                                                            )}
-                                                                        </motion.div>
-                                                                    )}
-                                                                </AnimatePresence>
-                                                            )}
-
-                                                            {isIconOnly ? (
-                                                                <div className="relative z-10">
-                                                                    <PenTool className="w-5 h-5" style={currentPage === 'drawing' ? { color: 'var(--accent-primary)' } : undefined} />
-                                                                </div>
-                                                            ) : (
-                                                                <div className="flex items-center gap-3 relative z-10 w-full">
-                                                                    <div className="relative w-5 h-5 shrink-0 flex items-center justify-center">
-                                                                        <motion.div
-                                                                            animate={{
-                                                                                opacity: showShortcuts && currentPage !== 'drawing' ? 0 : 1,
-                                                                                scale: showShortcuts && currentPage !== 'drawing' ? 0.5 : 1,
-                                                                                x: showShortcuts && currentPage !== 'drawing' ? -15 : 0
-                                                                            }}
-                                                                            transition={{ type: "spring", stiffness: 500, damping: 14 }}
-                                                                            whileHover={{ scale: 1.1 }}
-                                                                        >
-                                                                            <PenTool className={clsx("w-5 h-5 shrink-0")} style={currentPage === 'drawing' ? { color: 'var(--accent-primary)' } : undefined} />
-                                                                        </motion.div>
-                                                                    </div>
-                                                                    <span className="font-medium text-sm">Board</span>
-                                                                </div>
-                                                            )}
-                                                        </button>
-                                                    </IconTooltip>
                                                 </Reorder.Item>
                                             );
                                         }

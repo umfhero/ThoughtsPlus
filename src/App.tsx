@@ -894,6 +894,7 @@ function AppContent(props: AppContentProps) {
                                         notes={notebookNotes}
                                         onDeleteNote={handleDeleteQuickNote}
                                         onUpdateNote={handleUpdateQuickNote}
+                                        setPage={setCurrentPage}
                                     />
                                 )}
                                 {currentPage === 'settings' && <SettingsPage />}

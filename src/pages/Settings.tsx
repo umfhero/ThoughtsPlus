@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Folder, Palette, Sparkles, Check, ExternalLink, Clipboard, AlertCircle, LayoutDashboard, PieChart, Github, PenTool, Calendar as CalendarIcon, Code, RefreshCw, Bell, BellOff, Type, Upload, FileUp, Timer, Heart, Sidebar as SidebarIcon, Settings2, X, Trash2, Plus, ChevronDown, ChevronUp, History, Info, Save, Bug } from 'lucide-react';
+import { Folder, Palette, Sparkles, Check, ExternalLink, Clipboard, AlertCircle, LayoutDashboard, PieChart, Github, BookOpen, Calendar as CalendarIcon, Code, RefreshCw, Bell, BellOff, Type, Upload, FileUp, Timer, Heart, Sidebar as SidebarIcon, Settings2, X, Trash2, Plus, ChevronDown, ChevronUp, History, Info, Save, Bug, TrendingUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import clsx from 'clsx';
 import { useTheme } from '../contexts/ThemeContext';
@@ -72,7 +72,8 @@ export function SettingsPage() {
     // Feature Toggles
     const [enabledFeatures, setEnabledFeatures] = useState({
         calendar: true,
-        drawing: true,
+        notebook: true,
+        progress: true,
         stats: false,
         github: true,
         timer: true,
@@ -453,6 +454,16 @@ export function SettingsPage() {
     };
 
     const loadFeatureToggles = () => {
+        const defaultFeatures = {
+            calendar: true,
+            notebook: true,
+            progress: true,
+            stats: false,
+            github: true,
+            timer: true,
+            aiDescriptions: !import.meta.env.DEV // false in dev, true in production
+        };
+
         const saved = localStorage.getItem('feature-toggles');
         if (saved) {
             const features = JSON.parse(saved);
@@ -460,17 +471,10 @@ export function SettingsPage() {
             if (import.meta.env.DEV) {
                 features.aiDescriptions = false;
             }
-            setEnabledFeatures(features);
+            setEnabledFeatures({ ...defaultFeatures, ...features });
         } else {
             // No saved settings - use defaults based on environment
-            setEnabledFeatures({
-                calendar: true,
-                drawing: true,
-                stats: true,
-                github: true,
-                timer: true,
-                aiDescriptions: !import.meta.env.DEV // false in dev, true in production
-            });
+            setEnabledFeatures(defaultFeatures);
         }
     };
 
@@ -2083,49 +2087,29 @@ export function SettingsPage() {
                             </button>
                         </div>
 
-                        {/* Board Toggle */}
+                        {/* Notebook Toggle */}
                         <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600 min-w-0">
                             <div className="flex items-center gap-3 min-w-0 flex-1">
-                                <PenTool className="w-5 h-5 text-gray-600 dark:text-gray-400 shrink-0" />
-                                <span className="font-medium text-gray-800 dark:text-gray-200 truncate">Board</span>
+                                <BookOpen className="w-5 h-5 text-gray-600 dark:text-gray-400 shrink-0" />
+                                <span className="font-medium text-gray-800 dark:text-gray-200 truncate">Notebook</span>
                             </div>
                             <button
-                                onClick={() => toggleFeature('drawing')}
+                                onClick={() => toggleFeature('notebook')}
                                 className={clsx(
                                     "w-10 h-6 rounded-full p-1 transition-colors duration-300 focus:outline-none shrink-0",
-                                    enabledFeatures.drawing ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"
+                                    enabledFeatures.notebook ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"
                                 )}
                             >
                                 <motion.div
                                     layout
                                     className="w-4 h-4 rounded-full bg-white shadow-md"
-                                    animate={{ x: enabledFeatures.drawing ? 16 : 0 }}
+                                    animate={{ x: enabledFeatures.notebook ? 16 : 0 }}
                                     transition={{ type: "spring", stiffness: 500, damping: 30 }}
                                 />
                             </button>
                         </div>
 
-                        {/* Creator Stats Toggle */}
-                        <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600 min-w-0">
-                            <div className="flex items-center gap-3 min-w-0 flex-1">
-                                <PieChart className="w-5 h-5 text-gray-600 dark:text-gray-400 shrink-0" />
-                                <span className="font-medium text-gray-800 dark:text-gray-200 truncate">Creator Stats</span>
-                            </div>
-                            <button
-                                onClick={() => toggleFeature('stats')}
-                                className={clsx(
-                                    "w-10 h-6 rounded-full p-1 transition-colors duration-300 focus:outline-none shrink-0",
-                                    enabledFeatures.stats ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"
-                                )}
-                            >
-                                <motion.div
-                                    layout
-                                    className="w-4 h-4 rounded-full bg-white shadow-md"
-                                    animate={{ x: enabledFeatures.stats ? 16 : 0 }}
-                                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                                />
-                            </button>
-                        </div>
+
 
                         {/* GitHub Toggle */}
                         <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600 min-w-0">
@@ -2144,6 +2128,28 @@ export function SettingsPage() {
                                     layout
                                     className="w-4 h-4 rounded-full bg-white shadow-md"
                                     animate={{ x: enabledFeatures.github ? 16 : 0 }}
+                                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                                />
+                            </button>
+                        </div>
+
+                        {/* Progress Toggle */}
+                        <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600 min-w-0">
+                            <div className="flex items-center gap-3 min-w-0 flex-1">
+                                <TrendingUp className="w-5 h-5 text-gray-600 dark:text-gray-400 shrink-0" />
+                                <span className="font-medium text-gray-800 dark:text-gray-200 truncate">Progress</span>
+                            </div>
+                            <button
+                                onClick={() => toggleFeature('progress')}
+                                className={clsx(
+                                    "w-10 h-6 rounded-full p-1 transition-colors duration-300 focus:outline-none shrink-0",
+                                    enabledFeatures.progress ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"
+                                )}
+                            >
+                                <motion.div
+                                    layout
+                                    className="w-4 h-4 rounded-full bg-white shadow-md"
+                                    animate={{ x: enabledFeatures.progress ? 16 : 0 }}
                                     transition={{ type: "spring", stiffness: 500, damping: 30 }}
                                 />
                             </button>
@@ -2176,6 +2182,8 @@ export function SettingsPage() {
                         Note: Dashboard and Settings cannot be disabled.
                     </p>
                 </div>
+
+
 
                 {/* Multi-Provider Configuration Modal */}
                 {

@@ -56,8 +56,8 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
     const { accentColor, theme } = useTheme();
     const [enabledFeatures, setEnabledFeatures] = useState({
         calendar: true,
-        drawing: true,
-        stats: true,
+        notebook: true,
+        stats: false,
         github: true,
         aiDescriptions: !import.meta.env.DEV // false in dev, true in production
     });
@@ -1932,7 +1932,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                     </motion.div>
                 );
             case 'board':
-                if (!enabledFeatures.drawing) return null;
+                if (!enabledFeatures.notebook) return null;
                 // Format time ago
                 const getTimeAgo = (timestamp: number) => {
                     const now = Date.now();
