@@ -105,7 +105,8 @@ export async function fetchGithubContributors(owner: string, repo: string): Prom
     if (cached) {
         const { timestamp, contributors } = JSON.parse(cached) as ContributorsCachedData;
         if (Date.now() - timestamp < CACHE_DURATION) {
-            return contributors;
+            // Always filter cached data in case cache was stored before bot filtering was added
+            return filterOutBots(contributors);
         }
     }
 
