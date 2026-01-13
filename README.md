@@ -1,7 +1,7 @@
 <div align="center">
   <img src="git/newpics/thoughtsplus/banner.png" alt="ThoughtsPlus Banner" width="100%" style="border-radius: 15px; overflow: hidden;" />
 
-![Microsoft Store](https://img.shields.io/badge/dynamic/json?url=https://raw.githubusercontent.com/umfhero/ThoughtsPlus/main/version.json&query=$.msstore_version&label=Microsoft%20Store&color=0078D4&logo=microsoft)
+![Microsoft Store](https://img.shields.io/badge/dynamic/json?url=https://raw.githubusercontent.com/umfhero/ThoughtsPlus/HEAD/version.json&query=$.msstore_version&label=Microsoft%20Store&color=0078D4&logo=microsoft)
 ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/umfhero/ThoughtsPlus/total)
 ![GitHub last commit](https://img.shields.io/github/last-commit/umfhero/ThoughtsPlus)
 ![GitHub stars](https://img.shields.io/github/stars/umfhero/ThoughtsPlus?style=social)
@@ -9,19 +9,23 @@
 
 [![Microsoft Store](https://img.shields.io/badge/Microsoft_Store-Download-white?style=for-the-badge&logo=microsoft&logoColor=0078D4)](https://apps.microsoft.com/detail/9nb8vzfwnv81?hl=en-GB&gl=GB)
 [![Website](https://img.shields.io/badge/Website-Visit_Site-white?style=for-the-badge&logo=netlify&logoColor=00C7B7)](https://thoughtsplus.netlify.app/)
+
 </div>
 
 > [!IMPORTANT]
-> #### Transparent. Free. Forever. **ThoughtsPlus is a labour of love, not a product.**
-> * **Zero Cost:** No "Pro" tiers or hidden paywalls.
-> * **Zero Distraction:** No advertisements or sponsored content.
-> * **Zero Tracking:** No telemetry or data collection.
 >
-> We build this for fun and for the "nerdy" community. If you find value in it, your support is appreciated but never expected. 
+> #### Transparent. Free. Forever. **ThoughtsPlus is a labour of love, not a product.**
+>
+> - **Zero Cost:** No "Pro" tiers or hidden paywalls.
+> - **Zero Distraction:** No advertisements or sponsored content.
+> - **Zero Tracking:** No telemetry or data collection.
+>
+> We build this for fun and for the "nerdy" community. If you find value in it, your support is appreciated but never expected.
 
 **ThoughtsPlus** is an ultra-low-friction productivity suite designed for the "nerdy" brain. While modern tools like Notion and Obsidian have become cluttered with complex menus and feature bloat, ThoughtsPlus focuses on instant capture. It is designed for the user who needs to offload a thought in a split second and return to their primary task without breaking momentum.
 
 ## **Why ThoughtsPlus?**
+
 Shortcut-First Design: Move at the speed of thought. Execute commands and capture notes through a no-menu only, keyboard-centric interface.
 
 Frictionless Brain Dumping: Part calendar, part planning board and part analytics dashboard designed to be the ultimate landing zone for raw ideas.
