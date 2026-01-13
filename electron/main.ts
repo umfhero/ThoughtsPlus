@@ -1054,6 +1054,64 @@ ${notesStr}
         }
     });
 
+    // AI Draft - Generate note content for Board page
+    ipcMain.handle('generate-ai-note-content', async (_, prompt: string, noteType: 'text' | 'list') => {
+        try {
+            if (!deviceSettings.apiKey) {
+                return {
+                    error: 'API_KEY_MISSING',
+                    message: 'Please configure your AI API key in Settings.'
+                };
+            }
+
+            const isChecklist = noteType === 'list';
+
+            const aiPrompt = isChecklist
+                ? `You are a helpful assistant creating a checklist for a sticky note.
+
+User request: "${prompt}"
+
+IMPORTANT RULES:
+1. ONLY generate content based on what the user asked - do NOT make up specific data, dates, events, or personal information.
+2. If they ask about personal data you don't have (like "my tasks", "my schedule"), create a helpful template structure they can fill in.
+3. If they ask about a topic (like "revision guide for Python" or "packing list for camping"), create a relevant structured list for that topic.
+4. Return ONLY the list items, one per line, without bullet points, numbering, or checkboxes.
+5. Maximum 12 items. Use British English spelling.
+
+Output format (plain text, one item per line):
+First item here
+Second item here
+...`
+                : `You are a helpful writing assistant creating content for a sticky note.
+
+User request: "${prompt}"
+
+IMPORTANT RULES:
+1. ONLY generate content based on what the user asked - do NOT make up specific data, dates, events, names, or personal information.
+2. If they ask about personal data you don't have (like "my tasks", "summarise my notes"), politely explain you don't have access to their personal data and offer to create a helpful template instead.
+3. If they ask about a topic (like "revision guide for Python", "meeting agenda"), create genuinely useful content structured around that topic.
+4. For topic-based requests, organise content logically (e.g., Python revision = variables, data types, loops, functions, OOP, etc.)
+5. Write clear, readable paragraphs. Maximum 250 words. British English. No markdown formatting.`;
+
+            try {
+                const content = await generateAIContent(aiPrompt);
+                return { content: content.trim() };
+            } catch (error: any) {
+                console.warn('AI content generation failed:', error.message);
+                return {
+                    error: 'GENERATION_ERROR',
+                    message: error.message || 'AI service temporarily unavailable.'
+                };
+            }
+        } catch (error: any) {
+            console.error("AI Draft Error:", error);
+            return {
+                error: 'GENERATION_ERROR',
+                message: 'Something went wrong. Please try again.'
+            };
+        }
+    });
+
     ipcMain.handle('get-creator-stats', async () => {
         win?.webContents.executeJavaScript(`console.log("🚀 Fetching all Fortnite metrics + history...")`);
         try {

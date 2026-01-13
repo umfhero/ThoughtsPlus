@@ -621,6 +621,73 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
         setNotes(prev => [...prev, calcNote]);
     };
 
+    // Helper to convert markdown-like formatting to HTML
+    const convertMarkdownToHtml = (text: string): string => {
+        // Convert **text** to <b>text</b>
+        let html = text.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+        // Convert *text* to <i>text</i>
+        html = html.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<i>$1</i>');
+        // Make the first line a heading (larger/bolder)
+        const lines = html.split('\n');
+        if (lines.length > 0 && lines[0].trim()) {
+            lines[0] = `<div style="font-size: 1.25em; font-weight: bold; margin-bottom: 8px;">${lines[0]}</div>`;
+        }
+        return lines.join('\n');
+    };
+
+    // Handler for AI-generated notes
+    const addAIGeneratedNote = (content: string, type: 'text' | 'list') => {
+        const processedContent = type === 'text' ? convertMarkdownToHtml(content) : content;
+        const newNote: StickyNote = {
+            id: generateId(),
+            type: type,
+            x: -panOffset.x / zoom + 100,
+            y: -panOffset.y / zoom + 100,
+            width: 300,
+            height: 260,
+            content: type === 'text' ? processedContent : '',
+            color: noteConfig.color,
+            paperStyle: noteConfig.paperStyle,
+            attachmentStyle: noteConfig.attachmentStyle,
+            font: currentFont as any,
+            fontSize: 16,
+            listItems: type === 'list'
+                ? content.split('\n').filter(line => line.trim()).map(line => ({
+                    id: generateId(),
+                    text: line.replace(/^[-•*\[\]☐☑\d.)]\s*/, '').replace(/\*\*/g, '').trim(),
+                    checked: line.includes('☑') || line.includes('[x]')
+                }))
+                : undefined
+        };
+        setNotes(prev => [...prev, newNote]);
+        setSelectedNoteId(newNote.id);
+    };
+
+    // Handler for adding dictionary definitions as notes
+    const addDictionaryNote = (word: string, partOfSpeech: string, definitions: { definition: string; example?: string }[]) => {
+        const content = `<div style="font-size: 1.25em; font-weight: bold; margin-bottom: 8px;">${word} <span style="font-size: 0.75em; color: #9333ea; text-transform: uppercase;">(${partOfSpeech})</span></div>\n` +
+            definitions.slice(0, 3).map((def, i) =>
+                `<b>${i + 1}.</b> ${def.definition}${def.example ? `\n<i>"${def.example}"</i>` : ''}`
+            ).join('\n\n');
+
+        const newNote: StickyNote = {
+            id: generateId(),
+            type: 'text',
+            x: -panOffset.x / zoom + 100,
+            y: -panOffset.y / zoom + 100,
+            width: 300,
+            height: 220,
+            content: content,
+            color: '#E6F3FF', // Light blue for dictionary notes
+            paperStyle: 'smooth',
+            attachmentStyle: 'tape-blue',
+            font: currentFont as any,
+            fontSize: 14,
+        };
+        setNotes(prev => [...prev, newNote]);
+        setSelectedNoteId(newNote.id);
+    };
+
     const addNewBoard = () => {
         // Prevent double creation from React StrictMode
         if (isCreatingBoardRef.current) {
@@ -1194,8 +1261,8 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
                 </div>
             )}
 
-            {showDictionary && <DictionaryModal onClose={() => setShowDictionary(false)} />}
-            {showAIDraft && <AIDraftModal onClose={() => setShowAIDraft(false)} />}
+            {showDictionary && <DictionaryModal onClose={() => setShowDictionary(false)} onAddDefinition={addDictionaryNote} />}
+            {showAIDraft && <AIDraftModal onClose={() => setShowAIDraft(false)} onCreateNote={addAIGeneratedNote} />}
         </div>
     );
 }
@@ -1822,6 +1889,10 @@ function StickyNoteComponent({ note, isSelected, onMouseDown, onResizeStart, onD
     );
 }
 
+// Minimum dimensions for calculator to maintain usability
+const CALCULATOR_MIN_WIDTH = 220;
+const CALCULATOR_MIN_HEIGHT = 320;
+
 function CalculatorNote({ note, isSelected, onMouseDown, onResizeStart, onDelete }: any) {
     const [equation, setEquation] = useState('');
     const [display, setDisplay] = useState('0');
@@ -1847,14 +1918,20 @@ function CalculatorNote({ note, isSelected, onMouseDown, onResizeStart, onDelete
         }
     };
 
+    // Enforce minimum dimensions - if too small, lock to minimum
+    const effectiveWidth = Math.max(note.width, CALCULATOR_MIN_WIDTH);
+    const effectiveHeight = Math.max(note.height, CALCULATOR_MIN_HEIGHT);
+
     return (
         <motion.div
             style={{
                 position: 'absolute',
                 left: note.x,
                 top: note.y,
-                width: note.width,
-                height: note.height,
+                width: effectiveWidth,
+                height: effectiveHeight,
+                minWidth: CALCULATOR_MIN_WIDTH,
+                minHeight: CALCULATOR_MIN_HEIGHT,
             }}
             className={clsx(
                 "rounded-lg shadow-2xl bg-white dark:bg-gray-800 cursor-move",
@@ -1867,21 +1944,21 @@ function CalculatorNote({ note, isSelected, onMouseDown, onResizeStart, onDelete
             transition={{ type: 'spring', stiffness: 300, damping: 20 }}
         >
             <div className="p-4 h-full flex flex-col" onClick={(e) => e.stopPropagation()}>
-                <div className="mb-4">
-                    <div className="text-sm text-gray-500 dark:text-gray-400 h-6 overflow-hidden">{equation || ' '}</div>
-                    <div className="text-3xl font-bold text-gray-800 dark:text-gray-100 text-right">{display}</div>
+                <div className="mb-4 flex-shrink-0">
+                    <div className="text-sm text-gray-500 dark:text-gray-400 h-6 overflow-hidden truncate">{equation || ' '}</div>
+                    <div className="text-2xl font-bold text-gray-800 dark:text-gray-100 text-right truncate">{display}</div>
                 </div>
 
-                <div className="grid grid-cols-4 gap-2 flex-1">
+                <div className="grid grid-cols-4 gap-1.5 flex-1 min-h-0">
                     {['C', '(', ')', '/'].map(btn => (
-                        <button key={btn} onClick={() => handleInput(btn)} className="py-3 bg-gray-200 dark:bg-gray-600 rounded-lg font-medium hover:bg-gray-300 transition-colors">{btn}</button>
+                        <button key={btn} onClick={() => handleInput(btn)} className="py-2 bg-gray-200 dark:bg-gray-600 rounded-lg font-medium hover:bg-gray-300 transition-colors text-sm">{btn}</button>
                     ))}
                     {['7', '8', '9', '*', '4', '5', '6', '-', '1', '2', '3', '+'].map(btn => (
-                        <button key={btn} onClick={() => handleInput(btn)} className={clsx("py-3 rounded-lg font-medium transition-colors", /\d/.test(btn) ? "bg-gray-100 dark:bg-gray-700 hover:bg-gray-200" : "bg-purple-500 text-white hover:bg-purple-600")}>{btn}</button>
+                        <button key={btn} onClick={() => handleInput(btn)} className={clsx("py-2 rounded-lg font-medium transition-colors text-sm", /\d/.test(btn) ? "bg-gray-100 dark:bg-gray-700 hover:bg-gray-200" : "bg-purple-500 text-white hover:bg-purple-600")}>{btn}</button>
                     ))}
-                    <button onClick={() => handleInput('0')} className="col-span-2 py-3 bg-gray-100 dark:bg-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">0</button>
-                    <button onClick={() => handleInput('.')} className="py-3 bg-gray-100 dark:bg-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">.</button>
-                    <button onClick={() => handleInput('=')} className="py-3 bg-purple-500 text-white rounded-lg font-medium hover:bg-purple-600 transition-colors">=</button>
+                    <button onClick={() => handleInput('0')} className="col-span-2 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors text-sm">0</button>
+                    <button onClick={() => handleInput('.')} className="py-2 bg-gray-100 dark:bg-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors text-sm">.</button>
+                    <button onClick={() => handleInput('=')} className="py-2 bg-purple-500 text-white rounded-lg font-medium hover:bg-purple-600 transition-colors text-sm">=</button>
                 </div>
             </div>
 
@@ -1968,9 +2045,64 @@ function AddNoteModal({ onClose, config, setConfig, onAdd }: any) {
     );
 }
 
+// Helper function to strip HTML tags from content
+function stripHtmlTags(html: string): string {
+    if (!html) return '';
+    // Create a temporary element to parse HTML and extract text
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || '';
+}
+
+// Helper function to get searchable text from a note
+function getSearchableText(note: StickyNote): string {
+    const parts: string[] = [];
+
+    // Add main content (strip HTML for text notes)
+    if (note.content) {
+        parts.push(stripHtmlTags(note.content));
+    }
+
+    // Add list items for checklist notes
+    if (note.type === 'list' && note.listItems) {
+        note.listItems.forEach(item => {
+            if (item.text) {
+                parts.push(item.text);
+            }
+        });
+    }
+
+    // Add link URL if present
+    if (note.linkUrl) {
+        parts.push(note.linkUrl);
+    }
+
+    return parts.join(' ').toLowerCase();
+}
+
+// Helper function to get display text for a note
+function getNoteDisplayText(note: StickyNote): string {
+    if (note.type === 'list' && note.listItems && note.listItems.length > 0) {
+        // For checklists, show the items as a preview
+        return note.listItems.map(item => `${item.checked ? '☑' : '☐'} ${item.text}`).slice(0, 3).join(', ') + (note.listItems.length > 3 ? '...' : '');
+    }
+    if (note.type === 'image') {
+        return '[Image Note]';
+    }
+    if (note.type === 'link') {
+        return note.linkUrl || stripHtmlTags(note.content) || '[Link Note]';
+    }
+    if (note.type === 'calculator') {
+        return '[Calculator]';
+    }
+    // For text notes, strip HTML tags
+    return stripHtmlTags(note.content) || 'Empty note';
+}
+
 function SearchModal({ onClose, notes, onSelectNote }: any) {
     const [query, setQuery] = useState('');
-    const filtered = notes.filter((n: StickyNote) => n.content.toLowerCase().includes(query.toLowerCase()));
+    const queryLower = query.toLowerCase();
+    const filtered = notes.filter((n: StickyNote) => getSearchableText(n).includes(queryLower));
 
     return (
         <motion.div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} onClick={onClose}>
@@ -1988,7 +2120,7 @@ function SearchModal({ onClose, notes, onSelectNote }: any) {
                             {filtered.map((note: StickyNote) => (
                                 <button key={note.id} onClick={() => onSelectNote(note.id)} className="w-full text-left p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 transition-colors">
                                     <span className="px-2 py-1 bg-[var(--accent-light)] text-[var(--accent-secondary)] text-xs rounded">{note.type}</span>
-                                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 line-clamp-2">{note.content}</p>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 line-clamp-2">{getNoteDisplayText(note)}</p>
                                 </button>
                             ))}
                         </div>
@@ -1999,32 +2131,355 @@ function SearchModal({ onClose, notes, onSelectNote }: any) {
     );
 }
 
-function DictionaryModal({ onClose }: any) {
+interface DictionaryResult {
+    word: string;
+    phonetic?: string;
+    phonetics?: { text?: string; audio?: string }[];
+    meanings: {
+        partOfSpeech: string;
+        definitions: {
+            definition: string;
+            example?: string;
+            synonyms?: string[];
+        }[];
+    }[];
+}
+
+interface DictionaryModalProps {
+    onClose: () => void;
+    onAddDefinition: (word: string, partOfSpeech: string, definitions: { definition: string; example?: string }[]) => void;
+}
+
+function DictionaryModal({ onClose, onAddDefinition }: DictionaryModalProps) {
     const [word, setWord] = useState('');
+    const [result, setResult] = useState<DictionaryResult | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const searchWord = async () => {
+        if (!word.trim()) return;
+
+        setIsLoading(true);
+        setError(null);
+        setResult(null);
+
+        try {
+            // Using Free Dictionary API - no external dependencies, works in sandboxed apps
+            const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word.trim())}`);
+
+            if (!response.ok) {
+                if (response.status === 404) {
+                    setError(`No definition found for "${word}". Try checking the spelling.`);
+                } else {
+                    setError('Failed to fetch definition. Please try again.');
+                }
+                return;
+            }
+
+            const data = await response.json();
+            if (data && data.length > 0) {
+                setResult(data[0]);
+            } else {
+                setError('No definition found.');
+            }
+        } catch (err) {
+            setError('Dictionary service unavailable. This may be a network issue - please try again.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            searchWord();
+        }
+    };
+
+    const handleAddMeaning = (meaning: DictionaryResult['meanings'][0]) => {
+        if (result) {
+            onAddDefinition(result.word, meaning.partOfSpeech, meaning.definitions);
+            onClose();
+        }
+    };
+
     return (
-        <motion.div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" initial={{ opacity: 0 }} animate={{ opacity: 1 }} onClick={onClose}>
-            <motion.div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-96 shadow-2xl" initial={{ scale: 0.9 }} animate={{ scale: 1 }} onClick={(e) => e.stopPropagation()}>
+        <motion.div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} onClick={onClose}>
+            <motion.div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-lg shadow-2xl max-h-[80vh] flex flex-col" initial={{ scale: 0.9 }} animate={{ scale: 1 }} onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-bold">Dictionary</h2>
-                    <button onClick={onClose}><X className="w-5 h-5" /></button>
+                    <div className="flex items-center gap-2">
+                        <BookOpen className="w-5 h-5 text-purple-500" />
+                        <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Dictionary</h2>
+                    </div>
+                    <button onClick={onClose} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"><X className="w-5 h-5 text-gray-500" /></button>
                 </div>
-                <input type="text" value={word} onChange={(e) => setWord(e.target.value)} placeholder="Enter a word..." className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700" />
+
+                <div className="flex gap-2 mb-4">
+                    <input
+                        type="text"
+                        value={word}
+                        onChange={(e) => setWord(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder="Enter a word..."
+                        className="flex-1 px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        autoFocus
+                    />
+                    <button
+                        onClick={searchWord}
+                        disabled={isLoading || !word.trim()}
+                        className="px-4 py-2.5 bg-purple-500 text-white rounded-lg font-medium hover:bg-purple-600 disabled:opacity-50 transition-colors flex items-center gap-2"
+                    >
+                        {isLoading ? (
+                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        ) : (
+                            <Search className="w-4 h-4" />
+                        )}
+                        Search
+                    </button>
+                </div>
+
+                {error && (
+                    <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-sm mb-4">
+                        {error}
+                    </div>
+                )}
+
+                {result && (
+                    <div className="flex-1 overflow-y-auto custom-scrollbar">
+                        <div className="mb-4">
+                            <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{result.word}</h3>
+                            {result.phonetic && (
+                                <p className="text-gray-500 dark:text-gray-400 italic">{result.phonetic}</p>
+                            )}
+                        </div>
+
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Click a meaning to add it to your board:</p>
+
+                        <div className="space-y-4">
+                            {result.meanings.map((meaning, idx) => (
+                                <div
+                                    key={idx}
+                                    onClick={() => handleAddMeaning(meaning)}
+                                    className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 cursor-pointer hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:border-purple-300 dark:hover:border-purple-600 border-2 border-transparent transition-all group"
+                                >
+                                    <div className="flex items-center justify-between mb-2">
+                                        <p className="text-sm font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wide">
+                                            {meaning.partOfSpeech}
+                                        </p>
+                                        <span className="text-xs text-gray-400 group-hover:text-purple-500 transition-colors">Click to add →</span>
+                                    </div>
+                                    <ol className="space-y-2">
+                                        {meaning.definitions.slice(0, 3).map((def, defIdx) => (
+                                            <li key={defIdx} className="text-sm text-gray-700 dark:text-gray-300">
+                                                <span className="font-medium">{defIdx + 1}.</span> {def.definition}
+                                                {def.example && (
+                                                    <p className="text-gray-500 dark:text-gray-400 italic mt-1 ml-4">
+                                                        "{def.example}"
+                                                    </p>
+                                                )}
+                                            </li>
+                                        ))}
+                                    </ol>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {!result && !error && !isLoading && (
+                    <div className="flex-1 flex items-center justify-center text-gray-400 dark:text-gray-500 text-sm">
+                        <div className="text-center">
+                            <BookOpen className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                            <p>Enter a word to look up its definition</p>
+                        </div>
+                    </div>
+                )}
             </motion.div>
         </motion.div>
     );
 }
 
-function AIDraftModal({ onClose }: any) {
+interface AIDraftModalProps {
+    onClose: () => void;
+    onCreateNote: (content: string, type: 'text' | 'list') => void;
+}
+
+function AIDraftModal({ onClose, onCreateNote }: AIDraftModalProps) {
     const [prompt, setPrompt] = useState('');
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [generatedContent, setGeneratedContent] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
+    const [noteType, setNoteType] = useState<'text' | 'list'>('text');
+
+    const handleGenerate = async () => {
+        if (!prompt.trim()) return;
+
+        setIsGenerating(true);
+        setError(null);
+        setGeneratedContent(null);
+
+        try {
+            // @ts-ignore
+            const result = await window.ipcRenderer?.invoke('generate-ai-note-content', prompt, noteType);
+
+            if (result?.error === 'API_KEY_MISSING') {
+                setError('Please configure your AI API key in Settings → AI Configuration.');
+                return;
+            }
+
+            if (result?.error) {
+                const errorMsg = result.message || 'Failed to generate content. Please check your API key and try again.';
+                if (errorMsg.includes('region') || errorMsg.includes('location')) {
+                    setError('This AI service is not available in your region. Please switch to Perplexity in Settings.');
+                } else {
+                    setError(errorMsg);
+                }
+                return;
+            }
+
+            if (result?.content) {
+                setGeneratedContent(result.content);
+            } else {
+                setError('AI failed to generate content. Please try rephrasing your request.');
+            }
+        } catch (err: any) {
+            console.error('AI Draft error:', err);
+            setError('An error occurred. Please check your API key and internet connection.');
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
+    const handleCreateNote = () => {
+        if (generatedContent) {
+            onCreateNote(generatedContent, noteType);
+            onClose();
+        }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleGenerate();
+        }
+    };
+
     return (
-        <motion.div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" initial={{ opacity: 0 }} animate={{ opacity: 1 }} onClick={onClose}>
-            <motion.div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-96 shadow-2xl" initial={{ scale: 0.9 }} animate={{ scale: 1 }} onClick={(e) => e.stopPropagation()}>
+        <motion.div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} onClick={onClose}>
+            <motion.div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-lg shadow-2xl max-h-[80vh] flex flex-col" initial={{ scale: 0.9 }} animate={{ scale: 1 }} onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-bold">AI Draft</h2>
-                    <button onClick={onClose}><X className="w-5 h-5" /></button>
+                    <div className="flex items-center gap-2">
+                        <Sparkles className="w-5 h-5 text-purple-500" />
+                        <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">AI Draft</h2>
+                    </div>
+                    <button onClick={onClose} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
+                        <X className="w-5 h-5 text-gray-500" />
+                    </button>
                 </div>
-                <input type="text" value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="What do you want to create?" className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 mb-4" />
-                <button className="w-full py-3 bg-[var(--accent-primary)] text-white rounded-lg font-medium hover:opacity-90">Generate</button>
+
+                {!generatedContent ? (
+                    <>
+                        {error && (
+                            <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-sm mb-4">
+                                {error}
+                            </div>
+                        )}
+
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Note Type</label>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setNoteType('text')}
+                                    className={clsx(
+                                        "flex-1 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2",
+                                        noteType === 'text' ? "bg-purple-500 text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                                    )}
+                                >
+                                    <MessageSquare className="w-4 h-4" /> Text
+                                </button>
+                                <button
+                                    onClick={() => setNoteType('list')}
+                                    className={clsx(
+                                        "flex-1 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2",
+                                        noteType === 'list' ? "bg-purple-500 text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                                    )}
+                                >
+                                    <List className="w-4 h-4" /> Checklist
+                                </button>
+                            </div>
+                        </div>
+
+                        <textarea
+                            value={prompt}
+                            onChange={(e) => setPrompt(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            placeholder={noteType === 'list' ? "e.g., 'Create a packing list for a beach vacation'" : "e.g., 'Write a meeting summary about project updates'"}
+                            className="w-full h-32 px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none mb-4"
+                            autoFocus
+                        />
+
+                        <button
+                            onClick={handleGenerate}
+                            disabled={isGenerating || !prompt.trim()}
+                            className="w-full py-3 bg-purple-500 text-white rounded-lg font-medium hover:bg-purple-600 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                        >
+                            {isGenerating ? (
+                                <>
+                                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    Generating...
+                                </>
+                            ) : (
+                                <>
+                                    <Sparkles className="w-5 h-5" />
+                                    Generate
+                                </>
+                            )}
+                        </button>
+                    </>
+                ) : (
+                    <>
+                        <div className="flex-1 overflow-y-auto mb-4">
+                            <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+                                <p className="text-xs font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wide mb-2">
+                                    Generated {noteType === 'list' ? 'Checklist' : 'Note'}
+                                </p>
+                                <div
+                                    className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap ai-preview-content"
+                                    dangerouslySetInnerHTML={{
+                                        __html: noteType === 'text'
+                                            ? generatedContent
+                                                .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
+                                                .replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<i>$1</i>')
+                                                .split('\n')
+                                                .map((line, i) => i === 0 && line.trim()
+                                                    ? `<div style="font-size: 1.15em; font-weight: bold; margin-bottom: 6px;">${line}</div>`
+                                                    : line)
+                                                .join('\n')
+                                            : generatedContent
+                                    }}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => {
+                                    setGeneratedContent(null);
+                                    setPrompt('');
+                                }}
+                                className="flex-1 py-3 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium transition-colors"
+                            >
+                                Try Again
+                            </button>
+                            <button
+                                onClick={handleCreateNote}
+                                className="flex-1 py-3 bg-purple-500 text-white rounded-lg font-medium hover:bg-purple-600 transition-colors flex items-center justify-center gap-2"
+                            >
+                                <Plus className="w-5 h-5" />
+                                Create Note
+                            </button>
+                        </div>
+                    </>
+                )}
             </motion.div>
         </motion.div>
     );
