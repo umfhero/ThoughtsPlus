@@ -485,6 +485,10 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
     }, [boards]);
 
     const handleWheel = useCallback((e: WheelEvent) => {
+        // Check if the scroll is happening inside a note - if so, don't pan the board
+        const target = e.target as HTMLElement;
+        const isInsideNote = target.closest('[data-note-container]');
+
         if (e.ctrlKey) {
             e.preventDefault();
             const rect = canvasRef.current?.getBoundingClientRect();
@@ -508,12 +512,14 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
 
             setZoom(newZoom);
             setPanOffset({ x: newPanX, y: newPanY });
-        } else {
+        } else if (!isInsideNote) {
+            // Only pan if not scrolling inside a note
             setPanOffset(prev => ({
                 x: prev.x - e.deltaX,
                 y: prev.y - e.deltaY
             }));
         }
+        // If inside a note, let the default scroll behavior happen
     }, [zoom, panOffset]);
 
     useEffect(() => {
@@ -1655,6 +1661,8 @@ function StickyNoteComponent({ note, isSelected, onMouseDown, onResizeStart, onD
                 "rounded-lg shadow-lg transition-shadow duration-150 group",
                 isSelected && "ring-4 ring-[var(--accent-primary)] shadow-2xl"
             )}
+            data-note-container="true"
+            onWheel={(e) => e.stopPropagation()}
         >
             {/* Attachment (tape/pin) - needs to be above the note content */}
             <div className="absolute top-0 left-0 w-full pointer-events-none" style={{ zIndex: 10 }}>
