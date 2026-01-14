@@ -1,12 +1,25 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Plus, Trash2, Edit2, Check, X, ChevronLeft,
-    Type, Code, FileText, Sparkles, FolderOpen, Clock
+    Plus, Trash2, Edit2, Check, X, ChevronLeft, ChevronUp, ChevronDown,
+    Type, Code, FileText, Sparkles, FolderOpen, Clock, Save, Scissors,
+    Clipboard, Play, Square, Copy, ArrowUp, ArrowDown, RotateCcw, Loader2, Terminal
 } from 'lucide-react';
 import { NerdNotebook, NerdCell, NerdCellType, Page } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import clsx from 'clsx';
+import Prism from 'prismjs';
+import 'prismjs/themes/prism-tomorrow.css'; // Dark theme for syntax highlighting
+import 'prismjs/components/prism-javascript';
+import 'prismjs/components/prism-typescript';
+import 'prismjs/components/prism-python';
+import 'prismjs/components/prism-jsx';
+import 'prismjs/components/prism-tsx';
+import 'prismjs/components/prism-css';
+import 'prismjs/components/prism-json';
+import 'prismjs/components/prism-markdown';
+import 'prismjs/components/prism-bash';
+import 'prismjs/components/prism-sql';
 
 interface NerdbookPageProps {
     notebooks: NerdNotebook[];
@@ -17,6 +30,7 @@ interface NerdbookPageProps {
 }
 
 type NerdbookView = 'list' | 'editor';
+type CellMode = 'command' | 'edit';
 
 // Color palette for notebooks
 const NOTEBOOK_COLORS = [
@@ -40,12 +54,17 @@ export function NerdbookPage({
     const { accentColor } = useTheme();
     const [currentView, setCurrentView] = useState<NerdbookView>('list');
     const [activeNotebook, setActiveNotebook] = useState<NerdNotebook | null>(null);
-    const [editingCellId, setEditingCellId] = useState<string | null>(null);
+    const [selectedCellId, setSelectedCellId] = useState<string | null>(null);
+    const [cellMode, setCellMode] = useState<CellMode>('command');
     const [editingTitle, setEditingTitle] = useState(false);
     const [titleInput, setTitleInput] = useState('');
     const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
+    const [clipboard, setClipboard] = useState<NerdCell | null>(null);
+    const [deletedCells, setDeletedCells] = useState<{ cell: NerdCell; index: number }[]>([]);
+    const [pendingDelete, setPendingDelete] = useState(false); // For 'dd' shortcut
     const textareaRefs = useRef<{ [key: string]: HTMLTextAreaElement | null }>({});
+    const containerRef = useRef<HTMLDivElement>(null);
 
     // Create a new notebook
     const handleCreateNotebook = () => {
@@ -55,7 +74,7 @@ export function NerdbookPage({
             cells: [
                 {
                     id: crypto.randomUUID(),
-                    type: 'text',
+                    type: 'code',
                     content: '',
                     createdAt: new Date().toISOString(),
                 }
@@ -66,17 +85,215 @@ export function NerdbookPage({
         onAddNotebook(newNotebook);
         setActiveNotebook(newNotebook);
         setCurrentView('editor');
-        setEditingCellId(newNotebook.cells[0].id);
+        setSelectedCellId(newNotebook.cells[0].id);
+        setCellMode('edit');
+    };
+
+    // Create a test notebook with sample content
+    const handleCreateTestNotebook = () => {
+        const testNotebook: NerdNotebook = {
+            id: crypto.randomUUID(),
+            title: '🧪 Test Notebook - Sample Content',
+            cells: [
+                {
+                    id: crypto.randomUUID(),
+                    type: 'markdown',
+                    content: `# Welcome to Nerdbook! 🚀
+
+This is a **test notebook** with sample content for testing the Jupyter-style interface.
+
+## Keyboard Shortcuts
+
+### Command Mode (Escape)
+- \`a\` - Insert cell above
+- \`b\` - Insert cell below
+- \`dd\` - Delete cell
+- \`y\` - Change to code
+- \`m\` - Change to markdown
+- \`c\` - Copy cell
+- \`x\` - Cut cell
+- \`v\` - Paste cell
+- \`z\` - Undo delete
+- \`↑/k\` - Select above
+- \`↓/j\` - Select below
+
+### Edit Mode (Enter)
+- \`Shift+Enter\` - Run & next
+- \`Ctrl+Enter\` - Run & stay
+- \`Alt+Enter\` - Run & insert below`,
+                    createdAt: new Date().toISOString(),
+                },
+                {
+                    id: crypto.randomUUID(),
+                    type: 'code',
+                    content: `// JavaScript Code Example
+function fibonacci(n) {
+    if (n <= 1) return n;
+    return fibonacci(n - 1) + fibonacci(n - 2);
+}
+
+// Calculate first 10 Fibonacci numbers
+const results = [];
+for (let i = 0; i < 10; i++) {
+    results.push(fibonacci(i));
+}
+
+console.log("Fibonacci sequence:", results);
+// Output: [0, 1, 1, 2, 3, 5, 8, 13, 21, 34]`,
+                    createdAt: new Date().toISOString(),
+                },
+                {
+                    id: crypto.randomUUID(),
+                    type: 'markdown',
+                    content: `## Data Visualization Ideas
+
+Here are some things you could implement:
+
+1. **Charts** - Line, bar, pie charts using libraries like Chart.js
+2. **Tables** - Render data as formatted tables
+3. **Diagrams** - Flowcharts, sequence diagrams with Mermaid.js
+4. **Math** - LaTeX rendering with KaTeX or MathJax
+
+### Example Mermaid Diagram (future feature)
+\`\`\`mermaid
+graph TD
+    A[Start] --> B{Is it working?}
+    B -->|Yes| C[Great!]
+    B -->|No| D[Debug]
+    D --> B
+\`\`\``,
+                    createdAt: new Date().toISOString(),
+                },
+                {
+                    id: crypto.randomUUID(),
+                    type: 'code',
+                    content: `// Python-style pseudocode
+# Data processing example
+
+data = [
+    { "name": "Alice", "score": 95 },
+    { "name": "Bob", "score": 87 },
+    { "name": "Charlie", "score": 92 },
+    { "name": "Diana", "score": 88 }
+]
+
+# Calculate average
+total = sum(item["score"] for item in data)
+average = total / len(data)
+
+print(f"Average score: {average}")
+# Output: Average score: 90.5`,
+                    createdAt: new Date().toISOString(),
+                },
+                {
+                    id: crypto.randomUUID(),
+                    type: 'text',
+                    content: `This is a plain TEXT cell. It's useful for quick notes without any formatting.
+
+You can use it for:
+• Scratch notes
+• Quick thoughts
+• Raw data
+• Temporary storage`,
+                    createdAt: new Date().toISOString(),
+                },
+                {
+                    id: crypto.randomUUID(),
+                    type: 'code',
+                    content: `# python
+# Matplotlib Scatter Plot Example (Jupyter-style)
+# Note: Python execution requires a Python kernel - this is for visual comparison
+
+from matplotlib import pyplot as plt
+import numpy as np
+
+# Generate 100 random data points along 3 dimensions
+x, y, scale = np.random.randn(3, 100)
+fig, ax = plt.subplots()
+
+# Map each onto a scatterplot we'll create with Matplotlib
+ax.scatter(x=x, y=y, c=scale, s=np.abs(scale)*500)
+ax.set(title="Some random data, created with JupyterLab!")
+plt.show()`,
+                    createdAt: new Date().toISOString(),
+                },
+                {
+                    id: crypto.randomUUID(),
+                    type: 'code',
+                    content: `// ASCII Art Diagram Example
+/*
+    ┌─────────────┐     ┌─────────────┐
+    │   Input     │────▶│  Process    │
+    └─────────────┘     └──────┬──────┘
+                               │
+                               ▼
+                        ┌──────────────┐
+                        │   Output     │
+                        └──────────────┘
+*/
+
+// Simple state machine
+const States = {
+    IDLE: 'idle',
+    LOADING: 'loading',
+    SUCCESS: 'success',
+    ERROR: 'error'
+};
+
+let currentState = States.IDLE;
+console.log(\`Current state: \${currentState}\`);`,
+                    createdAt: new Date().toISOString(),
+                },
+                {
+                    id: crypto.randomUUID(),
+                    type: 'markdown',
+                    content: `---
+
+## 🎯 Try These Tests
+
+1. **Select cells** - Click on different cells
+2. **Edit mode** - Press \`Enter\` to edit a cell
+3. **Command mode** - Press \`Escape\` to go back
+4. **Add cells** - Press \`b\` to add below, \`a\` to add above
+5. **Delete cell** - Press \`d\` twice quickly
+6. **Change type** - Press \`y\` for code, \`m\` for markdown
+7. **Navigate** - Use arrow keys or \`j\`/\`k\`
+8. **Copy/Paste** - Use \`c\` to copy, \`v\` to paste
+
+---
+
+*Happy coding! 🎉*`,
+                    createdAt: new Date().toISOString(),
+                },
+            ],
+            createdAt: new Date().toISOString(),
+            color: '#8b5cf6', // Purple for test notebook
+        };
+        onAddNotebook(testNotebook);
+        setActiveNotebook(testNotebook);
+        setCurrentView('editor');
+        setSelectedCellId(testNotebook.cells[0].id);
+        setCellMode('command');
     };
 
     // Open a notebook for editing
     const handleOpenNotebook = (notebook: NerdNotebook) => {
         setActiveNotebook(notebook);
         setCurrentView('editor');
+        if (notebook.cells.length > 0) {
+            setSelectedCellId(notebook.cells[0].id);
+        }
+        setCellMode('command');
     };
 
+    // Get selected cell index
+    const getSelectedCellIndex = useCallback(() => {
+        if (!activeNotebook || !selectedCellId) return -1;
+        return activeNotebook.cells.findIndex(c => c.id === selectedCellId);
+    }, [activeNotebook, selectedCellId]);
+
     // Add a new cell
-    const handleAddCell = (type: NerdCellType, afterCellId?: string) => {
+    const handleAddCell = useCallback((type: NerdCellType, position: 'above' | 'below' = 'below') => {
         if (!activeNotebook) return;
 
         const newCell: NerdCell = {
@@ -86,17 +303,15 @@ export function NerdbookPage({
             createdAt: new Date().toISOString(),
         };
 
-        let newCells: NerdCell[];
-        if (afterCellId) {
-            const index = activeNotebook.cells.findIndex(c => c.id === afterCellId);
-            newCells = [
-                ...activeNotebook.cells.slice(0, index + 1),
-                newCell,
-                ...activeNotebook.cells.slice(index + 1)
-            ];
-        } else {
-            newCells = [...activeNotebook.cells, newCell];
-        }
+        const currentIndex = getSelectedCellIndex();
+        let insertIndex = position === 'above' ? currentIndex : currentIndex + 1;
+        if (insertIndex < 0) insertIndex = activeNotebook.cells.length;
+
+        const newCells = [
+            ...activeNotebook.cells.slice(0, insertIndex),
+            newCell,
+            ...activeNotebook.cells.slice(insertIndex)
+        ];
 
         const updatedNotebook = {
             ...activeNotebook,
@@ -105,8 +320,9 @@ export function NerdbookPage({
         };
         setActiveNotebook(updatedNotebook);
         onUpdateNotebook(updatedNotebook);
-        setEditingCellId(newCell.id);
-    };
+        setSelectedCellId(newCell.id);
+        setCellMode('edit');
+    }, [activeNotebook, getSelectedCellIndex, onUpdateNotebook]);
 
     // Update a cell's content
     const handleUpdateCell = useCallback((cellId: string, content: string) => {
@@ -124,12 +340,17 @@ export function NerdbookPage({
             updatedAt: new Date().toISOString(),
         };
         setActiveNotebook(updatedNotebook);
-        // Debounced save will handle this
     }, [activeNotebook]);
 
     // Delete a cell
-    const handleDeleteCell = (cellId: string) => {
+    const handleDeleteCell = useCallback((cellId: string) => {
         if (!activeNotebook || activeNotebook.cells.length <= 1) return;
+
+        const cellIndex = activeNotebook.cells.findIndex(c => c.id === cellId);
+        const cellToDelete = activeNotebook.cells[cellIndex];
+
+        // Store for undo
+        setDeletedCells(prev => [...prev, { cell: cellToDelete, index: cellIndex }]);
 
         const updatedCells = activeNotebook.cells.filter(c => c.id !== cellId);
         const updatedNotebook = {
@@ -139,11 +360,91 @@ export function NerdbookPage({
         };
         setActiveNotebook(updatedNotebook);
         onUpdateNotebook(updatedNotebook);
-        setEditingCellId(null);
-    };
+
+        // Select next cell or previous if at end
+        if (cellIndex < updatedCells.length) {
+            setSelectedCellId(updatedCells[cellIndex].id);
+        } else if (updatedCells.length > 0) {
+            setSelectedCellId(updatedCells[updatedCells.length - 1].id);
+        }
+        setCellMode('command');
+    }, [activeNotebook, onUpdateNotebook]);
+
+    // Undo cell deletion
+    const handleUndoDelete = useCallback(() => {
+        if (!activeNotebook || deletedCells.length === 0) return;
+
+        const { cell, index } = deletedCells[deletedCells.length - 1];
+        setDeletedCells(prev => prev.slice(0, -1));
+
+        const newCells = [
+            ...activeNotebook.cells.slice(0, index),
+            cell,
+            ...activeNotebook.cells.slice(index)
+        ];
+
+        const updatedNotebook = {
+            ...activeNotebook,
+            cells: newCells,
+            updatedAt: new Date().toISOString(),
+        };
+        setActiveNotebook(updatedNotebook);
+        onUpdateNotebook(updatedNotebook);
+        setSelectedCellId(cell.id);
+    }, [activeNotebook, deletedCells, onUpdateNotebook]);
+
+    // Duplicate cell
+    const handleDuplicateCell = useCallback((cellId: string) => {
+        if (!activeNotebook) return;
+
+        const cellIndex = activeNotebook.cells.findIndex(c => c.id === cellId);
+        const cellToDuplicate = activeNotebook.cells[cellIndex];
+
+        const newCell: NerdCell = {
+            ...cellToDuplicate,
+            id: crypto.randomUUID(),
+            createdAt: new Date().toISOString(),
+        };
+
+        const newCells = [
+            ...activeNotebook.cells.slice(0, cellIndex + 1),
+            newCell,
+            ...activeNotebook.cells.slice(cellIndex + 1)
+        ];
+
+        const updatedNotebook = {
+            ...activeNotebook,
+            cells: newCells,
+            updatedAt: new Date().toISOString(),
+        };
+        setActiveNotebook(updatedNotebook);
+        onUpdateNotebook(updatedNotebook);
+        setSelectedCellId(newCell.id);
+    }, [activeNotebook, onUpdateNotebook]);
+
+    // Move cell up/down
+    const handleMoveCell = useCallback((cellId: string, direction: 'up' | 'down') => {
+        if (!activeNotebook) return;
+
+        const cellIndex = activeNotebook.cells.findIndex(c => c.id === cellId);
+        if (direction === 'up' && cellIndex === 0) return;
+        if (direction === 'down' && cellIndex === activeNotebook.cells.length - 1) return;
+
+        const newCells = [...activeNotebook.cells];
+        const targetIndex = direction === 'up' ? cellIndex - 1 : cellIndex + 1;
+        [newCells[cellIndex], newCells[targetIndex]] = [newCells[targetIndex], newCells[cellIndex]];
+
+        const updatedNotebook = {
+            ...activeNotebook,
+            cells: newCells,
+            updatedAt: new Date().toISOString(),
+        };
+        setActiveNotebook(updatedNotebook);
+        onUpdateNotebook(updatedNotebook);
+    }, [activeNotebook, onUpdateNotebook]);
 
     // Change cell type
-    const handleChangeCellType = (cellId: string, newType: NerdCellType) => {
+    const handleChangeCellType = useCallback((cellId: string, newType: NerdCellType) => {
         if (!activeNotebook) return;
 
         const updatedCells = activeNotebook.cells.map(cell =>
@@ -159,7 +460,67 @@ export function NerdbookPage({
         };
         setActiveNotebook(updatedNotebook);
         onUpdateNotebook(updatedNotebook);
-    };
+    }, [activeNotebook, onUpdateNotebook]);
+
+    // Cut cell
+    const handleCutCell = useCallback(() => {
+        if (!activeNotebook || !selectedCellId) return;
+        const cell = activeNotebook.cells.find(c => c.id === selectedCellId);
+        if (cell) {
+            setClipboard({ ...cell });
+            handleDeleteCell(selectedCellId);
+        }
+    }, [activeNotebook, selectedCellId, handleDeleteCell]);
+
+    // Copy cell
+    const handleCopyCell = useCallback(() => {
+        if (!activeNotebook || !selectedCellId) return;
+        const cell = activeNotebook.cells.find(c => c.id === selectedCellId);
+        if (cell) {
+            setClipboard({ ...cell });
+        }
+    }, [activeNotebook, selectedCellId]);
+
+    // Paste cell
+    const handlePasteCell = useCallback(() => {
+        if (!activeNotebook || !clipboard) return;
+
+        const newCell: NerdCell = {
+            ...clipboard,
+            id: crypto.randomUUID(),
+            createdAt: new Date().toISOString(),
+        };
+
+        const currentIndex = getSelectedCellIndex();
+        const insertIndex = currentIndex >= 0 ? currentIndex + 1 : activeNotebook.cells.length;
+
+        const newCells = [
+            ...activeNotebook.cells.slice(0, insertIndex),
+            newCell,
+            ...activeNotebook.cells.slice(insertIndex)
+        ];
+
+        const updatedNotebook = {
+            ...activeNotebook,
+            cells: newCells,
+            updatedAt: new Date().toISOString(),
+        };
+        setActiveNotebook(updatedNotebook);
+        onUpdateNotebook(updatedNotebook);
+        setSelectedCellId(newCell.id);
+    }, [activeNotebook, clipboard, getSelectedCellIndex, onUpdateNotebook]);
+
+    // Select cell above/below
+    const selectAdjacentCell = useCallback((direction: 'up' | 'down') => {
+        if (!activeNotebook) return;
+        const currentIndex = getSelectedCellIndex();
+        if (currentIndex < 0) return;
+
+        const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+        if (newIndex >= 0 && newIndex < activeNotebook.cells.length) {
+            setSelectedCellId(activeNotebook.cells[newIndex].id);
+        }
+    }, [activeNotebook, getSelectedCellIndex]);
 
     // Save notebook title
     const handleSaveTitle = () => {
@@ -198,21 +559,367 @@ export function NerdbookPage({
         textarea.style.height = `${textarea.scrollHeight}px`;
     };
 
-    // Handle keyboard shortcuts in cells
-    const handleCellKeyDown = (e: React.KeyboardEvent, cellId: string) => {
-        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-            // Ctrl+Enter: Add new cell below
-            e.preventDefault();
-            handleAddCell('text', cellId);
-        } else if (e.key === 'Escape') {
-            // Escape: Finish editing
-            setEditingCellId(null);
-        } else if (e.key === 'Backspace' && e.ctrlKey && e.shiftKey) {
-            // Ctrl+Shift+Backspace: Delete cell
-            e.preventDefault();
-            handleDeleteCell(cellId);
-        }
+    // Detect language from code content
+    const detectLanguage = useCallback((content: string): string => {
+        const firstLine = content.trim().split('\n')[0].toLowerCase();
+
+        // Check for explicit language hints
+        if (firstLine.includes('// javascript') || firstLine.includes('// js')) return 'javascript';
+        if (firstLine.includes('// typescript') || firstLine.includes('// ts')) return 'typescript';
+        if (firstLine.includes('# python') || firstLine.includes('# py')) return 'python';
+        if (firstLine.includes('// css')) return 'css';
+        if (firstLine.includes('// sql')) return 'sql';
+        if (firstLine.includes('# bash') || firstLine.includes('# shell')) return 'bash';
+
+        // Auto-detect based on patterns
+        if (content.includes('import React') || content.includes('useState') || content.includes('const ') && content.includes('=>')) return 'javascript';
+        if (content.includes('interface ') || content.includes(': string') || content.includes(': number')) return 'typescript';
+        if (content.includes('def ') || content.includes('print(') || content.includes('import ') && !content.includes('from \'')) return 'python';
+        if (content.includes('SELECT ') || content.includes('FROM ') || content.includes('WHERE ')) return 'sql';
+        if (content.includes('{') && content.includes(':') && content.includes(';') && !content.includes('function')) return 'css';
+
+        // Default to JavaScript
+        return 'javascript';
+    }, []);
+
+    // Get Prism language class
+    const getPrismLanguage = (lang: string): string => {
+        const langMap: { [key: string]: string } = {
+            'javascript': 'javascript',
+            'js': 'javascript',
+            'typescript': 'typescript',
+            'ts': 'typescript',
+            'python': 'python',
+            'py': 'python',
+            'css': 'css',
+            'json': 'json',
+            'markdown': 'markdown',
+            'md': 'markdown',
+            'bash': 'bash',
+            'shell': 'bash',
+            'sql': 'sql',
+            'jsx': 'jsx',
+            'tsx': 'tsx',
+        };
+        return langMap[lang.toLowerCase()] || 'javascript';
     };
+
+    // Syntax highlight code
+    const highlightCode = useCallback((code: string, language: string): string => {
+        const lang = getPrismLanguage(language);
+        try {
+            if (Prism.languages[lang]) {
+                return Prism.highlight(code, Prism.languages[lang], lang);
+            }
+            return code;
+        } catch {
+            return code;
+        }
+    }, []);
+
+    // Run a code cell
+    const handleRunCell = useCallback(async (cellId: string) => {
+        if (!activeNotebook) return;
+
+        const cell = activeNotebook.cells.find(c => c.id === cellId);
+        if (!cell || cell.type !== 'code') return;
+
+        // Set executing state
+        const setExecuting = (executing: boolean) => {
+            const updatedCells = activeNotebook.cells.map(c =>
+                c.id === cellId ? { ...c, isExecuting: executing } : c
+            );
+            setActiveNotebook({
+                ...activeNotebook,
+                cells: updatedCells,
+            });
+        };
+
+        setExecuting(true);
+
+        // Capture console output
+        const outputs: string[] = [];
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+
+        console.log = (...args) => {
+            outputs.push(args.map(a =>
+                typeof a === 'object' ? JSON.stringify(a, null, 2) : String(a)
+            ).join(' '));
+        };
+        console.error = (...args) => {
+            outputs.push(`Error: ${args.map(a =>
+                typeof a === 'object' ? JSON.stringify(a, null, 2) : String(a)
+            ).join(' ')}`);
+        };
+        console.warn = (...args) => {
+            outputs.push(`Warning: ${args.map(a =>
+                typeof a === 'object' ? JSON.stringify(a, null, 2) : String(a)
+            ).join(' ')}`);
+        };
+
+        let output = '';
+        let hasError = false;
+
+        try {
+            // Execute the code
+            // eslint-disable-next-line no-new-func
+            const AsyncFunction = Object.getPrototypeOf(async function () { }).constructor;
+            const fn = new AsyncFunction(cell.content);
+            const result = await fn();
+
+            // If there's a return value, add it to outputs
+            if (result !== undefined) {
+                outputs.push(`→ ${typeof result === 'object' ? JSON.stringify(result, null, 2) : String(result)}`);
+            }
+
+            output = outputs.join('\n');
+        } catch (error: any) {
+            hasError = true;
+            output = outputs.length > 0
+                ? outputs.join('\n') + '\n\n' + `❌ Error: ${error.message}`
+                : `❌ Error: ${error.message}`;
+        } finally {
+            // Restore console
+            console.log = originalLog;
+            console.error = originalError;
+            console.warn = originalWarn;
+        }
+
+        // Update cell with output
+        const updatedCells = activeNotebook.cells.map(c =>
+            c.id === cellId
+                ? {
+                    ...c,
+                    output: output || '(No output)',
+                    isExecuting: false,
+                    executionError: hasError,
+                    updatedAt: new Date().toISOString()
+                }
+                : c
+        );
+
+        const updatedNotebook = {
+            ...activeNotebook,
+            cells: updatedCells,
+            updatedAt: new Date().toISOString(),
+        };
+        setActiveNotebook(updatedNotebook);
+        onUpdateNotebook(updatedNotebook);
+    }, [activeNotebook, onUpdateNotebook]);
+
+    // Clear cell output
+    const handleClearOutput = useCallback((cellId: string) => {
+        if (!activeNotebook) return;
+
+        const updatedCells = activeNotebook.cells.map(c =>
+            c.id === cellId
+                ? { ...c, output: undefined, executionError: undefined }
+                : c
+        );
+
+        const updatedNotebook = {
+            ...activeNotebook,
+            cells: updatedCells,
+        };
+        setActiveNotebook(updatedNotebook);
+    }, [activeNotebook]);
+
+    // Global keyboard shortcuts - block defaults and implement custom
+    // Using capture: true to intercept events BEFORE App.tsx's handlers
+    useEffect(() => {
+        if (currentView !== 'editor' || !activeNotebook) return;
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            const target = e.target as HTMLElement;
+            const isInTextarea = target.tagName === 'TEXTAREA' || target.tagName === 'INPUT';
+            const isContentEditable = target.getAttribute('contenteditable') === 'true';
+
+            // ALWAYS stop propagation for navigation shortcuts when on Nerdbook page
+            // This prevents Sidebar.tsx from handling these and navigating away
+            if ((e.ctrlKey || e.metaKey) && ['c', 'v', 'x'].includes(e.key.toLowerCase())) {
+                // Always stop propagation to prevent global handlers from navigating
+                e.stopPropagation();
+
+                // In command mode, also prevent default and handle clipboard at cell level
+                if (cellMode === 'command') {
+                    e.preventDefault();
+                    if (e.key.toLowerCase() === 'c') handleCopyCell();
+                    if (e.key.toLowerCase() === 'x') handleCutCell();
+                    if (e.key.toLowerCase() === 'v') handlePasteCell();
+                    return;
+                }
+                // In edit mode, allow native clipboard to work (don't preventDefault)
+                // but we already stopped propagation above
+                return;
+            }
+
+            // Block Ctrl+M (AI Quick Add) on this page - we'll use 'm' for markdown cell type
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'm') {
+                e.preventDefault();
+                e.stopPropagation();
+                // In command mode, this will be handled by the 'm' shortcut below
+                return;
+            }
+
+            // Block Ctrl+Enter (Quick Timer) - we use it for run cell
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                e.stopPropagation();
+                // Run cell handled in edit mode section below
+            }
+
+            // Save shortcut
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+                e.preventDefault();
+                e.stopPropagation();
+                handleSaveNotebook();
+                return;
+            }
+
+            // Escape - enter command mode
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                e.stopPropagation();
+                setCellMode('command');
+                // Blur any focused textarea
+                if (document.activeElement instanceof HTMLElement) {
+                    document.activeElement.blur();
+                }
+                return;
+            }
+
+            // Enter - enter edit mode (only in command mode and not in input)
+            if (e.key === 'Enter' && cellMode === 'command' && !isInTextarea && !isContentEditable) {
+                e.preventDefault();
+                e.stopPropagation();
+                setCellMode('edit');
+                // Focus the selected cell's textarea
+                if (selectedCellId && textareaRefs.current[selectedCellId]) {
+                    textareaRefs.current[selectedCellId]?.focus();
+                }
+                return;
+            }
+
+            // Command mode shortcuts
+            if (cellMode === 'command' && !isInTextarea && !isContentEditable) {
+                switch (e.key.toLowerCase()) {
+                    case 'a':
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleAddCell('code', 'above');
+                        break;
+                    case 'b':
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleAddCell('code', 'below');
+                        break;
+                    case 'd':
+                        e.stopPropagation();
+                        if (pendingDelete) {
+                            e.preventDefault();
+                            if (selectedCellId) handleDeleteCell(selectedCellId);
+                            setPendingDelete(false);
+                        } else {
+                            setPendingDelete(true);
+                            setTimeout(() => setPendingDelete(false), 500);
+                        }
+                        break;
+                    case 'y':
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (selectedCellId) handleChangeCellType(selectedCellId, 'code');
+                        break;
+                    case 'm':
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (selectedCellId) handleChangeCellType(selectedCellId, 'markdown');
+                        break;
+                    case 'z':
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleUndoDelete();
+                        break;
+                    case 'arrowup':
+                    case 'k':
+                        e.preventDefault();
+                        e.stopPropagation();
+                        selectAdjacentCell('up');
+                        break;
+                    case 'arrowdown':
+                    case 'j':
+                        e.preventDefault();
+                        e.stopPropagation();
+                        selectAdjacentCell('down');
+                        break;
+                }
+            }
+
+            // Edit mode shortcuts
+            if (cellMode === 'edit') {
+                // Shift+Enter - run and select next
+                if (e.shiftKey && e.key === 'Enter') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    // Run the current cell
+                    if (selectedCellId) {
+                        const currentCell = activeNotebook.cells.find(c => c.id === selectedCellId);
+                        if (currentCell?.type === 'code') {
+                            handleRunCell(selectedCellId);
+                        }
+                    }
+                    // Move to next cell
+                    const currentIndex = getSelectedCellIndex();
+                    if (currentIndex < activeNotebook.cells.length - 1) {
+                        setSelectedCellId(activeNotebook.cells[currentIndex + 1].id);
+                    } else {
+                        // Add new cell at end
+                        handleAddCell('code', 'below');
+                    }
+                    return;
+                }
+
+                // Ctrl+Enter - run and stay
+                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    // Run the current cell and stay
+                    if (selectedCellId) {
+                        const currentCell = activeNotebook.cells.find(c => c.id === selectedCellId);
+                        if (currentCell?.type === 'code') {
+                            handleRunCell(selectedCellId);
+                        }
+                    }
+                    return;
+                }
+
+                // Alt+Enter - run and insert new below
+                if (e.altKey && e.key === 'Enter') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    // Run the current cell
+                    if (selectedCellId) {
+                        const currentCell = activeNotebook.cells.find(c => c.id === selectedCellId);
+                        if (currentCell?.type === 'code') {
+                            handleRunCell(selectedCellId);
+                        }
+                    }
+                    handleAddCell('code', 'below');
+                    return;
+                }
+            }
+        };
+
+        // Using capture: true ensures our handler fires BEFORE App.tsx's handlers
+        window.addEventListener('keydown', handleKeyDown, true);
+        return () => window.removeEventListener('keydown', handleKeyDown, true);
+    }, [
+        currentView, activeNotebook, cellMode, selectedCellId, pendingDelete,
+        handleCopyCell, handleCutCell, handlePasteCell, handleSaveNotebook,
+        handleAddCell, handleDeleteCell, handleChangeCellType, handleUndoDelete,
+        selectAdjacentCell, getSelectedCellIndex, handleRunCell
+    ]);
 
     // Format relative time
     const formatRelativeTime = (dateStr: string) => {
@@ -251,7 +958,6 @@ export function NerdbookPage({
 
     // Render markdown preview (simple version)
     const renderMarkdownPreview = (content: string) => {
-        // Very basic markdown rendering for preview
         let html = content
             .replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">$1</h3>')
             .replace(/^## (.*$)/gim, '<h2 class="text-xl font-bold text-gray-900 dark:text-white mb-2">$1</h2>')
@@ -281,8 +987,50 @@ export function NerdbookPage({
         }
     };
 
+    // Toolbar button component
+    const ToolbarButton = ({ icon: Icon, label, onClick, disabled = false, title }: {
+        icon: any;
+        label?: string;
+        onClick: () => void;
+        disabled?: boolean;
+        title: string;
+    }) => (
+        <button
+            onClick={onClick}
+            disabled={disabled}
+            className={clsx(
+                "flex items-center gap-1.5 px-2 py-1.5 rounded-md text-sm transition-colors",
+                disabled
+                    ? "text-gray-300 dark:text-gray-600 cursor-not-allowed"
+                    : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+            )}
+            title={title}
+        >
+            <Icon className="w-4 h-4" />
+            {label && <span className="hidden md:inline">{label}</span>}
+        </button>
+    );
+
+    // Cell action button component
+    const CellActionButton = ({ icon: Icon, onClick, title }: {
+        icon: any;
+        onClick: () => void;
+        title: string;
+    }) => (
+        <button
+            onClick={(e) => {
+                e.stopPropagation();
+                onClick();
+            }}
+            className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            title={title}
+        >
+            <Icon className="w-4 h-4" />
+        </button>
+    );
+
     return (
-        <div className="h-full flex flex-col p-6 space-y-6 overflow-hidden">
+        <div ref={containerRef} className="h-full flex flex-col overflow-hidden">
             <AnimatePresence mode="wait">
                 {currentView === 'list' ? (
                     <motion.div
@@ -291,7 +1039,7 @@ export function NerdbookPage({
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -20 }}
                         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                        className="h-full flex flex-col space-y-6"
+                        className="h-full flex flex-col space-y-6 p-6"
                     >
                         {/* Header */}
                         <div className="flex items-center justify-between shrink-0">
@@ -317,15 +1065,25 @@ export function NerdbookPage({
                                 </div>
                             </div>
 
-                            {/* Create Button */}
-                            <button
-                                onClick={handleCreateNotebook}
-                                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white font-medium transition-all hover:scale-105 hover:shadow-lg"
-                                style={{ backgroundColor: accentColor, boxShadow: `0 4px 12px ${accentColor}40` }}
-                            >
-                                <Plus className="w-4 h-4" />
-                                <span>New Notebook</span>
-                            </button>
+                            {/* Create Buttons */}
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={handleCreateTestNotebook}
+                                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all hover:scale-105 hover:shadow-lg bg-purple-500 text-white"
+                                    title="Create a test notebook with sample content"
+                                >
+                                    <span>🧪</span>
+                                    <span>Test Notebook</span>
+                                </button>
+                                <button
+                                    onClick={handleCreateNotebook}
+                                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white font-medium transition-all hover:scale-105 hover:shadow-lg"
+                                    style={{ backgroundColor: accentColor, boxShadow: `0 4px 12px ${accentColor}40` }}
+                                >
+                                    <Plus className="w-4 h-4" />
+                                    <span>New Notebook</span>
+                                </button>
+                            </div>
                         </div>
 
                         {/* Search */}
@@ -447,196 +1205,204 @@ export function NerdbookPage({
                         transition={{ type: "spring", stiffness: 300, damping: 30 }}
                         className="h-full flex flex-col"
                     >
-                        {/* Editor Header */}
-                        <div className="flex items-center justify-between shrink-0 mb-4">
-                            <div className="flex items-center gap-3">
-                                <button
-                                    onClick={() => {
-                                        handleSaveNotebook();
-                                        setCurrentView('list');
-                                        setActiveNotebook(null);
-                                    }}
-                                    className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                                    title="Back to list"
-                                >
-                                    <ChevronLeft className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-                                </button>
-
-                                {editingTitle ? (
-                                    <div className="flex items-center gap-2">
-                                        <input
-                                            type="text"
-                                            value={titleInput}
-                                            onChange={(e) => setTitleInput(e.target.value)}
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Enter') handleSaveTitle();
-                                                if (e.key === 'Escape') setEditingTitle(false);
-                                            }}
-                                            className="px-3 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 text-lg font-semibold"
-                                            style={{ '--tw-ring-color': `${accentColor}50` } as React.CSSProperties}
-                                            autoFocus
-                                        />
-                                        <button
-                                            onClick={handleSaveTitle}
-                                            className="p-1.5 rounded-lg text-white"
-                                            style={{ backgroundColor: accentColor }}
-                                        >
-                                            <Check className="w-4 h-4" />
-                                        </button>
-                                        <button
-                                            onClick={() => setEditingTitle(false)}
-                                            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-                                        >
-                                            <X className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                ) : (
+                        {/* Sticky Top Toolbar - Jupyter Style */}
+                        <div className="sticky top-0 z-20 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+                            <div className="flex items-center justify-between px-4 py-2">
+                                <div className="flex items-center gap-1">
+                                    {/* Back button */}
                                     <button
                                         onClick={() => {
-                                            setTitleInput(activeNotebook?.title || '');
-                                            setEditingTitle(true);
+                                            handleSaveNotebook();
+                                            setCurrentView('list');
+                                            setActiveNotebook(null);
                                         }}
-                                        className="flex items-center gap-2 group"
+                                        className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                                        title="Back to list"
                                     >
-                                        <div
-                                            className="w-3 h-3 rounded-full shrink-0"
-                                            style={{ backgroundColor: activeNotebook?.color || accentColor }}
-                                        />
-                                        <h1 className="text-xl font-bold text-gray-900 dark:text-white group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors">
-                                            {activeNotebook?.title}
-                                        </h1>
-                                        <Edit2 className="w-4 h-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        <ChevronLeft className="w-5 h-5 text-gray-600 dark:text-gray-300" />
                                     </button>
-                                )}
-                            </div>
 
-                            {/* Toolbar */}
-                            <div className="flex items-center gap-2">
-                                <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-xl p-1 gap-1">
-                                    <button
-                                        onClick={() => handleAddCell('text')}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-700 transition-colors"
-                                        title="Add text cell"
+                                    <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
+
+                                    {/* Toolbar Actions */}
+                                    <ToolbarButton icon={Save} onClick={handleSaveNotebook} title="Save (Ctrl+S)" />
+
+                                    <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
+
+                                    <ToolbarButton icon={Plus} onClick={() => handleAddCell('code', 'below')} title="Add cell below (B)" />
+                                    <ToolbarButton icon={Scissors} onClick={handleCutCell} disabled={!selectedCellId} title="Cut cell (X)" />
+                                    <ToolbarButton icon={Copy} onClick={handleCopyCell} disabled={!selectedCellId} title="Copy cell (C)" />
+                                    <ToolbarButton icon={Clipboard} onClick={handlePasteCell} disabled={!clipboard} title="Paste cell (V)" />
+
+                                    <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
+
+                                    <ToolbarButton icon={ArrowUp} onClick={() => selectedCellId && handleMoveCell(selectedCellId, 'up')} disabled={!selectedCellId || getSelectedCellIndex() === 0} title="Move cell up" />
+                                    <ToolbarButton icon={ArrowDown} onClick={() => selectedCellId && handleMoveCell(selectedCellId, 'down')} disabled={!selectedCellId || getSelectedCellIndex() === (activeNotebook?.cells.length || 0) - 1} title="Move cell down" />
+
+                                    <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
+
+                                    <ToolbarButton icon={Play} onClick={() => { }} title="Run cell (Shift+Enter)" />
+                                    <ToolbarButton icon={Square} onClick={() => { }} title="Interrupt kernel" />
+
+                                    <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
+
+                                    <ToolbarButton icon={RotateCcw} onClick={handleUndoDelete} disabled={deletedCells.length === 0} title="Undo delete (Z)" />
+
+                                    <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
+
+                                    {/* Cell Type Selector */}
+                                    <select
+                                        value={selectedCellId ? activeNotebook?.cells.find(c => c.id === selectedCellId)?.type || 'code' : 'code'}
+                                        onChange={(e) => selectedCellId && handleChangeCellType(selectedCellId, e.target.value as NerdCellType)}
+                                        disabled={!selectedCellId}
+                                        className="px-2 py-1 rounded-md text-sm bg-gray-100 dark:bg-gray-800 border-none focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 dark:text-gray-300 disabled:opacity-50"
                                     >
-                                        <Type className="w-4 h-4" />
-                                        <span className="hidden sm:inline">Text</span>
-                                    </button>
-                                    <button
-                                        onClick={() => handleAddCell('markdown')}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-700 transition-colors"
-                                        title="Add markdown cell"
-                                    >
-                                        <FileText className="w-4 h-4" />
-                                        <span className="hidden sm:inline">Markdown</span>
-                                    </button>
-                                    <button
-                                        onClick={() => handleAddCell('code')}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-700 transition-colors"
-                                        title="Add code cell"
-                                    >
-                                        <Code className="w-4 h-4" />
-                                        <span className="hidden sm:inline">Code</span>
-                                    </button>
+                                        <option value="code">Code</option>
+                                        <option value="markdown">Markdown</option>
+                                        <option value="text">Text</option>
+                                    </select>
+                                </div>
+
+                                {/* Notebook Title */}
+                                <div className="flex items-center gap-3">
+                                    {editingTitle ? (
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="text"
+                                                value={titleInput}
+                                                onChange={(e) => setTitleInput(e.target.value)}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') handleSaveTitle();
+                                                    if (e.key === 'Escape') setEditingTitle(false);
+                                                }}
+                                                className="px-3 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 text-sm font-medium"
+                                                style={{ '--tw-ring-color': `${accentColor}50` } as React.CSSProperties}
+                                                autoFocus
+                                            />
+                                            <button
+                                                onClick={handleSaveTitle}
+                                                className="p-1.5 rounded-lg text-white"
+                                                style={{ backgroundColor: accentColor }}
+                                            >
+                                                <Check className="w-4 h-4" />
+                                            </button>
+                                            <button
+                                                onClick={() => setEditingTitle(false)}
+                                                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                                            >
+                                                <X className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <button
+                                            onClick={() => {
+                                                setTitleInput(activeNotebook?.title || '');
+                                                setEditingTitle(true);
+                                            }}
+                                            className="flex items-center gap-2 group text-sm"
+                                        >
+                                            <span className="font-medium text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white">
+                                                {activeNotebook?.title}
+                                            </span>
+                                            <Edit2 className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        </button>
+                                    )}
+
+                                    {/* Mode indicator */}
+                                    <div className={clsx(
+                                        "px-2 py-1 rounded text-xs font-medium",
+                                        cellMode === 'command'
+                                            ? "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
+                                            : "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
+                                    )}>
+                                        {cellMode === 'command' ? 'Command' : 'Edit'}
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Cells Container */}
-                        <div className="flex-1 overflow-y-auto thin-scrollbar space-y-3 pb-20">
-                            <AnimatePresence>
-                                {activeNotebook?.cells.map((cell) => {
-                                    const CellIcon = getCellTypeIcon(cell.type);
-                                    const isEditing = editingCellId === cell.id;
+                        {/* Cells Container - Jupyter Style */}
+                        <div className="flex-1 overflow-y-auto bg-white dark:bg-gray-900">
+                            <div className="w-full max-w-[95%] xl:max-w-[90%] mx-auto py-6 px-2">
+                                <AnimatePresence>
+                                    {activeNotebook?.cells.map((cell, index) => {
+                                        const isSelected = selectedCellId === cell.id;
+                                        const isEditing = isSelected && cellMode === 'edit';
+                                        const CellIcon = getCellTypeIcon(cell.type);
 
-                                    return (
-                                        <motion.div
-                                            key={cell.id}
-                                            layout
-                                            initial={{ opacity: 0, y: 10 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0, y: -10 }}
-                                            className="group relative"
-                                        >
-                                            <div
-                                                className={clsx(
-                                                    "relative bg-white dark:bg-gray-800 rounded-xl border transition-all",
-                                                    isEditing
-                                                        ? "border-2 shadow-lg"
-                                                        : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
-                                                )}
-                                                style={{
-                                                    borderColor: isEditing ? (activeNotebook?.color || accentColor) : undefined,
-                                                    boxShadow: isEditing ? `0 4px 20px ${activeNotebook?.color || accentColor}20` : undefined,
+                                        return (
+                                            <motion.div
+                                                key={cell.id}
+                                                layout
+                                                initial={{ opacity: 0, y: 10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                exit={{ opacity: 0, y: -10 }}
+                                                className="group relative flex mb-2"
+                                                onClick={() => {
+                                                    setSelectedCellId(cell.id);
+                                                    if (cellMode === 'edit') {
+                                                        textareaRefs.current[cell.id]?.focus();
+                                                    }
                                                 }}
                                             >
-                                                {/* Cell Type Indicator */}
-                                                <div className="flex items-center gap-2 px-4 py-2 border-b border-gray-100 dark:border-gray-700">
-                                                    <div
-                                                        className="p-1 rounded"
-                                                        style={{ backgroundColor: `${activeNotebook?.color || accentColor}15` }}
-                                                    >
-                                                        <CellIcon
-                                                            className="w-3.5 h-3.5"
-                                                            style={{ color: activeNotebook?.color || accentColor }}
-                                                        />
-                                                    </div>
-                                                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                                                        {getCellTypeLabel(cell.type)}
-                                                    </span>
-
-                                                    {/* Cell Actions */}
-                                                    <div className="ml-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        {/* Type Switcher */}
-                                                        <div className="flex items-center gap-0.5">
-                                                            {(['text', 'markdown', 'code'] as NerdCellType[]).map(type => {
-                                                                const Icon = getCellTypeIcon(type);
-                                                                return (
-                                                                    <button
-                                                                        key={type}
-                                                                        onClick={() => handleChangeCellType(cell.id, type)}
-                                                                        className={clsx(
-                                                                            "p-1 rounded transition-colors",
-                                                                            cell.type === type
-                                                                                ? "bg-gray-200 dark:bg-gray-600"
-                                                                                : "hover:bg-gray-100 dark:hover:bg-gray-700"
-                                                                        )}
-                                                                        title={getCellTypeLabel(type)}
-                                                                    >
-                                                                        <Icon className="w-3 h-3 text-gray-500" />
-                                                                    </button>
-                                                                );
-                                                            })}
-                                                        </div>
-
-                                                        <div className="w-px h-4 bg-gray-200 dark:bg-gray-600 mx-1" />
-
-                                                        {/* Add cell after */}
-                                                        <button
-                                                            onClick={() => handleAddCell('text', cell.id)}
-                                                            className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                                                            title="Add cell below"
-                                                        >
-                                                            <Plus className="w-3 h-3 text-gray-500" />
-                                                        </button>
-
-                                                        {/* Delete cell */}
-                                                        {activeNotebook.cells.length > 1 && (
-                                                            <button
-                                                                onClick={() => handleDeleteCell(cell.id)}
-                                                                className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 hover:text-red-500 transition-colors"
-                                                                title="Delete cell (Ctrl+Shift+Backspace)"
-                                                            >
-                                                                <Trash2 className="w-3 h-3 text-gray-500" />
-                                                            </button>
-                                                        )}
-                                                    </div>
+                                                {/* Left side - Execution count & selection indicator */}
+                                                <div className="flex-shrink-0 w-16 flex items-start justify-end pr-2 pt-2">
+                                                    {cell.type === 'code' && (
+                                                        <span className="text-xs font-mono text-gray-400">
+                                                            [{index + 1}]:
+                                                        </span>
+                                                    )}
                                                 </div>
 
-                                                {/* Cell Content */}
+                                                {/* Selection indicator bar */}
                                                 <div
-                                                    className="p-4 cursor-text"
-                                                    onClick={() => setEditingCellId(cell.id)}
-                                                >
+                                                    className={clsx(
+                                                        "w-1 rounded-full mr-2 transition-colors",
+                                                        isSelected
+                                                            ? cellMode === 'command'
+                                                                ? "bg-blue-500"
+                                                                : "bg-green-500"
+                                                            : "bg-transparent group-hover:bg-gray-200 dark:group-hover:bg-gray-700"
+                                                    )}
+                                                />
+
+                                                {/* Cell Content */}
+                                                <div className="flex-1 min-w-0">
+                                                    {/* Code cell header with language and run button */}
+                                                    {cell.type === 'code' && (
+                                                        <div className="flex items-center justify-between mb-1">
+                                                            <span className="text-xs font-mono px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
+                                                                {detectLanguage(cell.content)}
+                                                            </span>
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleRunCell(cell.id);
+                                                                }}
+                                                                disabled={cell.isExecuting}
+                                                                className={clsx(
+                                                                    "flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all",
+                                                                    cell.isExecuting
+                                                                        ? "bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed"
+                                                                        : "bg-green-500 hover:bg-green-600 text-white hover:shadow-md"
+                                                                )}
+                                                                title="Run cell (Shift+Enter)"
+                                                            >
+                                                                {cell.isExecuting ? (
+                                                                    <>
+                                                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                                                        Running...
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <Play className="w-3 h-3" />
+                                                                        Run
+                                                                    </>
+                                                                )}
+                                                            </button>
+                                                        </div>
+                                                    )}
+
                                                     {isEditing ? (
                                                         <textarea
                                                             ref={(el) => {
@@ -648,7 +1414,6 @@ export function NerdbookPage({
                                                                 handleUpdateCell(cell.id, e.target.value);
                                                                 autoResizeTextarea(e.target);
                                                             }}
-                                                            onKeyDown={(e) => handleCellKeyDown(e, cell.id)}
                                                             onBlur={handleSaveNotebook}
                                                             placeholder={
                                                                 cell.type === 'markdown'
@@ -658,19 +1423,23 @@ export function NerdbookPage({
                                                                         : "Start typing..."
                                                             }
                                                             className={clsx(
-                                                                "w-full resize-none focus:outline-none bg-transparent",
+                                                                "w-full resize-none focus:outline-none bg-transparent py-2",
                                                                 "text-gray-900 dark:text-gray-100 placeholder-gray-400",
-                                                                cell.type === 'code' && "font-mono text-sm"
+                                                                cell.type === 'code' && "font-mono text-sm bg-gray-900 dark:bg-gray-950 text-gray-100 rounded-lg px-4 py-3"
                                                             )}
                                                             autoFocus
                                                         />
                                                     ) : (
                                                         <div
                                                             className={clsx(
-                                                                "min-h-[1.5rem]",
-                                                                cell.type === 'code' && "font-mono text-sm bg-gray-50 dark:bg-gray-900 -m-4 p-4 rounded-b-xl",
+                                                                "min-h-[2rem] py-2 cursor-text",
+                                                                cell.type === 'code' && "rounded-lg overflow-hidden",
                                                                 !cell.content && "text-gray-400 italic"
                                                             )}
+                                                            onClick={() => {
+                                                                setSelectedCellId(cell.id);
+                                                                setCellMode('edit');
+                                                            }}
                                                         >
                                                             {cell.content ? (
                                                                 cell.type === 'markdown' ? (
@@ -680,39 +1449,116 @@ export function NerdbookPage({
                                                                             __html: renderMarkdownPreview(cell.content)
                                                                         }}
                                                                     />
+                                                                ) : cell.type === 'code' ? (
+                                                                    <pre className="bg-gray-900 dark:bg-gray-950 rounded-lg px-4 py-3 overflow-x-auto">
+                                                                        <code
+                                                                            className={`language-${detectLanguage(cell.content)}`}
+                                                                            dangerouslySetInnerHTML={{
+                                                                                __html: highlightCode(cell.content, detectLanguage(cell.content))
+                                                                            }}
+                                                                        />
+                                                                    </pre>
                                                                 ) : (
-                                                                    <pre className="whitespace-pre-wrap">{cell.content}</pre>
+                                                                    <pre className="whitespace-pre-wrap text-gray-900 dark:text-gray-100">{cell.content}</pre>
                                                                 )
                                                             ) : (
                                                                 'Click to edit...'
                                                             )}
                                                         </div>
                                                     )}
-                                                </div>
-                                            </div>
 
-                                            {/* Keyboard hints */}
-                                            {isEditing && (
-                                                <div className="absolute -bottom-5 left-4 text-[10px] text-gray-400 flex gap-3">
-                                                    <span>Ctrl+Enter: new cell</span>
-                                                    <span>Esc: done</span>
+                                                    {/* Output display for code cells */}
+                                                    {cell.type === 'code' && cell.output && (
+                                                        <div className="mt-2">
+                                                            <div className="flex items-center justify-between mb-1">
+                                                                <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+                                                                    <Terminal className="w-3 h-3" />
+                                                                    <span>Output</span>
+                                                                </div>
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleClearOutput(cell.id);
+                                                                    }}
+                                                                    className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                                                                >
+                                                                    Clear
+                                                                </button>
+                                                            </div>
+                                                            <div
+                                                                className={clsx(
+                                                                    "font-mono text-sm rounded-lg px-4 py-3 overflow-auto",
+                                                                    "max-h-48", // Max height to prevent infinite expansion
+                                                                    cell.executionError
+                                                                        ? "bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300"
+                                                                        : "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200"
+                                                                )}
+                                                            >
+                                                                <pre className="whitespace-pre-wrap break-words">{cell.output}</pre>
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
-                                            )}
-                                        </motion.div>
-                                    );
-                                })}
-                            </AnimatePresence>
 
-                            {/* Quick add button at bottom */}
-                            <motion.button
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                onClick={() => handleAddCell('text')}
-                                className="w-full py-4 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600 transition-all flex items-center justify-center gap-2"
-                            >
-                                <Plus className="w-5 h-5" />
-                                <span>Add cell</span>
-                            </motion.button>
+                                                {/* Right side - Cell actions (visible on hover/selection) */}
+                                                <div className={clsx(
+                                                    "flex-shrink-0 flex items-start gap-0.5 ml-2 pt-1 transition-opacity",
+                                                    isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                                                )}>
+                                                    {cell.type === 'code' && (
+                                                        <CellActionButton
+                                                            icon={cell.isExecuting ? Loader2 : Play}
+                                                            onClick={() => handleRunCell(cell.id)}
+                                                            title="Run cell (Shift+Enter)"
+                                                        />
+                                                    )}
+                                                    <CellActionButton
+                                                        icon={Copy}
+                                                        onClick={() => handleDuplicateCell(cell.id)}
+                                                        title="Duplicate cell"
+                                                    />
+                                                    <CellActionButton
+                                                        icon={ChevronUp}
+                                                        onClick={() => handleMoveCell(cell.id, 'up')}
+                                                        title="Move cell up"
+                                                    />
+                                                    <CellActionButton
+                                                        icon={ChevronDown}
+                                                        onClick={() => handleMoveCell(cell.id, 'down')}
+                                                        title="Move cell down"
+                                                    />
+                                                    <CellActionButton
+                                                        icon={Plus}
+                                                        onClick={() => {
+                                                            setSelectedCellId(cell.id);
+                                                            handleAddCell('code', 'below');
+                                                        }}
+                                                        title="Insert cell below"
+                                                    />
+                                                    {activeNotebook.cells.length > 1 && (
+                                                        <CellActionButton
+                                                            icon={Trash2}
+                                                            onClick={() => handleDeleteCell(cell.id)}
+                                                            title="Delete cell (D D)"
+                                                        />
+                                                    )}
+                                                </div>
+                                            </motion.div>
+                                        );
+                                    })}
+                                </AnimatePresence>
+
+                                {/* Quick add button at bottom */}
+                                <motion.button
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    onClick={() => handleAddCell('code', 'below')}
+                                    className="w-full py-3 rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600 transition-all flex items-center justify-center gap-2 mt-4"
+                                >
+                                    <Plus className="w-4 h-4" />
+                                    <span className="text-sm">Add cell</span>
+                                </motion.button>
+                            </div>
                         </div>
                     </motion.div>
                 )}

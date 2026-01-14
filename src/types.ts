@@ -99,7 +99,10 @@ export interface NerdCell {
     id: string;
     type: NerdCellType;
     content: string;
+    language?: string; // For code cells: 'javascript', 'python', 'typescript', etc.
     output?: string; // For code cells: execution output
+    isExecuting?: boolean; // Whether the cell is currently running
+    executionError?: boolean; // Whether the last execution had an error
     isEditing?: boolean;
     createdAt: string; // ISO date string
     updatedAt?: string; // ISO date string

@@ -41,11 +41,29 @@ process.env.VITE_PUBLIC = app.isPackaged ? process.env.DIST : path.join(__dirnam
 
 let win: BrowserWindow | null
 
+// ============================================================================
+// DEV MODE DATA ISOLATION
+// ============================================================================
+// In development mode, use a separate folder to protect production data from
+// accidental overwrites during hot-reloads. Production data is auto-copied
+// to the dev folder on startup if it doesn't exist.
+// ============================================================================
+const IS_DEV_MODE = !app.isPackaged;
+const DEV_FOLDER_NAME = 'ThoughtsPlus-Dev';
+const PROD_FOLDER_NAME = 'ThoughtsPlus';
+
 // Try to detect OneDrive path, fallback to Documents
 const oneDrivePath = process.env.OneDrive || path.join(app.getPath('home'), 'OneDrive');
-const ONEDRIVE_DATA_PATH = path.join(oneDrivePath, 'ThoughtsPlus', 'calendar-data.json');
+
+// Use dev folder in dev mode, production folder in production
+const DATA_FOLDER_NAME = IS_DEV_MODE ? DEV_FOLDER_NAME : PROD_FOLDER_NAME;
+const ONEDRIVE_DATA_PATH = path.join(oneDrivePath, DATA_FOLDER_NAME, 'calendar-data.json');
 const DEFAULT_DATA_PATH = ONEDRIVE_DATA_PATH;
 let currentDataPath = DEFAULT_DATA_PATH;
+
+// Production data path (for copying to dev)
+const PROD_DATA_FOLDER = path.join(oneDrivePath, PROD_FOLDER_NAME);
+const PROD_DATA_PATH = path.join(PROD_DATA_FOLDER, 'calendar-data.json');
 
 // Device-specific settings (stored locally, not synced)
 // NOTE: This persists in AppData\Roaming\thoughts-plus\device-settings.json and survives app uninstall
@@ -55,6 +73,69 @@ let deviceSettings: any = {};
 
 // Global settings (synced across devices)
 let globalSettingsPath = '';
+
+// Copy production data to dev folder
+async function copyProductionToDevFolder(): Promise<void> {
+    if (!IS_DEV_MODE) return;
+
+    const devDataFolder = path.join(oneDrivePath, DEV_FOLDER_NAME);
+    const devDataPath = path.join(devDataFolder, 'calendar-data.json');
+
+    console.log('================================================================');
+    console.log('🔧 DEV MODE: Data Isolation Active');
+    console.log('================================================================');
+    console.log(`Production folder: ${PROD_DATA_FOLDER}`);
+    console.log(`Dev folder: ${devDataFolder}`);
+
+    try {
+        // Create dev folder if it doesn't exist
+        if (!existsSync(devDataFolder)) {
+            await fs.mkdir(devDataFolder, { recursive: true });
+            console.log('Created dev data folder');
+        }
+
+        // Copy production data to dev folder if dev data doesn't exist or is older
+        if (existsSync(PROD_DATA_PATH)) {
+            let shouldCopy = !existsSync(devDataPath);
+
+            if (!shouldCopy && existsSync(devDataPath)) {
+                // Check if dev file is suspiciously small (might be corrupted)
+                const devStat = await fs.stat(devDataPath);
+
+                // Also copy if dev file is suspiciously small (might be corrupted)
+                if (devStat.size < 100) {
+                    console.log('⚠️ Dev data file is very small, likely corrupted. Copying from production...');
+                    shouldCopy = true;
+                }
+            }
+
+            if (shouldCopy) {
+                // Copy all JSON files from production to dev
+                const files = await fs.readdir(PROD_DATA_FOLDER);
+                for (const file of files) {
+                    if (file.endsWith('.json')) {
+                        const src = path.join(PROD_DATA_FOLDER, file);
+                        const dest = path.join(devDataFolder, file);
+                        const stat = await fs.stat(src);
+                        if (stat.isFile()) {
+                            await fs.copyFile(src, dest);
+                            console.log(`✅ Copied to dev: ${file} (${Math.round(stat.size / 1024)} KB)`);
+                        }
+                    }
+                }
+                console.log('Production data copied to dev folder for testing');
+            } else {
+                console.log('Dev folder already has data, using existing');
+            }
+        } else {
+            console.log('No production data found to copy');
+        }
+    } catch (err) {
+        console.error('Failed to copy production data to dev folder:', err);
+    }
+
+    console.log('================================================================');
+}
 
 async function loadSettings() {
     // Load device-specific settings (local)
@@ -1921,6 +2002,9 @@ async function generateAIContent(prompt: string): Promise<string> {
 
 // Initialize app when ready
 app.whenReady().then(async () => {
+    // In dev mode, copy production data to dev folder first
+    await copyProductionToDevFolder();
+
     await loadSettings();
     setupIpcHandlers(); // Register handlers BEFORE creating window
     createWindow();
