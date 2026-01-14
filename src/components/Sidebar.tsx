@@ -138,28 +138,33 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
 
     const [order, setOrder] = useState<string[]>([]);
 
-    // Sync Order
+    // Sync Order - with version key to force new default order
     useEffect(() => {
+        const SIDEBAR_ORDER_VERSION = 'v2'; // Increment this to reset order for all users
+        const savedVersion = localStorage.getItem('sidebar-order-version');
         const savedOrder = localStorage.getItem('sidebar-order');
-        const defaultItems = ['dashboard', 'progress', 'notebook', 'calendar', 'timer', 'stats', 'github'];
+        const defaultItems = ['dashboard', 'notebook', 'calendar', 'timer', 'github', 'progress'];
 
         let newOrder: string[] = [];
 
-        if (savedOrder) {
+        // If version mismatch or no saved order, use defaults
+        if (savedVersion !== SIDEBAR_ORDER_VERSION || !savedOrder) {
+            newOrder = [...defaultItems];
+            localStorage.setItem('sidebar-order-version', SIDEBAR_ORDER_VERSION);
+            localStorage.setItem('sidebar-order', JSON.stringify(newOrder));
+        } else {
             try {
                 const parsed = JSON.parse(savedOrder);
-                // Filter to only include default items
+                // Filter to only include default items (removes old 'stats' entries)
                 newOrder = parsed.filter((id: string) => defaultItems.includes(id));
 
-                // Add missing default items
+                // Add missing default items at the end
                 defaultItems.forEach(id => {
                     if (!newOrder.includes(id)) newOrder.push(id);
                 });
             } catch (e) {
                 newOrder = [...defaultItems];
             }
-        } else {
-            newOrder = [...defaultItems];
         }
 
         // Only update if different to avoid loops
@@ -189,7 +194,7 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                 calendar: true,
                 notebook: true,
                 progress: true,
-                stats: false,
+                stats: false, // Always default to false
                 github: true,
                 timer: true
             };
@@ -197,8 +202,14 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
             if (saved) {
                 try {
                     const parsed = JSON.parse(saved);
-                    // Merge saved with defaults to handle new keys (like progress)
-                    setEnabledFeatures({ ...defaultFeatures, ...parsed });
+                    // Force stats to be false unless explicitly saved as true
+                    // This prevents stats from reappearing unexpectedly
+                    const merged = { ...defaultFeatures, ...parsed };
+                    // If stats was not explicitly saved, keep it false
+                    if (parsed.stats === undefined) {
+                        merged.stats = false;
+                    }
+                    setEnabledFeatures(merged);
                 } catch {
                     setEnabledFeatures(defaultFeatures);
                 }

@@ -458,7 +458,7 @@ export function SettingsPage() {
             calendar: true,
             notebook: true,
             progress: true,
-            stats: false,
+            stats: false, // Always default to false
             github: true,
             timer: true,
             aiDescriptions: !import.meta.env.DEV // false in dev, true in production
@@ -471,7 +471,12 @@ export function SettingsPage() {
             if (import.meta.env.DEV) {
                 features.aiDescriptions = false;
             }
-            setEnabledFeatures({ ...defaultFeatures, ...features });
+            // Force stats to be false unless explicitly saved as true
+            const merged = { ...defaultFeatures, ...features };
+            if (features.stats === undefined) {
+                merged.stats = false;
+            }
+            setEnabledFeatures(merged);
         } else {
             // No saved settings - use defaults based on environment
             setEnabledFeatures(defaultFeatures);
@@ -1449,12 +1454,12 @@ export function SettingsPage() {
                         </div>
                     </motion.div>
 
-                    {/* GitHub Integration */}
+                    {/* GitHub Integration - moves below Keyboard Shortcuts on screens < xl */}
                     <motion.div
                         initial={{ y: -15, scale: 0.97 }}
                         animate={{ y: 0, scale: 1 }}
                         transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.12 }}
-                        className="p-6 rounded-3xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50 overflow-hidden"
+                        className="p-6 rounded-3xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50 overflow-hidden order-last xl:order-none"
                     >
                         <div className="flex items-center gap-3 mb-4 min-w-0">
                             <div className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-900/30 text-gray-600 dark:text-gray-400 shrink-0">

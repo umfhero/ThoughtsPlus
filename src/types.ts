@@ -92,7 +92,7 @@ export interface SnapshotsData {
     [periodKey: string]: Snapshot; // Key e.g., "monthly-2025-01" or "yearly-2025"
 }
 
-// Nerdbook - Jupyter-like cell-based note system
+// Nerdbook - Cell-based note system with rich text, code, and diagrams
 export type NerdCellType = 'markdown' | 'code' | 'text';
 
 export interface NerdCell {

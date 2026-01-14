@@ -357,7 +357,7 @@ export function NerdbookPage({
                                     <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md mb-4">
                                         {searchQuery
                                             ? 'Try a different search term'
-                                            : 'Create your first Nerdbook to start capturing ideas with a Jupyter-like experience!'
+                                            : 'Create your first Nerdbook to start capturing ideas with rich text, code, and diagrams!'
                                         }
                                     </p>
                                     {!searchQuery && (

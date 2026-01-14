@@ -344,9 +344,24 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
     useEffect(() => {
         // Load feature toggles
         const loadFeatureToggles = () => {
+            const defaultFeatures = {
+                calendar: true,
+                notebook: true,
+                stats: false, // Always default to false
+                github: true,
+                aiDescriptions: !import.meta.env.DEV
+            };
             const saved = localStorage.getItem('feature-toggles');
             if (saved) {
-                setEnabledFeatures(JSON.parse(saved));
+                const parsed = JSON.parse(saved);
+                // Force stats to be false unless explicitly saved as true
+                const merged = { ...defaultFeatures, ...parsed };
+                if (parsed.stats === undefined) {
+                    merged.stats = false;
+                }
+                setEnabledFeatures(merged);
+            } else {
+                setEnabledFeatures(defaultFeatures);
             }
         };
         loadFeatureToggles();

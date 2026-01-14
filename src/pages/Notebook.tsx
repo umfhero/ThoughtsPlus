@@ -247,7 +247,7 @@ export function NotebookPage({ notes, onDeleteNote, onUpdateNote, setPage, nerdb
         {
             id: 'nerdbook',
             title: 'Nerdbook',
-            description: 'Jupyter-like cell-based notebooks for structured note-taking',
+            description: 'Cell-based notebooks for structured note-taking with code and markdown',
             icon: Sparkles,
             count: nerdbooks.length,
             countLabel: nerdbooks.length === 1 ? 'notebook' : 'notebooks',
@@ -387,7 +387,7 @@ export function NotebookPage({ notes, onDeleteNote, onUpdateNote, setPage, nerdb
         </div>
     );
 
-    // Mock Nerdbook preview component (Jupyter-like document with text and code cells)
+    // Mock Nerdbook preview component (document with text and code cells)
     const NerdbookMockPreview = () => (
         <div className="w-full h-full p-2 flex flex-col gap-1 overflow-hidden bg-white dark:bg-gray-800 rounded-lg">
             {/* Document header / title */}
