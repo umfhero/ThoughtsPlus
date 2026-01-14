@@ -1,5 +1,5 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './pages/Dashboard';
 import { AiQuickAddModal } from './components/AiQuickAddModal';
@@ -25,6 +25,7 @@ const TimerPage = lazy(() => import('./pages/Timer').then(m => ({ default: m.Tim
 const ProgressPage = lazy(() => import('./pages/Progress').then(m => ({ default: m.ProgressPage })));
 const NotebookPage = lazy(() => import('./pages/Notebook').then(m => ({ default: m.NotebookPage })));
 const NerdbookPage = lazy(() => import('./pages/Nerdbook').then(m => ({ default: m.NerdbookPage })));
+const WorkspacePage = lazy(() => import('./pages/Workspace').then(m => ({ default: m.WorkspacePage })));
 
 // Preload function to load pages in background
 const preloadPages = () => {
@@ -365,7 +366,7 @@ function App() {
             }
 
             if (e.key === 'Control') {
-                if (currentPage !== 'drawing' && currentPage !== 'settings' && currentPage !== 'dev') {
+                if (currentPage !== 'drawing' && currentPage !== 'settings' && currentPage !== 'dev' && currentPage !== 'workspace') {
                     setIsSidebarCollapsed(false);
                 }
             }
@@ -931,18 +932,29 @@ function AppContent(props: AppContentProps) {
             <div className="absolute top-0 left-0 w-full h-8 z-50 app-drag-region" style={{ WebkitAppRegion: 'drag' } as any} />
 
             <div className="relative z-20 flex w-full h-full pt-8">
-                <Sidebar
-                    currentPage={currentPage}
-                    setPage={setCurrentPage}
-                    notes={activeNotes}
-                    onMonthSelect={handleMonthSelect}
-                    currentMonth={currentMonth}
-                    isCollapsed={isSidebarCollapsed}
-                    toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                    showDev={showDev}
-                    isEditMode={isEditMode}
-                    isIconOnly={effectiveSidebarIconOnly}
-                />
+                {/* Hide main sidebar when on workspace page - workspace has its own sidebar */}
+                <AnimatePresence>
+                    {currentPage !== 'workspace' && (
+                        <motion.div
+                            initial={{ x: 0, opacity: 1 }}
+                            exit={{ x: -280, opacity: 0 }}
+                            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                        >
+                            <Sidebar
+                                currentPage={currentPage}
+                                setPage={setCurrentPage}
+                                notes={activeNotes}
+                                onMonthSelect={handleMonthSelect}
+                                currentMonth={currentMonth}
+                                isCollapsed={isSidebarCollapsed}
+                                toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                                showDev={showDev}
+                                isEditMode={isEditMode}
+                                isIconOnly={effectiveSidebarIconOnly}
+                            />
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
                 <main className="flex-1 h-full relative overflow-hidden">
                     <div className="h-full py-4 pr-4 pl-2">
@@ -1012,6 +1024,18 @@ function AppContent(props: AppContentProps) {
                                         handleAddNerdbook={handleAddNerdbook}
                                         handleUpdateNerdbook={handleUpdateNerdbook}
                                         handleDeleteNerdbook={handleDeleteNerdbook}
+                                    />
+                                )}
+                                {currentPage === 'workspace' && (
+                                    <WorkspacePage
+                                        setPage={setCurrentPage}
+                                        onSidebarTransition={(visible) => {
+                                            // When entering workspace, collapse main sidebar
+                                            // When exiting, restore it
+                                            if (visible) {
+                                                setIsSidebarCollapsed(true);
+                                            }
+                                        }}
                                     />
                                 )}
                                 {currentPage === 'settings' && <SettingsPage />}

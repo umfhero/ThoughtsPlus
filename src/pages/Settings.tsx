@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Folder, Palette, Sparkles, Check, ExternalLink, Clipboard, AlertCircle, LayoutDashboard, PieChart, Github, BookOpen, Calendar as CalendarIcon, Code, RefreshCw, Bell, BellOff, Type, Upload, FileUp, Timer, Heart, Sidebar as SidebarIcon, Settings2, X, Trash2, Plus, ChevronDown, ChevronUp, History, Info, Save, Bug, TrendingUp } from 'lucide-react';
+import { Folder, Palette, Sparkles, Check, ExternalLink, Clipboard, AlertCircle, LayoutDashboard, PieChart, Github, NotebookPen, Calendar as CalendarIcon, Code, RefreshCw, Bell, BellOff, Type, Upload, FileUp, Timer, Heart, Sidebar as SidebarIcon, Settings2, X, Trash2, Plus, ChevronDown, ChevronUp, History, Info, Save, Bug, TrendingUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import clsx from 'clsx';
 import { useTheme } from '../contexts/ThemeContext';
@@ -2109,7 +2109,7 @@ export function SettingsPage() {
                         {/* Notebook Toggle */}
                         <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600 min-w-0">
                             <div className="flex items-center gap-3 min-w-0 flex-1">
-                                <BookOpen className="w-5 h-5 text-gray-600 dark:text-gray-400 shrink-0" />
+                                <NotebookPen className="w-5 h-5 text-gray-600 dark:text-gray-400 shrink-0" />
                                 <span className="font-medium text-gray-800 dark:text-gray-200 truncate">Notebook</span>
                             </div>
                             <button

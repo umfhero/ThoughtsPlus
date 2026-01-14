@@ -1,4 +1,4 @@
-import { Home, Calendar as CalendarIcon, PieChart, Settings, ChevronDown, ChevronRight, PanelLeftClose, PanelLeftOpen, Github, Code, Timer, TrendingUp, BookOpen } from 'lucide-react';
+import { Home, Calendar as CalendarIcon, PieChart, Settings, ChevronDown, ChevronRight, PanelLeftClose, PanelLeftOpen, Github, Code, Timer, TrendingUp, NotebookPen } from 'lucide-react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import clsx from 'clsx';
 import { useState, useEffect } from 'react';
@@ -299,10 +299,10 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                     case 'dashboard': setPage('dashboard'); break;
                     case 'calendar': if (enabledFeatures.calendar) setPage('calendar'); break;
                     case 'timer': if (enabledFeatures.timer) setPage('timer'); break;
-                    case 'board': if (enabledFeatures.notebook) setPage('notebook'); break;
+                    case 'board': if (enabledFeatures.notebook) setPage('workspace'); break;
                     case 'github': if (enabledFeatures.github) setPage('github'); break;
                     case 'progress': if (enabledFeatures.progress) setPage('progress'); break;
-                    case 'notebook': setPage('notebook'); break;
+                    case 'notebook': setPage('workspace'); break;
                     case 'settings': setPage('settings'); break;
                     case 'ai-quick-add':
                         window.dispatchEvent(new CustomEvent('open-ai-quick-add'));
@@ -344,8 +344,8 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
             setIsCalendarOpen(true);
         }
 
-        // Force hide shortcuts when on drawing or notebook page
-        if (currentPage === 'drawing' || currentPage === 'notebook') {
+        // Force hide shortcuts when on drawing or notebook or workspace page
+        if (currentPage === 'drawing' || currentPage === 'notebook' || currentPage === 'workspace') {
             setShowShortcuts(false);
         }
     }, [currentPage]);
@@ -400,7 +400,7 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                                 switch (id) {
                                     case 'dashboard': Icon = Home; label = 'Dashboard'; page = 'dashboard'; break;
                                     case 'progress': Icon = TrendingUp; label = 'Progress'; page = 'progress'; break;
-                                    case 'notebook': Icon = BookOpen; label = 'Notebook'; page = 'notebook'; break;
+                                    case 'notebook': Icon = NotebookPen; label = 'Workspace'; page = 'workspace'; break;
                                     case 'calendar': Icon = CalendarIcon; label = 'Calendar'; page = 'calendar'; break;
                                     case 'timer': Icon = Timer; label = 'Timer'; page = 'timer'; break;
                                     case 'stats': Icon = PieChart; label = 'Stats'; page = 'stats'; break;
@@ -698,19 +698,19 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                                         if (id === 'notebook' && enabledFeatures.notebook) {
                                             return (
                                                 <Reorder.Item key={id} value={id} dragListener={isEditMode} className="relative overflow-visible">
-                                                    <IconTooltip label="Notebook" show={isIconOnly}>
+                                                    <IconTooltip label="Workspace" show={isIconOnly}>
                                                         <button
-                                                            onClick={() => setPage('notebook')}
+                                                            onClick={() => setPage('workspace')}
                                                             className={clsx(
                                                                 isIconOnly
                                                                     ? "w-12 h-12 flex items-center justify-center rounded-full transition-colors duration-300 relative"
                                                                     : "w-full flex items-center justify-start p-3 rounded-xl transition-colors duration-300 group relative overflow-visible",
-                                                                currentPage === 'notebook'
+                                                                (currentPage === 'notebook' || currentPage === 'workspace')
                                                                     ? isIconOnly ? "" : "text-white shadow-lg shadow-gray-900/20 dark:shadow-gray-950/30"
                                                                     : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100"
                                                             )}
                                                         >
-                                                            {currentPage === 'notebook' && (
+                                                            {(currentPage === 'notebook' || currentPage === 'workspace') && (
                                                                 isIconOnly ? (
                                                                     <motion.div
                                                                         layoutId="activeCircle"
@@ -733,7 +733,7 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
 
                                                             {!isIconOnly && (
                                                                 <AnimatePresence>
-                                                                    {showShortcuts && currentPage !== 'drawing' && currentPage !== 'notebook' && (
+                                                                    {showShortcuts && currentPage !== 'drawing' && currentPage !== 'notebook' && currentPage !== 'workspace' && (
                                                                         <motion.div
                                                                             initial={{ opacity: 0, x: -20 }}
                                                                             animate={{ opacity: 1, x: 0 }}
@@ -753,24 +753,24 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
 
                                                             {isIconOnly ? (
                                                                 <div className="relative z-10">
-                                                                    <BookOpen className="w-5 h-5" style={currentPage === 'notebook' ? { color: 'var(--accent-primary)' } : undefined} />
+                                                                    <NotebookPen className="w-5 h-5" style={(currentPage === 'notebook' || currentPage === 'workspace') ? { color: 'var(--accent-primary)' } : undefined} />
                                                                 </div>
                                                             ) : (
                                                                 <div className="flex items-center gap-3 relative z-10 w-full">
                                                                     <div className="relative w-5 h-5 shrink-0 flex items-center justify-center">
                                                                         <motion.div
                                                                             animate={{
-                                                                                opacity: showShortcuts && currentPage !== 'drawing' && currentPage !== 'notebook' ? 0 : 1,
-                                                                                scale: showShortcuts && currentPage !== 'drawing' && currentPage !== 'notebook' ? 0.5 : 1,
-                                                                                x: showShortcuts && currentPage !== 'drawing' && currentPage !== 'notebook' ? -15 : 0
+                                                                                opacity: showShortcuts && currentPage !== 'drawing' && currentPage !== 'notebook' && currentPage !== 'workspace' ? 0 : 1,
+                                                                                scale: showShortcuts && currentPage !== 'drawing' && currentPage !== 'notebook' && currentPage !== 'workspace' ? 0.5 : 1,
+                                                                                x: showShortcuts && currentPage !== 'drawing' && currentPage !== 'notebook' && currentPage !== 'workspace' ? -15 : 0
                                                                             }}
                                                                             transition={{ type: "spring", stiffness: 500, damping: 14 }}
                                                                             whileHover={{ scale: 1.1 }}
                                                                         >
-                                                                            <BookOpen className={clsx("w-5 h-5 shrink-0")} style={currentPage === 'notebook' ? { color: 'var(--accent-primary)' } : undefined} />
+                                                                            <NotebookPen className={clsx("w-5 h-5 shrink-0")} style={(currentPage === 'notebook' || currentPage === 'workspace') ? { color: 'var(--accent-primary)' } : undefined} />
                                                                         </motion.div>
                                                                     </div>
-                                                                    <span className="font-medium text-sm">Notebook</span>
+                                                                    <span className="font-medium text-sm">Workspace</span>
                                                                 </div>
                                                             )}
                                                         </button>

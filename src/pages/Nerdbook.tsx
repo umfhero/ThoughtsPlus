@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     Plus, Trash2, Edit2, Check, X, ChevronLeft, ChevronUp, ChevronDown,
     Type, Code, FileText, Sparkles, FolderOpen, Clock, Save, Scissors,
-    Clipboard, Play, Square, Copy, ArrowUp, ArrowDown, RotateCcw, Loader2, Terminal,
+    Clipboard, Play, Square, Copy, ArrowUp, ArrowDown, RotateCcw, Terminal,
     Sun, Moon, Palette, Monitor
 } from 'lucide-react';
 import { NerdNotebook, NerdCell, NerdCellType, Page } from '../types';
@@ -981,6 +981,23 @@ plt.show = _custom_show
         setActiveNotebook(updatedNotebook);
     }, [activeNotebook]);
 
+    // Stop cell execution (marks as not executing - actual interruption is limited in browser)
+    const handleStopCell = useCallback((cellId: string) => {
+        if (!activeNotebook) return;
+
+        const updatedCells = activeNotebook.cells.map(c =>
+            c.id === cellId
+                ? { ...c, isExecuting: false, output: '(Execution stopped)', executionError: true }
+                : c
+        );
+
+        const updatedNotebook = {
+            ...activeNotebook,
+            cells: updatedCells,
+        };
+        setActiveNotebook(updatedNotebook);
+    }, [activeNotebook]);
+
     // Global keyboard shortcuts - block defaults and implement custom
     // Using capture: true to intercept events BEFORE App.tsx's handlers
     useEffect(() => {
@@ -1503,11 +1520,6 @@ plt.show = _custom_show
 
                                     <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
 
-                                    <ToolbarButton icon={Play} onClick={() => { }} title="Run cell (Shift+Enter)" />
-                                    <ToolbarButton icon={Square} onClick={() => { }} title="Interrupt kernel" />
-
-                                    <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
-
                                     <ToolbarButton icon={RotateCcw} onClick={handleUndoDelete} disabled={deletedCells.length === 0} title="Undo delete (Z)" />
 
                                     <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
@@ -1895,11 +1907,19 @@ plt.show = _custom_show
                                                         <option value="text">Text</option>
                                                     </select>
                                                     {cell.type === 'code' && (
-                                                        <CellActionButton
-                                                            icon={cell.isExecuting ? Loader2 : Play}
-                                                            onClick={() => handleRunCell(cell.id)}
-                                                            title="Run cell (Shift+Enter)"
-                                                        />
+                                                        cell.isExecuting ? (
+                                                            <CellActionButton
+                                                                icon={Square}
+                                                                onClick={() => handleStopCell(cell.id)}
+                                                                title="Stop execution"
+                                                            />
+                                                        ) : (
+                                                            <CellActionButton
+                                                                icon={Play}
+                                                                onClick={() => handleRunCell(cell.id)}
+                                                                title="Run cell (Shift+Enter)"
+                                                            />
+                                                        )
                                                     )}
                                                     <CellActionButton
                                                         icon={Copy}

@@ -1,4 +1,4 @@
-export type Page = 'dashboard' | 'calendar' | 'stats' | 'settings' | 'drawing' | 'github' | 'dev' | 'custom' | 'timer' | 'progress' | 'notebook';
+export type Page = 'dashboard' | 'calendar' | 'stats' | 'settings' | 'drawing' | 'github' | 'dev' | 'custom' | 'timer' | 'progress' | 'notebook' | 'workspace';
 
 export interface QuickNote {
     id: string;

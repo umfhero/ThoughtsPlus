@@ -170,15 +170,23 @@ async function copyProductionToDevFolder(): Promise<void> {
                     try {
                         const devData = JSON.parse(await fs.readFile(devDataPath, 'utf-8'));
                         const devNotesCount = devData.notes ? Object.keys(devData.notes).length : 0;
+                        const devBoardsCount = devData.boards ? devData.boards.length : 0;
+                        const devNotebooksCount = devData.notebooks ? devData.notebooks.length : 0;
 
                         // Check if production has more data
                         const prodData = JSON.parse(await fs.readFile(actualProdDataPath, 'utf-8'));
                         const prodNotesCount = prodData.notes ? Object.keys(prodData.notes).length : 0;
+                        const prodBoardsCount = prodData.boards ? prodData.boards.length : 0;
+                        const prodNotebooksCount = prodData.notebooks ? prodData.notebooks.length : 0;
 
-                        console.log(`Dev notes count: ${devNotesCount}, Production notes count: ${prodNotesCount}`);
+                        console.log(`Dev: notes=${devNotesCount}, boards=${devBoardsCount}, notebooks=${devNotebooksCount}`);
+                        console.log(`Prod: notes=${prodNotesCount}, boards=${prodBoardsCount}, notebooks=${prodNotebooksCount}`);
 
-                        if (devNotesCount === 0 && prodNotesCount > 0) {
-                            console.log('⚠️ Dev data has no notes but production does. Copying from production...');
+                        // Copy if dev is missing data that production has
+                        if ((devNotesCount === 0 && prodNotesCount > 0) ||
+                            (devBoardsCount === 0 && prodBoardsCount > 0) ||
+                            (devNotebooksCount === 0 && prodNotebooksCount > 0)) {
+                            console.log('⚠️ Dev data is missing content that production has. Copying from production...');
                             shouldCopy = true;
                         }
                     } catch (parseErr) {
@@ -1640,6 +1648,39 @@ IMPORTANT RULES:
             await fs.writeFile(currentDataPath, JSON.stringify(data, null, 2));
             return { success: true };
         } catch (e) { return { success: false, error: e }; }
+    });
+
+    // Workspace IPC Handlers
+    ipcMain.handle('get-workspace', async () => {
+        try {
+            if (!existsSync(currentDataPath)) {
+                return null;
+            }
+            const data = JSON.parse(await fs.readFile(currentDataPath, 'utf-8'));
+            return data.workspace || null;
+        } catch (e) {
+            console.error('Failed to load workspace:', e);
+            return null;
+        }
+    });
+
+    ipcMain.handle('save-workspace', async (_, workspaceData) => {
+        try {
+            const dir = path.dirname(currentDataPath);
+            if (!existsSync(dir)) {
+                await fs.mkdir(dir, { recursive: true });
+            }
+            let data: any = {};
+            if (existsSync(currentDataPath)) {
+                data = JSON.parse(await fs.readFile(currentDataPath, 'utf-8'));
+            }
+            data.workspace = workspaceData;
+            await fs.writeFile(currentDataPath, JSON.stringify(data, null, 2));
+            return { success: true };
+        } catch (e) {
+            console.error('Failed to save workspace:', e);
+            return { success: false, error: (e as Error).message };
+        }
     });
 
     ipcMain.handle('get-auto-launch', () => app.getLoginItemSettings().openAtLogin);
