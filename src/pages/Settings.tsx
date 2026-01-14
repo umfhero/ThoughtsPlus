@@ -501,10 +501,10 @@ export function SettingsPage() {
             addNotification({ title: 'Data Path Updated', message: `Data folder set to: ${newPath}`, type: 'success' });
 
             // Reload data from new path
-            console.log('🔄 Reloading data from new path...');
+            console.log('[Settings] Reloading data from new path...');
             // @ts-ignore
             const newData = await window.ipcRenderer.invoke('get-data');
-            console.log('📥 Loaded notes from new path:', newData);
+            console.log('[Settings] Loaded notes from new path:', newData);
 
             // Trigger a refresh by dispatching custom event
             window.dispatchEvent(new CustomEvent('data-path-changed', { detail: { path: newPath, data: newData } }));
@@ -1376,10 +1376,10 @@ export function SettingsPage() {
                                         await window.ipcRenderer.invoke('set-data-path', dataPath);
 
                                         // Reload data from new path
-                                        console.log('🔄 Reloading data after manual path entry...');
+                                        console.log('[Settings] Reloading data after manual path entry...');
                                         // @ts-ignore
                                         const newData = await window.ipcRenderer.invoke('get-data');
-                                        console.log('📥 Loaded notes from new path:', newData);
+                                        console.log('[Settings] Loaded notes from new path:', newData);
 
                                         // Trigger refresh
                                         window.dispatchEvent(new CustomEvent('data-path-changed', { detail: { path: dataPath, data: newData } }));

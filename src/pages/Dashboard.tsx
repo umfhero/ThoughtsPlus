@@ -179,9 +179,9 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
 
     // Debug logging
     useEffect(() => {
-        console.log('🎯 Dashboard Layout State:', dashboardLayout);
-        console.log('👁️ Hidden Widgets:', hiddenWidgets);
-        console.log('✏️ Edit Mode:', isEditMode);
+        console.log('[Dashboard] Layout State:', dashboardLayout);
+        console.log('[Dashboard] Hidden Widgets:', hiddenWidgets);
+        console.log('[Dashboard] Edit Mode:', isEditMode);
     }, [dashboardLayout, hiddenWidgets, isEditMode]);
 
     // Check if edit tip has been shown (Edit Tip Logic)
@@ -200,7 +200,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
         const widgetsToAdd = newWidgets.filter(id => !allWidgetIds.has(id));
 
         if (widgetsToAdd.length > 0) {
-            console.log('✨ Migrating Dashboard: Adding new widgets:', widgetsToAdd);
+            console.log('[Dashboard] Migrating: Adding new widgets:', widgetsToAdd);
             setDashboardLayout(prev => [
                 ...prev,
                 ...widgetsToAdd.map(id => ({
@@ -789,15 +789,15 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
     }, []);
 
     const loadStats = async () => {
-        console.log('📊 loadStats called - fetching creator stats...');
+        console.log('[Stats] loadStats called - fetching creator stats...');
         try {
             // @ts-ignore
             const data = await window.ipcRenderer.invoke('get-creator-stats');
-            console.log('📊 Received stats data:', data);
+            console.log('[Stats] Received stats data:', data);
             setStats(data);
-            console.log('📊 Stats state updated');
+            console.log('[Stats] State updated');
         } catch (e) {
-            console.error("❌ Failed to load stats", e);
+            console.error("[Stats] Failed to load stats", e);
         }
     };
 

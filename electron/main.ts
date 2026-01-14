@@ -93,7 +93,7 @@ async function loadSettings() {
 
             // Only migrate if ThoughtsPlus doesn't exist AND CalendarPlus does
             if (!existsSync(thoughtsPlusPath) && existsSync(calendarPlusPath)) {
-                console.log('🔄 Detected legacy "A - CalendarPlus" folder. Migrating to "ThoughtsPlus"...');
+                console.log('Detected legacy "A - CalendarPlus" folder. Migrating to "ThoughtsPlus"...');
                 await fs.mkdir(thoughtsPlusPath, { recursive: true });
 
                 const files = await fs.readdir(calendarPlusPath);
@@ -104,13 +104,13 @@ async function loadSettings() {
                     const stat = await fs.stat(src);
                     if (stat.isFile()) {
                         await fs.copyFile(src, dest);
-                        console.log(`  ✅ Copied legacy file: ${file}`);
+                        console.log(`  Copied legacy file: ${file}`);
                     }
                 }
-                console.log('✨ Migration to ThoughtsPlus complete.');
+                console.log('Migration to ThoughtsPlus complete.');
             }
         } catch (migrationErr) {
-            console.error('❌ Migration failed:', migrationErr);
+            console.error('Migration failed:', migrationErr);
             // Continue execution, don't block app startup
         }
 
@@ -120,7 +120,7 @@ async function loadSettings() {
         let targetDir = '';
         let foundExistingData = false;
 
-        log('🔍 Searching for existing data folders...');
+        log('Searching for existing data folders...');
 
         // 1. Search in OneDrive for folders WITH calendar-data.json
         for (const folderName of folderNames) {
@@ -131,7 +131,7 @@ async function loadSettings() {
             if (existsSync(dataFile)) {
                 targetDir = checkPath;
                 foundExistingData = true;
-                log(`✅ Found existing data file in OneDrive: ${targetDir}`);
+                log(`Found existing data file in OneDrive: ${targetDir}`);
                 break;
             }
         }
@@ -147,7 +147,7 @@ async function loadSettings() {
                 if (existsSync(dataFile)) {
                     targetDir = checkPath;
                     foundExistingData = true;
-                    log(`✅ Found existing data file in Documents: ${targetDir}`);
+                    log(`Found existing data file in Documents: ${targetDir}`);
                     break;
                 }
             }
@@ -160,7 +160,7 @@ async function loadSettings() {
                 if (existsSync(path.join(checkPath, 'settings.json'))) {
                     targetDir = checkPath;
                     foundExistingData = true;
-                    log(`✅ Found settings.json in OneDrive: ${targetDir}`);
+                    log(`Found settings.json in OneDrive: ${targetDir}`);
                     break;
                 }
             }
@@ -169,7 +169,7 @@ async function loadSettings() {
         // 4. Default to OneDrive/CalendarPlus if nothing found
         if (!targetDir) {
             targetDir = path.join(oneDrivePath, 'ThoughtsPlus');
-            log(`📁 Using default path: ${targetDir}`);
+            log(`Using default path: ${targetDir}`);
         }
 
         if (!existsSync(targetDir)) {
@@ -189,10 +189,10 @@ async function loadSettings() {
             currentDataPath = path.join(targetDir, 'calendar-data.json');
         }
 
-        log(`✅ Final data path: ${currentDataPath}`);
+        log(`Final data path: ${currentDataPath}`);
 
         console.log('----------------------------------------------------------------');
-        console.log('📂 DATA STORAGE PATHS');
+        console.log('DATA STORAGE PATHS');
         console.log('----------------------------------------------------------------');
         console.log('Main Data Path:', currentDataPath);
         console.log('Device Settings:', DEVICE_SETTINGS_PATH);
@@ -275,7 +275,7 @@ async function migrateToEncrypted() {
 
     // Migrate main API key
     if (deviceSettings.apiKey && !deviceSettings._apiKeyEncrypted) {
-        console.log('🔒 Migrating main API key to encrypted storage...');
+        console.log('Migrating main API key to encrypted storage...');
         deviceSettings.apiKey = encryptString(deviceSettings.apiKey);
         deviceSettings._apiKeyEncrypted = true;
         needsSave = true;
@@ -283,7 +283,7 @@ async function migrateToEncrypted() {
 
     // Migrate provider API keys
     if (deviceSettings.providerApiKeys && !deviceSettings._providerKeysEncrypted) {
-        console.log('🔒 Migrating provider API keys to encrypted storage...');
+        console.log('Migrating provider API keys to encrypted storage...');
         const providers = Object.keys(deviceSettings.providerApiKeys);
         for (const provider of providers) {
             if (deviceSettings.providerApiKeys[provider]) {
@@ -296,7 +296,7 @@ async function migrateToEncrypted() {
 
     // Migrate GitHub token
     if (deviceSettings.githubToken && !deviceSettings._githubTokenEncrypted) {
-        console.log('🔒 Migrating GitHub token to encrypted storage...');
+        console.log('Migrating GitHub token to encrypted storage...');
         deviceSettings.githubToken = encryptString(deviceSettings.githubToken);
         deviceSettings._githubTokenEncrypted = true;
         needsSave = true;
@@ -304,7 +304,7 @@ async function migrateToEncrypted() {
 
     // Migrate provider configs
     if (deviceSettings.providerConfigs && !deviceSettings._providerConfigsEncrypted) {
-        console.log('🔒 Migrating provider configs API keys to encrypted storage...');
+        console.log('Migrating provider configs API keys to encrypted storage...');
         deviceSettings.providerConfigs = deviceSettings.providerConfigs.map((config: ProviderConfig) => ({
             ...config,
             apiKey: encryptString(config.apiKey)
@@ -315,7 +315,7 @@ async function migrateToEncrypted() {
 
     if (needsSave) {
         await saveDeviceSettings();
-        console.log('✅ API keys migration to encrypted storage complete');
+        console.log('API keys migration to encrypted storage complete');
     }
 }
 
@@ -421,10 +421,10 @@ async function tryMigrateLegacyData() {
                     if (legacySettings.accentColor) deviceSettings.accentColor = legacySettings.accentColor;
 
                     await saveDeviceSettings();
-                    console.log('✅ Migrated legacy settings (API Key, User Name, etc)');
+                    console.log('Migrated legacy settings (API Key, User Name, etc)');
                 }
             } catch (err) {
-                console.warn('⚠️ Could not migrate legacy settings:', err);
+                console.warn('Could not migrate legacy settings:', err);
             }
 
             return true;
@@ -541,11 +541,11 @@ if (process.platform === 'win32') {
 
 // Register all IPC handlers BEFORE app is ready
 function setupIpcHandlers() {
-    console.log('📡 Setting up IPC handlers...');
+    console.log('Setting up IPC handlers...');
 
     // Error logging from renderer (for debugging APPX issues)
     ipcMain.handle('log-error', (_, errorData) => {
-        console.error('❌ Renderer Error:', errorData);
+        console.error('Renderer Error:', errorData);
         return true;
     });
 
@@ -581,7 +581,7 @@ function setupIpcHandlers() {
                 if (existsSync(badgePath)) {
                     const badgeIcon = nativeImage.createFromPath(badgePath).resize({ width: 8, height: 8 });
                     win.setOverlayIcon(badgeIcon, 'Timer Alert');
-                    console.log('✅ Taskbar badge set from:', badgePath);
+                    console.log('Taskbar badge set from:', badgePath);
                 } else {
                     console.warn('Badge icon not found at:', badgePath);
                 }
@@ -745,7 +745,7 @@ function setupIpcHandlers() {
         if (hotkey) {
             try {
                 const registered = globalShortcut.register(hotkey, () => {
-                    console.log('🚀 Quick Capture hotkey triggered!');
+                    console.log('Quick Capture hotkey triggered!');
                     if (win) {
                         // Bring window to front
                         if (win.isMinimized()) win.restore();
@@ -761,7 +761,7 @@ function setupIpcHandlers() {
                     return { success: false, error: 'Failed to register hotkey. It may be in use by another application.' };
                 }
                 currentHotkey = hotkey;
-                console.log('✅ Global hotkey registered:', hotkey);
+                console.log('Global hotkey registered:', hotkey);
                 return { success: true };
             } catch (e: any) {
                 console.error('Error registering hotkey:', e);
@@ -777,7 +777,7 @@ function setupIpcHandlers() {
             try {
                 globalShortcut.unregister(currentHotkey);
                 currentHotkey = null;
-                console.log('✅ Global hotkey unregistered');
+                console.log('Global hotkey unregistered');
             } catch (e) {
                 console.warn('Failed to unregister hotkey:', e);
             }
@@ -808,7 +808,7 @@ function setupIpcHandlers() {
                     });
                     if (registered) {
                         currentHotkey = hotkey;
-                        console.log('✅ Global hotkey enabled:', hotkey);
+                        console.log('Global hotkey enabled:', hotkey);
                     }
                 } catch (e) {
                     console.warn('Failed to register hotkey:', e);
@@ -820,7 +820,7 @@ function setupIpcHandlers() {
                 try {
                     globalShortcut.unregister(currentHotkey);
                     currentHotkey = null;
-                    console.log('✅ Global hotkey disabled');
+                    console.log('Global hotkey disabled');
                 } catch (e) {
                     console.warn('Failed to unregister hotkey:', e);
                 }
@@ -847,7 +847,7 @@ function setupIpcHandlers() {
                 });
                 if (registered) {
                     currentHotkey = hotkey;
-                    console.log('✅ Global hotkey initialized:', hotkey);
+                    console.log('Global hotkey initialized:', hotkey);
                 }
             } catch (e) {
                 console.warn('Failed to initialize global hotkey:', e);
@@ -866,7 +866,7 @@ function setupIpcHandlers() {
             ).catch(() => false);
 
             if (devSimulateRegionBlock && provider === 'gemini') {
-                console.log('🧪 DEV MODE: Simulating Gemini region restriction');
+                console.log('DEV MODE: Simulating Gemini region restriction');
                 return {
                     valid: false,
                     error: 'Google Gemini is not available in your region. Please use Perplexity instead.',
@@ -1113,7 +1113,7 @@ IMPORTANT RULES:
     });
 
     ipcMain.handle('get-creator-stats', async () => {
-        win?.webContents.executeJavaScript(`console.log("🚀 Fetching all Fortnite metrics + history...")`);
+        win?.webContents.executeJavaScript(`console.log("[Stats] Fetching all Fortnite metrics + history...")`);
         try {
             // Get user-configured creator codes, fallback to empty array
             const codes = deviceSettings.creatorCodes || [];
@@ -1157,7 +1157,7 @@ IMPORTANT RULES:
                 else if (metric === 'unique-players') results.uniquePlayers = total;
                 else if (metric === 'favorites') results.favorites = total;
                 else if (metric === 'plays') results.plays = total;
-                win?.webContents.executeJavaScript(`console.log("✅ ${metric}: ${total}")`);
+                win?.webContents.executeJavaScript(`console.log("[Stats] ${metric}: ${total}")`);
             }
 
             // Save stats to OneDrive folder for cross-device sync
@@ -1197,13 +1197,13 @@ IMPORTANT RULES:
                 });
 
                 await fs.writeFile(statsPath, JSON.stringify(history, null, 2));
-                win?.webContents.executeJavaScript(`console.log("💾 Saved week ${weekKey} snapshot")`);
+                win?.webContents.executeJavaScript(`console.log("[Stats] Saved week ${weekKey} snapshot")`);
             } else {
-                win?.webContents.executeJavaScript(`console.log("ℹ️ Week ${weekKey} already recorded - using cached data")`);
+                win?.webContents.executeJavaScript(`console.log("[Stats] Week ${weekKey} already recorded - using cached data")`);
             }
 
             const fmt = (n: number) => n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1000 ? (n / 1000).toFixed(1) + 'K' : n.toString();
-            win?.webContents.executeJavaScript(`console.log("📊 All-time: ${fmt(history.allTime.minutesPlayed)} min, ${fmt(history.allTime.uniquePlayers)} players, ${fmt(history.allTime.favorites)} favs, ${fmt(history.allTime.plays)} plays")`);
+            win?.webContents.executeJavaScript(`console.log("[Stats] All-time: ${fmt(history.allTime.minutesPlayed)} min, ${fmt(history.allTime.uniquePlayers)} players, ${fmt(history.allTime.favorites)} favs, ${fmt(history.allTime.plays)} plays")`);
 
             return {
                 fortnite: {
@@ -1221,7 +1221,7 @@ IMPORTANT RULES:
                 curseforge: { downloads: '0', username: deviceSettings.curseforgeUsername || '' }
             };
         } catch (e: any) {
-            win?.webContents.executeJavaScript(`console.error("❌ ${e.message}")`);
+            win?.webContents.executeJavaScript(`console.error("[Stats] Error: ${e.message}")`);
             return {
                 fortnite: {
                     minutesPlayed: '0', uniquePlayers: '0', favorites: '0', plays: '0',
@@ -1246,23 +1246,23 @@ IMPORTANT RULES:
                 win?.webContents.executeJavaScript(`console.log(${escaped})`).catch(() => { });
             };
 
-            log('📂 Reading data from: ' + currentDataPath);
-            log('📂 File exists: ' + existsSync(currentDataPath));
+            log('Reading data from: ' + currentDataPath);
+            log('File exists: ' + existsSync(currentDataPath));
 
             // Check for legacy migration if current data doesn't exist
             if (!existsSync(currentDataPath)) {
-                log('🔄 Attempting legacy data migration...');
+                log('Attempting legacy data migration...');
                 await tryMigrateLegacyData();
             }
 
             if (!existsSync(currentDataPath)) {
-                log('❌ No data file found, returning empty');
+                log('No data file found, returning empty');
                 return { notes: {} };
             }
 
             const rawData = JSON.parse(await fs.readFile(currentDataPath, 'utf-8'));
-            log('📥 Raw data loaded. Has notes? ' + !!rawData.notes);
-            log('📊 Raw notes keys: ' + (rawData.notes ? Object.keys(rawData.notes).length : 0));
+            log('Raw data loaded. Has notes? ' + !!rawData.notes);
+            log('Raw notes keys: ' + (rawData.notes ? Object.keys(rawData.notes).length : 0));
 
             // Normalize notes structure: ensure each date key contains an array
             if (rawData.notes && typeof rawData.notes === 'object') {
@@ -1280,33 +1280,33 @@ IMPORTANT RULES:
                     else if (value && typeof value === 'object' && value.id) {
                         fixedNotes[dateKey] = [value];
                         needsFixing = true;
-                        log('✅ Fixed date ' + dateKey + ': wrapped single note in array');
+                        log('Fixed date ' + dateKey + ': wrapped single note in array');
                     }
                     // If it's an empty string or invalid, create empty array
                     else {
                         fixedNotes[dateKey] = [];
                         if (value !== '' && value.length !== 0) {
                             needsFixing = true;
-                            log('⚠️ Fixed date ' + dateKey + ': replaced invalid value with empty array');
+                            log('Fixed date ' + dateKey + ': replaced invalid value with empty array');
                         }
                     }
                 }
 
-                log('✅ Total fixed notes: ' + Object.keys(fixedNotes).length);
+                log('Total fixed notes: ' + Object.keys(fixedNotes).length);
                 rawData.notes = fixedNotes;
 
                 // Save the fixed version back to disk
                 if (needsFixing) {
-                    log('💾 Normalized calendar-data.json structure. Saving...');
+                    log('Normalized calendar-data.json structure. Saving...');
                     await fs.writeFile(currentDataPath, JSON.stringify(rawData, null, 2));
-                    log('✅ Fixed data saved successfully.');
+                    log('Fixed data saved successfully.');
                 }
             }
 
-            log('📤 Returning data with ' + Object.keys(rawData.notes || {}).length + ' note dates');
+            log('Returning data with ' + Object.keys(rawData.notes || {}).length + ' note dates');
             return rawData;
         } catch (e) {
-            const errMsg = '❌ Error loading data: ' + (e as Error).message;
+            const errMsg = 'Error loading data: ' + (e as Error).message;
             console.error(errMsg, e);
             const escaped = JSON.stringify(errMsg);
             win?.webContents.executeJavaScript(`console.error(${escaped})`).catch(() => { });
@@ -1343,11 +1343,11 @@ IMPORTANT RULES:
             currentDataPath = newPath;
             globalSettingsPath = path.join(path.dirname(newPath), 'settings.json');
 
-            log(`🔄 Data folder selected via dialog`);
-            log(`🔄 Data path changed from: ${oldPath}`);
-            log(`🔄 Data path changed to: ${currentDataPath}`);
-            log(`🔄 Global settings path: ${globalSettingsPath}`);
-            log(`📂 File exists at new location: ${existsSync(currentDataPath)}`);
+            log(`Data folder selected via dialog`);
+            log(`Data path changed from: ${oldPath}`);
+            log(`Data path changed to: ${currentDataPath}`);
+            log(`Global settings path: ${globalSettingsPath}`);
+            log(`File exists at new location: ${existsSync(currentDataPath)}`);
 
             await saveGlobalSettings({ dataPath: newPath });
             return newPath;
@@ -1366,10 +1366,10 @@ IMPORTANT RULES:
         currentDataPath = newPath;
         globalSettingsPath = path.join(path.dirname(newPath), 'settings.json');
 
-        log(`🔄 Data path changed from: ${oldPath}`);
-        log(`🔄 Data path changed to: ${currentDataPath}`);
-        log(`🔄 Global settings path: ${globalSettingsPath}`);
-        log(`📂 File exists at new location: ${existsSync(currentDataPath)}`);
+        log(`Data path changed from: ${oldPath}`);
+        log(`Data path changed to: ${currentDataPath}`);
+        log(`Global settings path: ${globalSettingsPath}`);
+        log(`File exists at new location: ${existsSync(currentDataPath)}`);
 
         await saveGlobalSettings({ dataPath: newPath });
         return newPath;
@@ -1417,9 +1417,9 @@ IMPORTANT RULES:
                 const oldPath = currentDataPath;
                 currentDataPath = value;
                 globalSettingsPath = path.join(path.dirname(value), 'settings.json');
-                log(`🔄 Data path updated from: ${oldPath}`);
-                log(`🔄 Data path updated to: ${currentDataPath}`);
-                log(`🔄 Global settings path updated to: ${globalSettingsPath}`);
+                log(`Data path updated from: ${oldPath}`);
+                log(`Data path updated to: ${currentDataPath}`);
+                log(`Global settings path updated to: ${globalSettingsPath}`);
             }
 
             return { success: true };
@@ -1542,7 +1542,7 @@ IMPORTANT RULES:
             const thoughtsPlusPath = path.join(oneDrivePath, 'ThoughtsPlus');
             const calendarPlusPath = path.join(oneDrivePath, 'A - CalendarPlus');
 
-            console.log('🔄 FORCE MIGRATION REQUESTED');
+            console.log('FORCE MIGRATION REQUESTED');
             console.log(`  Source: ${calendarPlusPath}`);
             console.log(`  Target: ${thoughtsPlusPath}`);
 
@@ -1565,11 +1565,11 @@ IMPORTANT RULES:
                 const stat = await fs.stat(src);
                 if (stat.isFile()) {
                     await fs.copyFile(src, dest);
-                    console.log(`  ✅ Copied legacy file: ${file}`);
+                    console.log(`  Copied legacy file: ${file}`);
 
                     // Special handling for device settings if they were stored differently in older versions
                     if (file === 'device-settings.json' || file === 'settings.json') {
-                        console.log(`  ℹ️  Analyzing migrated ${file} for preferences...`);
+                        console.log(`  Analyzing migrated ${file} for preferences...`);
                         try {
                             const migratedSettings = JSON.parse(await fs.readFile(dest, 'utf-8'));
                             let updated = false;
@@ -1600,11 +1600,11 @@ IMPORTANT RULES:
 
                             if (updated) {
                                 await saveDeviceSettings();
-                                console.log('  ✅ Applied migrated preferences to active device settings.');
+                                console.log('  Applied migrated preferences to active device settings.');
                             }
 
                         } catch (parseErr) {
-                            console.warn('  ⚠️ Failed to parse migrated settings file:', parseErr);
+                            console.warn('  Failed to parse migrated settings file:', parseErr);
                         }
                     }
 
@@ -1707,7 +1707,7 @@ async function generateWithOpenAI(apiKey: string, prompt: string, provider: 'ope
         baseURL
     });
 
-    const logMsg = JSON.stringify(`🤖 Attempting AI generation with ${provider} model: ${model}`);
+    const logMsg = JSON.stringify(`[AI] Attempting AI generation with ${provider} model: ${model}`);
     win?.webContents.executeJavaScript(`console.log(${logMsg})`).catch(() => { });
 
     try {
@@ -1719,7 +1719,7 @@ async function generateWithOpenAI(apiKey: string, prompt: string, provider: 'ope
 
         return completion.choices[0]?.message?.content || '';
     } catch (e: any) {
-        const errorMsg = JSON.stringify(`❌ ${provider} failed: ${e.message}`);
+        const errorMsg = JSON.stringify(`[AI] ${provider} failed: ${e.message}`);
         win?.webContents.executeJavaScript(`console.error(${errorMsg})`).catch(() => { });
         throw new Error(getFriendlyErrorMessage(e, provider));
     }
@@ -1733,7 +1733,7 @@ async function generateWithGemini(genAI: GoogleGenerativeAI, prompt: string): Pr
     ).catch(() => false);
 
     if (devSimulateRegionBlock) {
-        console.log('🧪 DEV MODE: Simulating Gemini region restriction in content generation');
+        console.log('DEV MODE: Simulating Gemini region restriction in content generation');
         throw new Error('User location is not supported for the API use');
     }
 
@@ -1747,7 +1747,7 @@ async function generateWithGemini(genAI: GoogleGenerativeAI, prompt: string): Pr
     for (const modelName of models) {
         try {
             // Log to renderer console for visibility (safely escaped)
-            const logMsg = JSON.stringify(`🤖 Attempting AI generation with model: ${modelName}`);
+            const logMsg = JSON.stringify(`[AI] Attempting AI generation with model: ${modelName}`);
             win?.webContents.executeJavaScript(`console.log(${logMsg})`).catch(() => { });
 
             const model = genAI.getGenerativeModel({ model: modelName });
@@ -1756,7 +1756,7 @@ async function generateWithGemini(genAI: GoogleGenerativeAI, prompt: string): Pr
             return response.text();
         } catch (e: any) {
             // Log error to renderer console (safely escaped)
-            const errorMsg = JSON.stringify(`❌ Model ${modelName} failed: ${e.message}`);
+            const errorMsg = JSON.stringify(`[AI] Model ${modelName} failed: ${e.message}`);
             win?.webContents.executeJavaScript(`console.error(${errorMsg})`).catch(() => { });
 
             console.error(`Model ${modelName} failed:`, e.message);
@@ -1817,7 +1817,7 @@ async function logFallbackEvent(from: AIProvider, to: AIProvider, reason: string
     await saveDeviceSettings();
 
     // Notify renderer about the fallback
-    const msg = JSON.stringify(`⚠️ AI Fallback: Switched from ${from} to ${to} - ${reason}`);
+    const msg = JSON.stringify(`[AI] Fallback: Switched from ${from} to ${to} - ${reason}`);
     win?.webContents.executeJavaScript(`console.warn(${msg})`).catch(() => { });
 
     // Send event to renderer for UI notification

@@ -150,9 +150,9 @@ export function AiQuickAddModal({ isOpen, onClose, onSave }: AiQuickAddModalProp
     };
 
     const confirmAiNote = async () => {
-        console.log('🔵 confirmAiNote called');
+        console.log('[AiQuickAdd] confirmAiNote called');
         if (aiProposedNote) {
-            console.log('🔵 aiProposedNote exists:', {
+            console.log('[AiQuickAdd] aiProposedNote exists:', {
                 title: aiProposedNote.note.title,
                 hasRecurrence: !!aiProposedNote.note.recurrence,
                 recurrenceType: aiProposedNote.note.recurrence?.type,
@@ -160,18 +160,18 @@ export function AiQuickAddModal({ isOpen, onClose, onSave }: AiQuickAddModalProp
             });
 
             try {
-                console.log('🔵 Calling onSave...');
+                console.log('[AiQuickAdd] Calling onSave...');
                 await onSave(aiProposedNote.note, aiProposedNote.date);
-                console.log('✅ onSave completed successfully');
+                console.log('[AiQuickAdd] onSave completed successfully');
 
-                console.log('🔵 Calling resetAndClose...');
+                console.log('[AiQuickAdd] Calling resetAndClose...');
                 resetAndClose();
-                console.log('✅ resetAndClose completed');
+                console.log('[AiQuickAdd] resetAndClose completed');
             } catch (error) {
-                console.error('❌ Error in confirmAiNote:', error);
+                console.error('[AiQuickAdd] Error in confirmAiNote:', error);
             }
         } else {
-            console.log('⚠️ No aiProposedNote to save');
+            console.log('[AiQuickAdd] No aiProposedNote to save');
         }
     };
 

@@ -160,7 +160,7 @@ function App() {
         // Listen for quick capture trigger from main process (global hotkey)
         // @ts-ignore
         const handleOpenQuickCapture = () => {
-            console.log('🚀 Quick Capture event received from main process');
+            console.log('[QuickCapture] Event received from main process');
             setIsQuickCaptureOpen(true);
         };
         // @ts-ignore
@@ -280,7 +280,7 @@ function App() {
         try {
             // @ts-ignore
             const name = await window.ipcRenderer.invoke('get-username');
-            console.log('👤 Loaded username:', name);
+            console.log('[User] Loaded username:', name);
             if (name) {
                 setUserName(name);
             }
@@ -303,7 +303,7 @@ function App() {
     // Listen for data path changes
     useEffect(() => {
         const handleDataPathChange = (event: any) => {
-            console.log('🔄 Data path changed event received:', event.detail);
+            console.log('[Data] Data path changed event received:', event.detail);
             loadNotes(); // Reload notes from new location
         };
         window.addEventListener('data-path-changed', handleDataPathChange);
@@ -391,8 +391,8 @@ function App() {
         try {
             // @ts-ignore
             const data = await window.ipcRenderer.invoke('get-data');
-            console.log('📥 Loaded notes data:', data);
-            console.log('📊 Notes keys:', data?.notes ? Object.keys(data.notes) : 'No notes');
+            console.log('[Notes] Loaded notes data:', data);
+            console.log('[Notes] Notes keys:', data?.notes ? Object.keys(data.notes) : 'No notes');
             if (data && data.notes) {
                 setNotes(data.notes);
             }
@@ -444,22 +444,22 @@ function App() {
             const newNotes = { ...mockNotesState, [dateKey]: [...existingNotes, note] };
             setMockNotesState(newNotes);
         } else {
-            console.log('🟢 Creating notes map...');
+            console.log('[Note] Creating notes map...');
             let newNotesMap = { ...notes };
 
             // Generate a seriesId if this is a recurring note
             const seriesId = note.recurrence ? crypto.randomUUID() : undefined;
-            console.log('🟢 SeriesId:', seriesId);
+            console.log('[Note] SeriesId:', seriesId);
 
             // Add the first instance with seriesId
             const firstNote = { ...note, seriesId };
             if (!newNotesMap[dateKey]) newNotesMap[dateKey] = [];
             newNotesMap[dateKey].push(firstNote);
-            console.log('🟢 First note added to', dateKey);
+            console.log('[Note] First note added to', dateKey);
 
             // Handle recurring notes
             if (note.recurrence) {
-                console.log('🟢 Processing recurring notes...');
+                console.log('[Note] Processing recurring notes...');
                 let currentDate = date;
                 let count = 0;
                 const r = note.recurrence;
@@ -490,29 +490,29 @@ function App() {
                     newNotesMap[dk].push({ ...note, id: crypto.randomUUID(), seriesId });
                     count++;
                 }
-                console.log(`🟢 Created ${count + 1} recurring instances`);
+                console.log(`[Note] Created ${count + 1} recurring instances`);
             }
 
-            console.log('🟢 Setting notes state...');
+            console.log('[Note] Setting notes state...');
             setNotes(newNotesMap);
 
-            console.log('🟢 Saving to backend...');
+            console.log('[Note] Saving to backend...');
             try {
                 await saveNotesToBackend(newNotesMap);
-                console.log('✅ Backend save completed');
+                console.log('[Note] Backend save completed');
             } catch (error) {
-                console.error('❌ Backend save failed:', error);
+                console.error('[Note] Backend save failed:', error);
             }
         }
 
-        console.log('🟢 Showing notification...');
+        console.log('[Note] Showing notification...');
         addNotification({
             title: 'Note Added',
             message: `"${note.title}" has been added to your calendar.`,
             type: 'success',
             duration: 3000
         });
-        console.log('✅ handleAddNote completed');
+        console.log('[Note] handleAddNote completed');
     };
 
     const handleUpdateNote = (note: Note, date: Date) => {

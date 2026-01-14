@@ -8,14 +8,14 @@ import { DashboardLayoutProvider } from './contexts/DashboardLayoutContext'
 import { ErrorBoundary } from './components/ErrorBoundary'
 
 // Log startup for debugging APPX issues
-console.log('🚀 ThoughtsPlus starting...');
-console.log('📍 Location:', window.location.href);
-console.log('🌐 User Agent:', navigator.userAgent);
+console.log('[App] ThoughtsPlus starting...');
+console.log('[App] Location:', window.location.href);
+console.log('[App] User Agent:', navigator.userAgent);
 
 // Check if IPC is available
 if (typeof window !== 'undefined') {
     // @ts-ignore
-    console.log('📡 IPC Available:', !!window.ipcRenderer);
+    console.log('[App] IPC Available:', !!window.ipcRenderer);
 }
 
 // Initialize saved font preference immediately on startup
@@ -47,7 +47,7 @@ const initializeFont = () => {
         }
         document.documentElement.style.setProperty('--app-font', fontStack);
         document.body.style.fontFamily = fontStack;
-        console.log('🔤 Font initialized:', savedFont);
+        console.log('[Font] Font initialized:', savedFont);
     }
 };
 

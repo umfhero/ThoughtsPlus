@@ -121,10 +121,10 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
         const checkPendingNavigation = () => {
             const pendingId = localStorage.getItem('pendingBoardNavigation');
             if (pendingId && boards.length > 0) {
-                console.log('🔄 [Board] Checking pending navigation:', pendingId);
+                console.log('[Board] Checking pending navigation:', pendingId);
                 const targetBoard = boards.find(b => b.id === pendingId);
                 if (targetBoard && pendingId !== activeBoardId) {
-                    console.log('✅ [Board] Switching to board:', targetBoard.name);
+                    console.log('[Board] Switching to board:', targetBoard.name);
                     localStorage.removeItem('pendingBoardNavigation');
                     navigatedBoardIdRef.current = pendingId; // Store to prevent loadData override
                     setActiveBoardId(pendingId);
@@ -132,7 +132,7 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
                     // Reset centering so it recalculates for the new board
                     hasCenteredRef.current = null;
                 } else if (!targetBoard) {
-                    console.warn('⚠️ [Board] Pending board not found:', pendingId);
+                    console.warn('[Board] Pending board not found:', pendingId);
                     localStorage.removeItem('pendingBoardNavigation');
                 }
             }
@@ -155,7 +155,7 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
     // Listen for create-new-board event from Dashboard
     useEffect(() => {
         const handleCreateNewBoard = () => {
-            console.log('📝 [Board] Received create-new-board event');
+            console.log('[Board] Received create-new-board event');
             addNewBoard();
         };
 
@@ -197,7 +197,7 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
 
             // Check if board changed during wait - if so, abort
             if (activeBoardIdRef.current !== currentBoardId) {
-                console.log('📸 [Board] Board changed during capture, aborting for:', currentBoardId);
+                console.log('[Board] Board changed during capture, aborting for:', currentBoardId);
                 return;
             }
 
@@ -220,7 +220,7 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
 
             // Check again after capture in case board changed
             if (activeBoardIdRef.current !== currentBoardId) {
-                console.log('📸 [Board] Board changed after capture, aborting for:', currentBoardId);
+                console.log('[Board] Board changed after capture, aborting for:', currentBoardId);
                 return;
             }
 
@@ -253,7 +253,7 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
             // Also save to legacy key for backward compatibility
             localStorage.setItem('boardPreviewImage', JSON.stringify(previewData));
 
-            console.log('📸 [Board] Preview screenshot captured for board:', currentBoardId);
+            console.log('[Board] Preview screenshot captured for board:', currentBoardId);
         } catch (e) {
             console.error('Failed to capture board preview:', e);
         }
@@ -275,7 +275,7 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
             const canvasWidth = canvasRect.width;
             const canvasHeight = canvasRect.height;
 
-            console.log(`📐 [Board AutoCenter] Attempt ${attempts + 1}: Canvas ${canvasWidth}x${canvasHeight}`);
+            console.log(`[Board AutoCenter] Attempt ${attempts + 1}: Canvas ${canvasWidth}x${canvasHeight}`);
 
             if (canvasWidth === 0 || canvasHeight === 0) {
                 if (attempts < maxAttempts) {
@@ -302,7 +302,7 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
                 const optimalZoom = Math.min(zoomX, zoomY, 1.2); // Cap at 120% zoom max
                 const finalZoom = Math.max(optimalZoom, 0.6); // Minimum 60% zoom (+10%)
 
-                console.log(`🔎 [Board AutoCenter] Calculated Zoom: ${finalZoom}, Notes Dim: ${notesWidth}x${notesHeight}`);
+                console.log(`[Board AutoCenter] Calculated Zoom: ${finalZoom}, Notes Dim: ${notesWidth}x${notesHeight}`);
 
                 // Set the zoom level
                 setZoom(finalZoom);
@@ -324,7 +324,7 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
                 setTimeout(capturePreviewScreenshot, 500);
             } else {
                 // No notes - reset to center of canvas
-                console.log('🔎 [Board AutoCenter] No notes, resetting zoom/pan');
+                console.log('[Board AutoCenter] No notes, resetting zoom/pan');
                 setZoom(1);
                 setPanOffset({ x: 0, y: 0 });
 
@@ -345,10 +345,10 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
 
     const loadData = async () => {
         try {
-            console.log('📥 [Board] loadData started');
+            console.log('[Board] loadData started');
             // @ts-ignore
             const response = await window.ipcRenderer.invoke('get-boards');
-            console.log('📥 [Board] get-boards response type:', Array.isArray(response) ? 'Array' : typeof response);
+            console.log('[Board] get-boards response type:', Array.isArray(response) ? 'Array' : typeof response);
 
             // Handle both possible response structures
             // 1. response is { boards: [...] }
@@ -365,7 +365,7 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
                 }
             }
 
-            console.log('📥 [Board] Loaded boards:', loadedBoards.length);
+            console.log('[Board] Loaded boards:', loadedBoards.length);
 
             if (loadedBoards.length > 0) {
                 // Migration: Add tape to existing image notes that don't have attachments
@@ -382,7 +382,7 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
                 }));
 
                 if (needsSave) {
-                    console.log('📥 [Board] Migrated image notes to have tape attachment');
+                    console.log('[Board] Migrated image notes to have tape attachment');
                 }
 
                 setBoards(loadedBoards);
@@ -391,7 +391,7 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
                 // Check both the ref and localStorage (set by Dashboard before navigate-to-page)
                 const pendingNewBoardFromStorage = localStorage.getItem('pendingNewBoardCreation') === 'true';
                 if (pendingNewBoardRef.current || pendingNewBoardFromStorage) {
-                    console.log('📥 [Board] Pending new board creation, skipping board selection');
+                    console.log('[Board] Pending new board creation, skipping board selection');
                     return;
                 }
 
@@ -404,19 +404,19 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
 
                 const pendingId = localStorage.getItem('pendingBoardNavigation');
                 if (pendingId) {
-                    console.log('✅ [Board] Found pending navigation for:', pendingId);
+                    console.log('[Board] Found pending navigation for:', pendingId);
                     localStorage.removeItem('pendingBoardNavigation'); // Consume it
                     navigatedBoardIdRef.current = pendingId; // Store it to prevent override
                 }
 
                 // Use navigatedBoardIdRef if set (this survives multiple loadData calls)
                 let targetId = navigatedBoardIdRef.current || pendingId || lastActiveId || loadedBoards[0].id;
-                console.log('🎯 [Board] targetId determined as:', targetId, '(from ref:', !!navigatedBoardIdRef.current, ')');
+                console.log('[Board] targetId determined as:', targetId, '(from ref:', !!navigatedBoardIdRef.current, ')');
 
                 // Validate targetId exists in loaded boards
                 const targetBoard = loadedBoards.find(b => b.id === targetId);
                 if (!targetBoard) {
-                    console.warn('⚠️ [Board] Target ID not found in loaded boards, falling back to first board');
+                    console.warn('[Board] Target ID not found in loaded boards, falling back to first board');
                     targetId = loadedBoards[0].id;
                     lastActiveId = ''; // Reset if invalid
                     navigatedBoardIdRef.current = null; // Clear invalid ref
@@ -424,10 +424,10 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
 
                 setActiveBoardId(targetId);
                 const current = loadedBoards.find((b: Board) => b.id === targetId);
-                console.log('✅ [Board] Setting notes from board:', current?.name, 'Note Count:', current?.notes?.length);
+                console.log('[Board] Setting notes from board:', current?.name, 'Note Count:', current?.notes?.length);
                 setNotes(current?.notes || []);
             } else {
-                console.log('⚠️ [Board] No boards found in data. Creating default.');
+                console.log('[Board] No boards found in data. Creating default.');
                 // Create default board
                 const defaultBoard: Board = {
                     id: 'default-board-' + Date.now(),
@@ -440,7 +440,7 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
                 setNotes([]);
             }
         } catch (e) {
-            console.error('❌ [Board] Failed to load boards:', e);
+            console.error('[Board] Failed to load boards:', e);
             // Fallback: create default board even on error
             const defaultBoard: Board = {
                 id: 'error-fallback-' + Date.now(),
@@ -457,7 +457,7 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
     };
 
     // DEBUG: Render Log
-    console.log(`🎨 [Board Render] Notes: ${notes.length}, Zoom: ${zoom}, Pan: ${panOffset.x},${panOffset.y}, Canvas: ${canvasRef.current ? 'Mounted' : 'Null'}`);
+    console.log(`[Board Render] Notes: ${notes.length}, Zoom: ${zoom}, Pan: ${panOffset.x},${panOffset.y}, Canvas: ${canvasRef.current ? 'Mounted' : 'Null'}`);
 
     const saveData = async () => {
         try {
@@ -697,11 +697,11 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
     const addNewBoard = () => {
         // Prevent double creation from React StrictMode
         if (isCreatingBoardRef.current) {
-            console.log('📝 [Board] Already creating a board, skipping...');
+            console.log('[Board] Already creating a board, skipping...');
             return;
         }
 
-        console.log('📝 [Board] Creating new board...');
+        console.log('[Board] Creating new board...');
         isCreatingBoardRef.current = true;
 
         // Generate the new board ID upfront so we can track it
@@ -722,7 +722,7 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
         setBoards(prevBoards => {
             // Check if this board was already added (StrictMode double call)
             if (prevBoards.some(b => b.id === newBoardId)) {
-                console.log('📝 [Board] Board already exists, skipping duplicate:', newBoardId);
+                console.log('[Board] Board already exists, skipping duplicate:', newBoardId);
                 return prevBoards;
             }
 
@@ -746,7 +746,7 @@ export function BoardPage({ refreshTrigger }: { refreshTrigger?: number }) {
                 notes: []
             };
 
-            console.log('📝 [Board] Created board:', newBoard.name, newBoard.id, '(existing:', existingNumbers, ')');
+            console.log('[Board] Created board:', newBoard.name, newBoard.id, '(existing:', existingNumbers, ')');
 
             return [...prevBoards, newBoard];
         });
