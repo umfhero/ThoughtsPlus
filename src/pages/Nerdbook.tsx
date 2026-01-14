@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     Plus, Trash2, Edit2, Check, X, ChevronLeft, ChevronUp, ChevronDown,
     Type, Code, FileText, Sparkles, FolderOpen, Clock, Save, Scissors,
-    Clipboard, Play, Square, Copy, ArrowUp, ArrowDown, RotateCcw, Loader2, Terminal
+    Clipboard, Play, Square, Copy, ArrowUp, ArrowDown, RotateCcw, Loader2, Terminal,
+    Sun, Moon
 } from 'lucide-react';
 import { NerdNotebook, NerdCell, NerdCellType, Page } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
@@ -20,6 +21,9 @@ import 'prismjs/components/prism-json';
 import 'prismjs/components/prism-markdown';
 import 'prismjs/components/prism-bash';
 import 'prismjs/components/prism-sql';
+
+// Code theme options
+type CodeTheme = 'auto' | 'dark' | 'light';
 
 interface NerdbookPageProps {
     notebooks: NerdNotebook[];
@@ -51,7 +55,7 @@ export function NerdbookPage({
     onDeleteNotebook,
     setPage
 }: NerdbookPageProps) {
-    const { accentColor } = useTheme();
+    const { accentColor, theme } = useTheme();
     const [currentView, setCurrentView] = useState<NerdbookView>('list');
     const [activeNotebook, setActiveNotebook] = useState<NerdNotebook | null>(null);
     const [selectedCellId, setSelectedCellId] = useState<string | null>(null);
@@ -68,6 +72,24 @@ export function NerdbookPage({
     const [pyodideLoading, setPyodideLoading] = useState(false);
     const [pyodideReady, setPyodideReady] = useState(false);
     const pyodideRef = useRef<any>(null);
+
+    // Code theme setting: 'auto' follows system theme, 'dark' always dark, 'light' always light
+    const [codeTheme, setCodeTheme] = useState<CodeTheme>(() => {
+        const saved = localStorage.getItem('nerdbook-code-theme');
+        return (saved as CodeTheme) || 'auto';
+    });
+
+    // Determine if code cells should use dark theme
+    const useCodeDarkTheme = useMemo(() => {
+        if (codeTheme === 'dark') return true;
+        if (codeTheme === 'light') return false;
+        return theme === 'dark'; // 'auto' follows system theme
+    }, [codeTheme, theme]);
+
+    // Save code theme preference
+    useEffect(() => {
+        localStorage.setItem('nerdbook-code-theme', codeTheme);
+    }, [codeTheme]);
 
     // Clear all outputs when opening a notebook (fresh start each time)
     useEffect(() => {
@@ -1416,6 +1438,32 @@ sys.stderr = StringIO()
                                         <option value="markdown">Markdown</option>
                                         <option value="text">Text</option>
                                     </select>
+
+                                    <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
+
+                                    {/* Code Theme Toggle */}
+                                    <div className="flex items-center gap-1">
+                                        <button
+                                            onClick={() => setCodeTheme(codeTheme === 'auto' ? 'dark' : codeTheme === 'dark' ? 'light' : 'auto')}
+                                            className={clsx(
+                                                "flex items-center gap-1.5 px-2 py-1 rounded-md text-sm transition-colors",
+                                                "bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700",
+                                                "text-gray-600 dark:text-gray-300"
+                                            )}
+                                            title={`Code theme: ${codeTheme === 'auto' ? 'Auto (follows app theme)' : codeTheme === 'dark' ? 'Always Dark' : 'Always Light'}`}
+                                        >
+                                            {codeTheme === 'dark' ? (
+                                                <Moon className="w-3.5 h-3.5" />
+                                            ) : codeTheme === 'light' ? (
+                                                <Sun className="w-3.5 h-3.5" />
+                                            ) : (
+                                                <Code className="w-3.5 h-3.5" />
+                                            )}
+                                            <span className="text-xs">
+                                                {codeTheme === 'auto' ? 'Auto' : codeTheme === 'dark' ? 'Dark' : 'Light'}
+                                            </span>
+                                        </button>
+                                    </div>
                                 </div>
 
                                 {/* Notebook Title */}
@@ -1464,12 +1512,18 @@ sys.stderr = StringIO()
                                     )}
 
                                     {/* Mode indicator */}
-                                    <div className={clsx(
-                                        "px-2 py-1 rounded text-xs font-medium",
-                                        cellMode === 'command'
-                                            ? "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
-                                            : "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
-                                    )}>
+                                    <div
+                                        className={clsx(
+                                            "px-2 py-1 rounded text-xs font-medium",
+                                            cellMode === 'command'
+                                                ? "text-white"
+                                                : "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
+                                        )}
+                                        style={cellMode === 'command' ? {
+                                            backgroundColor: `${accentColor}20`,
+                                            color: accentColor
+                                        } : undefined}
+                                    >
                                         {cellMode === 'command' ? 'Command' : 'Edit'}
                                     </div>
                                 </div>
@@ -1513,12 +1567,15 @@ sys.stderr = StringIO()
                                                 <div
                                                     className={clsx(
                                                         "w-1 rounded-full mr-2 transition-colors",
-                                                        isSelected
-                                                            ? cellMode === 'command'
-                                                                ? "bg-blue-500"
-                                                                : "bg-green-500"
-                                                            : "bg-transparent group-hover:bg-gray-200 dark:group-hover:bg-gray-700"
+                                                        !isSelected && "bg-transparent group-hover:bg-gray-200 dark:group-hover:bg-gray-700"
                                                     )}
+                                                    style={{
+                                                        backgroundColor: isSelected
+                                                            ? cellMode === 'command'
+                                                                ? accentColor
+                                                                : '#22c55e' // green-500 for edit mode
+                                                            : undefined
+                                                    }}
                                                 />
 
                                                 {/* Cell Content */}
@@ -1567,7 +1624,12 @@ sys.stderr = StringIO()
                                                             className={clsx(
                                                                 "w-full resize-none focus:outline-none bg-transparent py-2",
                                                                 "text-gray-900 dark:text-gray-100 placeholder-gray-400",
-                                                                cell.type === 'code' && "font-mono text-sm bg-gray-900 dark:bg-gray-950 text-gray-100 rounded-lg px-4 py-3"
+                                                                cell.type === 'code' && clsx(
+                                                                    "font-mono text-sm rounded-lg px-4 py-3",
+                                                                    useCodeDarkTheme
+                                                                        ? "bg-gray-900 text-gray-100"
+                                                                        : "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                                                                )
                                                             )}
                                                             autoFocus
                                                         />
@@ -1592,9 +1654,17 @@ sys.stderr = StringIO()
                                                                         }}
                                                                     />
                                                                 ) : cell.type === 'code' ? (
-                                                                    <pre className="bg-gray-900 dark:bg-gray-950 rounded-lg px-4 py-3 overflow-x-auto">
+                                                                    <pre className={clsx(
+                                                                        "rounded-lg px-4 py-3 overflow-x-auto",
+                                                                        useCodeDarkTheme
+                                                                            ? "bg-gray-900 text-gray-100"
+                                                                            : "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                                                                    )}>
                                                                         <code
-                                                                            className={`language-${detectLanguage(cell.content)}`}
+                                                                            className={clsx(
+                                                                                `language-${detectLanguage(cell.content)}`,
+                                                                                !useCodeDarkTheme && "prism-light"
+                                                                            )}
                                                                             dangerouslySetInnerHTML={{
                                                                                 __html: highlightCode(cell.content, detectLanguage(cell.content))
                                                                             }}
@@ -1643,9 +1713,19 @@ sys.stderr = StringIO()
                                                                     "font-mono text-sm rounded-lg px-4 py-3 overflow-auto",
                                                                     "max-h-48", // Max height to prevent infinite expansion
                                                                     "select-text cursor-text", // Enable text selection
-                                                                    cell.executionError
-                                                                        ? "bg-gray-900 dark:bg-gray-950 border border-red-500/50 text-red-400"
-                                                                        : "bg-gray-900 dark:bg-gray-950 text-green-400"
+                                                                    useCodeDarkTheme
+                                                                        ? clsx(
+                                                                            "bg-gray-900",
+                                                                            cell.executionError
+                                                                                ? "border border-red-500/50 text-red-400"
+                                                                                : "text-green-400"
+                                                                        )
+                                                                        : clsx(
+                                                                            "bg-gray-100 dark:bg-gray-800",
+                                                                            cell.executionError
+                                                                                ? "border border-red-500/50 text-red-600 dark:text-red-400"
+                                                                                : "text-green-600 dark:text-green-400"
+                                                                        )
                                                                 )}
                                                                 style={{ userSelect: 'text' }}
                                                             >

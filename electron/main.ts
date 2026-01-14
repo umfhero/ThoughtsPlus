@@ -84,7 +84,64 @@ async function copyProductionToDevFolder(): Promise<void> {
     console.log('================================================================');
     console.log('🔧 DEV MODE: Data Isolation Active');
     console.log('================================================================');
-    console.log(`Production folder: ${PROD_DATA_FOLDER}`);
+
+    // Find the actual production data folder (same logic as loadSettings)
+    let actualProdFolder = '';
+    let actualProdDataPath = '';
+    const folderNames = ['ThoughtsPlus', 'A - CalendarPlus', 'A - Calendar Pro', 'CalendarPlus'];
+    const documentsPath = app.getPath('documents');
+
+    // 1. Search in OneDrive for folders WITH calendar-data.json
+    for (const folderName of folderNames) {
+        const checkPath = path.join(oneDrivePath, folderName);
+        const dataFile = path.join(checkPath, 'calendar-data.json');
+        if (existsSync(dataFile)) {
+            actualProdFolder = checkPath;
+            actualProdDataPath = dataFile;
+            console.log(`Found production data in OneDrive: ${actualProdFolder}`);
+            break;
+        }
+    }
+
+    // 2. Search in Documents if not found in OneDrive
+    if (!actualProdFolder) {
+        for (const folderName of folderNames) {
+            const checkPath = path.join(documentsPath, folderName);
+            const dataFile = path.join(checkPath, 'calendar-data.json');
+            if (existsSync(dataFile)) {
+                actualProdFolder = checkPath;
+                actualProdDataPath = dataFile;
+                console.log(`Found production data in Documents: ${actualProdFolder}`);
+                break;
+            }
+        }
+    }
+
+    // 3. Check settings.json in known locations for custom dataPath
+    if (!actualProdFolder) {
+        for (const folderName of folderNames) {
+            const settingsPath = path.join(oneDrivePath, folderName, 'settings.json');
+            if (existsSync(settingsPath)) {
+                try {
+                    const settings = JSON.parse(await fs.readFile(settingsPath, 'utf-8'));
+                    if (settings.dataPath && existsSync(settings.dataPath)) {
+                        actualProdDataPath = settings.dataPath;
+                        actualProdFolder = path.dirname(settings.dataPath);
+                        console.log(`Found production data via settings.json: ${actualProdFolder}`);
+                        break;
+                    }
+                } catch { }
+            }
+        }
+    }
+
+    // Fallback to default production path
+    if (!actualProdFolder) {
+        actualProdFolder = PROD_DATA_FOLDER;
+        actualProdDataPath = PROD_DATA_PATH;
+    }
+
+    console.log(`Production folder: ${actualProdFolder}`);
     console.log(`Dev folder: ${devDataFolder}`);
 
     try {
@@ -94,8 +151,8 @@ async function copyProductionToDevFolder(): Promise<void> {
             console.log('Created dev data folder');
         }
 
-        // Copy production data to dev folder if dev data doesn't exist or is older
-        if (existsSync(PROD_DATA_PATH)) {
+        // Copy production data to dev folder if dev data doesn't exist or is corrupted/empty
+        if (existsSync(actualProdDataPath)) {
             let shouldCopy = !existsSync(devDataPath);
 
             if (!shouldCopy && existsSync(devDataPath)) {
@@ -107,14 +164,36 @@ async function copyProductionToDevFolder(): Promise<void> {
                     console.log('⚠️ Dev data file is very small, likely corrupted. Copying from production...');
                     shouldCopy = true;
                 }
+
+                // Also check if dev file has no actual notes data
+                if (!shouldCopy) {
+                    try {
+                        const devData = JSON.parse(await fs.readFile(devDataPath, 'utf-8'));
+                        const devNotesCount = devData.notes ? Object.keys(devData.notes).length : 0;
+
+                        // Check if production has more data
+                        const prodData = JSON.parse(await fs.readFile(actualProdDataPath, 'utf-8'));
+                        const prodNotesCount = prodData.notes ? Object.keys(prodData.notes).length : 0;
+
+                        console.log(`Dev notes count: ${devNotesCount}, Production notes count: ${prodNotesCount}`);
+
+                        if (devNotesCount === 0 && prodNotesCount > 0) {
+                            console.log('⚠️ Dev data has no notes but production does. Copying from production...');
+                            shouldCopy = true;
+                        }
+                    } catch (parseErr) {
+                        console.log('⚠️ Failed to parse dev data file. Copying from production...');
+                        shouldCopy = true;
+                    }
+                }
             }
 
             if (shouldCopy) {
                 // Copy all JSON files from production to dev
-                const files = await fs.readdir(PROD_DATA_FOLDER);
+                const files = await fs.readdir(actualProdFolder);
                 for (const file of files) {
                     if (file.endsWith('.json')) {
-                        const src = path.join(PROD_DATA_FOLDER, file);
+                        const src = path.join(actualProdFolder, file);
                         const dest = path.join(devDataFolder, file);
                         const stat = await fs.stat(src);
                         if (stat.isFile()) {
@@ -128,7 +207,7 @@ async function copyProductionToDevFolder(): Promise<void> {
                 console.log('Dev folder already has data, using existing');
             }
         } else {
-            console.log('No production data found to copy');
+            console.log('No production data found to copy at: ' + actualProdDataPath);
         }
     } catch (err) {
         console.error('Failed to copy production data to dev folder:', err);

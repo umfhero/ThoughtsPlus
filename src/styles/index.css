@@ -349,3 +349,89 @@ body.is-scrolling ::-webkit-scrollbar-thumb {
   @apply overflow-hidden text-ellipsis whitespace-nowrap;
   max-width: 100%;
 }
+
+
+/* ============================================
+   Prism.js Light Theme Override for Nerdbook
+   Applied when code cells use light theme
+   ============================================ */
+
+/* Light theme syntax highlighting - override prism-tomorrow dark theme */
+.prism-light,
+.prism-light code,
+.prism-light pre {
+  color: #24292e !important;
+  background: transparent !important;
+}
+
+.prism-light .token.comment,
+.prism-light .token.prolog,
+.prism-light .token.doctype,
+.prism-light .token.cdata {
+  color: #6a737d !important;
+}
+
+.prism-light .token.punctuation {
+  color: #24292e !important;
+}
+
+.prism-light .token.namespace {
+  opacity: 0.7;
+}
+
+.prism-light .token.property,
+.prism-light .token.tag,
+.prism-light .token.boolean,
+.prism-light .token.number,
+.prism-light .token.constant,
+.prism-light .token.symbol,
+.prism-light .token.deleted {
+  color: #005cc5 !important;
+}
+
+.prism-light .token.selector,
+.prism-light .token.attr-name,
+.prism-light .token.string,
+.prism-light .token.char,
+.prism-light .token.builtin,
+.prism-light .token.inserted {
+  color: #22863a !important;
+}
+
+.prism-light .token.operator,
+.prism-light .token.entity,
+.prism-light .token.url,
+.prism-light .language-css .token.string,
+.prism-light .style .token.string {
+  color: #d73a49 !important;
+}
+
+.prism-light .token.atrule,
+.prism-light .token.attr-value,
+.prism-light .token.keyword {
+  color: #d73a49 !important;
+}
+
+.prism-light .token.function,
+.prism-light .token.class-name {
+  color: #6f42c1 !important;
+}
+
+.prism-light .token.regex,
+.prism-light .token.important,
+.prism-light .token.variable {
+  color: #e36209 !important;
+}
+
+.prism-light .token.important,
+.prism-light .token.bold {
+  font-weight: bold;
+}
+
+.prism-light .token.italic {
+  font-style: italic;
+}
+
+.prism-light .token.entity {
+  cursor: help;
+}
