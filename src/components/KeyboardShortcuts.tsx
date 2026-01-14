@@ -467,7 +467,7 @@ export function KeyboardShortcuts({ className }: KeyboardShortcutsProps) {
             </div>
 
             <p className="text-xs text-gray-400 dark:text-gray-500 text-center">
-                💡 <strong>Global</strong> shortcuts work system-wide, even when the app is minimized.
+                <strong>Global</strong> shortcuts work system-wide, even when the app is minimized.
             </p>
         </div>
     );
