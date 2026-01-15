@@ -75,10 +75,10 @@ export function WelcomeView({
             {/* Header */}
             <div className="mb-8">
                 <h1 className="text-3xl font-light text-gray-800 dark:text-gray-100 mb-1">
-                    ThoughtsPlus Code
+                    ThoughtsPlus Notes
                 </h1>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Editing evolved
+                    Nerd Notes Evolved
                 </p>
             </div>
 
