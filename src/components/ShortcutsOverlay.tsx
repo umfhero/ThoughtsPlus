@@ -9,17 +9,66 @@ import {
     Sparkles,
     X,
     ArrowUp,
-    Timer
+    Timer,
+    Notebook,
+    LucideIcon
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Page } from '../types';
+import { DEFAULT_SHORTCUTS, ShortcutConfig } from './KeyboardShortcuts';
 
 interface ShortcutsOverlayProps {
     currentPage: Page;
 }
 
+// Map shortcut IDs to icons
+const SHORTCUT_ICONS: Record<string, LucideIcon> = {
+    'dashboard': Home,
+    'calendar': Calendar,
+    'timer': Timer,
+    'board': PenTool,
+    'github': Github,
+    'progress': TrendingUp,
+    'notebook': Notebook,
+    'settings': Settings,
+    'ai-quick-add': Sparkles,
+    'quick-timer': Timer,
+};
+
 export function ShortcutsOverlay({ currentPage }: ShortcutsOverlayProps) {
     const [isVisible, setIsVisible] = useState(false);
+    const [shortcuts, setShortcuts] = useState<ShortcutConfig[]>(DEFAULT_SHORTCUTS);
+
+    // Load shortcuts from localStorage and listen for changes
+    useEffect(() => {
+        const loadShortcuts = () => {
+            const saved = localStorage.getItem('keyboard-shortcuts');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    // Merge with defaults to ensure all shortcuts exist
+                    const merged = DEFAULT_SHORTCUTS.map(def => {
+                        const found = parsed.find((s: ShortcutConfig) => s.id === def.id);
+                        return found ? { ...def, ...found } : def;
+                    });
+                    setShortcuts(merged);
+                } catch {
+                    setShortcuts([...DEFAULT_SHORTCUTS]);
+                }
+            } else {
+                setShortcuts([...DEFAULT_SHORTCUTS]);
+            }
+        };
+
+        loadShortcuts();
+
+        const handleShortcutsChanged = (e: CustomEvent) => {
+            setShortcuts(e.detail);
+        };
+
+        window.addEventListener('shortcuts-changed', handleShortcutsChanged as EventListener);
+        return () => window.removeEventListener('shortcuts-changed', handleShortcutsChanged as EventListener);
+    }, []);
 
     useEffect(() => {
         let showTimeout: NodeJS.Timeout | null = null;
@@ -62,17 +111,33 @@ export function ShortcutsOverlay({ currentPage }: ShortcutsOverlayProps) {
         }
     }, [currentPage]);
 
-    const shortcuts = [
-        { icon: Sparkles, key: 'Ctrl + M', description: 'AI Quick Note', color: '', prominent: true, useAccentColor: true },
-        { icon: Home, key: 'Ctrl + D', description: 'Dashboard', color: 'text-white' },
-        { icon: TrendingUp, key: 'Ctrl + P', description: 'Progress', color: 'text-white' },
-        { icon: Calendar, key: 'Ctrl + C', description: 'Calendar', color: 'text-white' },
-        { icon: Timer, key: 'Ctrl + T', description: 'Timer', color: 'text-white' },
-        { icon: PenTool, key: 'Ctrl + B', description: 'Board', color: 'text-white' },
-        { icon: Github, key: 'Ctrl + G', description: 'Github', color: 'text-white' },
-        { icon: Settings, key: 'Ctrl + S', description: 'Settings', color: 'text-white' },
-        { icon: ArrowUp, key: 'Ctrl + ↑/↓', description: 'Navigate Pages', color: 'text-white' },
-        { icon: X, key: 'Esc', description: 'Close Menus / Sidebar', color: 'text-white' },
+    // Build display shortcuts from saved config
+    const displayShortcuts = [
+        // AI Quick Add (prominent)
+        ...shortcuts
+            .filter(s => s.id === 'ai-quick-add' && s.enabled)
+            .map(s => ({
+                icon: SHORTCUT_ICONS[s.id] || Sparkles,
+                key: `${s.modifier} + ${s.key}`,
+                description: s.label,
+                color: '',
+                prominent: true,
+                useAccentColor: true
+            })),
+        // Other shortcuts
+        ...shortcuts
+            .filter(s => s.id !== 'ai-quick-add' && s.id !== 'quick-capture' && s.enabled && SHORTCUT_ICONS[s.id])
+            .map(s => ({
+                icon: SHORTCUT_ICONS[s.id],
+                key: `${s.modifier} + ${s.key}`,
+                description: s.label,
+                color: 'text-white',
+                prominent: false,
+                useAccentColor: false
+            })),
+        // Static shortcuts that aren't customizable
+        { icon: ArrowUp, key: 'Ctrl + ↑/↓', description: 'Navigate Pages', color: 'text-white', prominent: false, useAccentColor: false },
+        { icon: X, key: 'Esc', description: 'Close Menus / Sidebar', color: 'text-white', prominent: false, useAccentColor: false },
     ];
 
     return (
@@ -89,7 +154,7 @@ export function ShortcutsOverlay({ currentPage }: ShortcutsOverlayProps) {
                         <span className="bg-white/20 p-1 rounded">Ctrl</span> Shortcuts
                     </h2>
                     <div className="space-y-3">
-                        {shortcuts.map((shortcut, index) => (
+                        {displayShortcuts.map((shortcut, index) => (
                             <motion.div
                                 key={index}
                                 className={`flex items-center gap-3 ${shortcut.prominent ? 'text-white' : 'text-gray-200/70'}`}
@@ -102,7 +167,7 @@ export function ShortcutsOverlay({ currentPage }: ShortcutsOverlayProps) {
                                 >
                                     <shortcut.icon
                                         className={`w-5 h-5 ${shortcut.color}`}
-                                        style={(shortcut as any).useAccentColor ? { color: 'var(--accent-primary)' } : undefined}
+                                        style={shortcut.useAccentColor ? { color: 'var(--accent-primary)' } : undefined}
                                     />
                                 </div>
                                 <div className="flex-1 min-w-0">
