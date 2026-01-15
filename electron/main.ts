@@ -117,15 +117,30 @@ class FileLock {
 const dataFileLock = new FileLock();
 
 // Atomic write: write to temp file, then rename (prevents partial writes)
+// Uses copyFile + unlink pattern for Windows compatibility (rename fails if target exists)
 async function atomicWriteFile(filePath: string, data: string): Promise<void> {
-    const tempPath = filePath + '.tmp.' + Date.now();
+    const tempPath = filePath + '.tmp.' + Date.now() + '.' + Math.random().toString(36).slice(2);
     try {
+        // Write to temp file first
         await fs.writeFile(tempPath, data, 'utf-8');
-        // On Windows, we need to remove the target first if it exists
-        if (existsSync(filePath)) {
-            await fs.unlink(filePath);
+
+        // Verify the temp file was written correctly by reading it back
+        const verification = await fs.readFile(tempPath, 'utf-8');
+        try {
+            JSON.parse(verification); // Validate JSON before replacing
+        } catch (parseError) {
+            throw new Error('JSON validation failed before atomic write: ' + (parseError as Error).message);
         }
-        await fs.rename(tempPath, filePath);
+
+        // On Windows, use copyFile then unlink temp (more reliable than rename)
+        // This avoids the gap between unlink and rename where reads could fail
+        if (process.platform === 'win32') {
+            await fs.copyFile(tempPath, filePath);
+            await fs.unlink(tempPath);
+        } else {
+            // On Unix, rename is atomic
+            await fs.rename(tempPath, filePath);
+        }
     } catch (error) {
         // Clean up temp file if it exists
         try {

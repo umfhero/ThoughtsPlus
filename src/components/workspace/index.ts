@@ -5,3 +5,4 @@ export { TextNoteEditor } from './TextNoteEditor';
 export { ContentArea } from './ContentArea';
 export { NerdbookEditor } from './NerdbookEditor';
 export { BoardEditor } from './BoardEditor';
+export { TabBar } from './TabBar';

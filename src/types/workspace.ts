@@ -6,8 +6,8 @@ export type FileType = 'exec' | 'board' | 'note';
 // File extension mapping
 export const FILE_EXTENSIONS: Record<FileType, string> = {
     exec: '.exec',
-    board: '.board',
-    note: '.note',
+    board: '.brd',
+    note: '.nt',
 };
 
 // Icon mapping for file types
@@ -42,12 +42,22 @@ export interface WorkspaceFolder {
     sortOrder?: number;     // Custom sort order (lower = higher in list)
 }
 
+// Open tab representation
+export interface OpenTab {
+    fileId: string;
+    name: string;
+    type: FileType;
+}
+
 // Combined workspace structure for persistence
 export interface WorkspaceData {
     files: WorkspaceFile[];
     folders: WorkspaceFolder[];
     recentFiles: string[];  // Array of file IDs, most recent first
     expandedFolders: string[]; // Array of folder IDs that are expanded
+    openTabs: string[];     // Array of file IDs for open tabs
+    activeTabId: string | null; // Currently active tab
+    sidebarVisible: boolean; // Whether sidebar is visible
     migrationComplete: boolean;
 }
 

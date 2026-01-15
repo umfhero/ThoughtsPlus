@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileTree, ContentArea, NerdbookEditor, BoardEditor } from '../components/workspace';
+import { FileTree, ContentArea, NerdbookEditor, BoardEditor, TabBar } from '../components/workspace';
 import {
     WorkspaceFile,
     WorkspaceFolder,
@@ -30,9 +30,6 @@ import { Page, NerdNotebook, QuickNote } from '../types';
 
 /**
  * Loads existing data (nerdbooks, boards, quick notes) for migration
- * This function fetches data from the existing storage mechanisms
- * 
- * Requirements: 7.1, 7.2, 7.3, 7.4
  */
 async function loadExistingDataForMigration(): Promise<ExistingData> {
     const existingData: ExistingData = {
@@ -42,30 +39,22 @@ async function loadExistingDataForMigration(): Promise<ExistingData> {
     };
 
     try {
-        // Load nerdbooks and quick notes from main data store
         // @ts-ignore - ipcRenderer is exposed via preload
         const mainData = await window.ipcRenderer.invoke('get-data');
 
         if (mainData) {
-            // Extract nerdbooks
             if (mainData.nerdbooks?.notebooks && Array.isArray(mainData.nerdbooks.notebooks)) {
                 existingData.nerdbooks = mainData.nerdbooks.notebooks as NerdNotebook[];
-                console.log('[Migration] Found', existingData.nerdbooks.length, 'nerdbooks');
             }
-
-            // Extract quick notes (notebookNotes)
             if (mainData.notebookNotes && Array.isArray(mainData.notebookNotes)) {
                 existingData.quickNotes = mainData.notebookNotes as QuickNote[];
-                console.log('[Migration] Found', existingData.quickNotes.length, 'quick notes');
             }
         }
 
-        // Load boards from separate storage
         // @ts-ignore - ipcRenderer is exposed via preload
         const boardsResponse = await window.ipcRenderer.invoke('get-boards');
 
         if (boardsResponse) {
-            // Handle both array and object response structures
             let boards: BoardForMigration[] = [];
             if (Array.isArray(boardsResponse)) {
                 boards = boardsResponse;
@@ -73,7 +62,6 @@ async function loadExistingDataForMigration(): Promise<ExistingData> {
                 boards = boardsResponse.boards;
             }
             existingData.boards = boards;
-            console.log('[Migration] Found', existingData.boards.length, 'boards');
         }
     } catch (error) {
         console.error('[Migration] Error loading existing data:', error);
@@ -87,12 +75,6 @@ interface WorkspacePageProps {
     onSidebarTransition?: (visible: boolean) => void;
 }
 
-/**
- * WorkspacePage component - Main IDE-style workspace interface
- * Integrates FileTree sidebar and ContentArea with workspace state management.
- * 
- * Requirements: 2.1, 4.3, 6.1, 6.3, 6.4
- */
 export function WorkspacePage({
     setPage,
     onSidebarTransition,
@@ -103,16 +85,19 @@ export function WorkspacePage({
         folders: [],
         recentFiles: [],
         expandedFolders: [],
+        openTabs: [],
+        activeTabId: null,
+        sidebarVisible: true,
         migrationComplete: false,
     });
 
     // UI state
-    const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
     const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
     const [isLoading, setIsLoading] = useState(true);
     const [noteContents, setNoteContents] = useState<Record<string, string>>({});
+    const [sidebarVisible, setSidebarVisible] = useState(true);
 
-    // Rename/Delete modal state
+    // Modal state
     const [renameModal, setRenameModal] = useState<{
         isOpen: boolean;
         id: string;
@@ -132,46 +117,33 @@ export function WorkspacePage({
         fileType?: FileType;
     } | null>(null);
 
-    // Debounced save function
     const debouncedSave = useMemo(() => createDebouncedSave('workspace'), []);
 
-    // Load workspace data on mount and run migration if needed
+    // Load workspace data
     useEffect(() => {
         const loadData = async () => {
             setIsLoading(true);
             try {
                 const data = await loadWorkspace();
 
-                // Check if migration is needed
                 if (!data.migrationComplete) {
-                    console.log('[Workspace] Migration not complete, running migration...');
-
-                    // Load existing data for migration
                     const existingData = await loadExistingDataForMigration();
-
-                    // Run migration
                     const migrationResult = runMigrationWithResult(existingData, data);
 
                     if (migrationResult.success) {
-                        console.log('[Workspace] Migration completed:', {
-                            nerdbooks: migrationResult.migratedCounts.nerdbooks,
-                            boards: migrationResult.migratedCounts.boards,
-                            quickNotes: migrationResult.migratedCounts.quickNotes,
-                        });
-
-                        // Save migrated workspace data
                         await saveWorkspace(migrationResult.workspaceData);
                         setWorkspaceData(migrationResult.workspaceData);
                         setExpandedFolders(new Set(migrationResult.workspaceData.expandedFolders));
+                        setSidebarVisible(migrationResult.workspaceData.sidebarVisible ?? true);
                     } else {
-                        console.error('[Workspace] Migration failed:', migrationResult.error);
-                        // Still set the data even if migration failed
                         setWorkspaceData(data);
                         setExpandedFolders(new Set(data.expandedFolders));
+                        setSidebarVisible(data.sidebarVisible ?? true);
                     }
                 } else {
                     setWorkspaceData(data);
                     setExpandedFolders(new Set(data.expandedFolders));
+                    setSidebarVisible(data.sidebarVisible ?? true);
                 }
             } catch (error) {
                 console.error('Failed to load workspace:', error);
@@ -182,29 +154,32 @@ export function WorkspacePage({
         loadData();
     }, []);
 
-    // Notify parent about sidebar transition on mount/unmount
     useEffect(() => {
         onSidebarTransition?.(true);
-        return () => {
-            onSidebarTransition?.(false);
-        };
+        return () => onSidebarTransition?.(false);
     }, [onSidebarTransition]);
 
+    // Get active file
+    const activeFile = useMemo(() => {
+        const activeId = workspaceData.activeTabId;
+        if (!activeId) return null;
+        return workspaceData.files.find(f => f.id === activeId) || null;
+    }, [workspaceData.activeTabId, workspaceData.files]);
 
-    // Get selected file object
-    const selectedFile = useMemo(() => {
-        if (!selectedFileId) return null;
-        return workspaceData.files.find(f => f.id === selectedFileId) || null;
-    }, [selectedFileId, workspaceData.files]);
+    // Get open tab files
+    const openTabFiles = useMemo(() => {
+        return workspaceData.openTabs
+            .map(id => workspaceData.files.find(f => f.id === id))
+            .filter((f): f is WorkspaceFile => f !== null);
+    }, [workspaceData.openTabs, workspaceData.files]);
 
-    // Build recent files list for WelcomeView
+    // Build recent files list
     const recentFiles: RecentFile[] = useMemo(() => {
         return workspaceData.recentFiles
             .map(fileId => {
                 const file = workspaceData.files.find(f => f.id === fileId);
                 if (!file) return null;
 
-                // Build path
                 let path = file.name + FILE_EXTENSIONS[file.type];
                 let currentParentId = file.parentId;
                 while (currentParentId) {
@@ -212,89 +187,89 @@ export function WorkspacePage({
                     if (parent) {
                         path = parent.name + '/' + path;
                         currentParentId = parent.parentId;
-                    } else {
-                        break;
-                    }
+                    } else break;
                 }
 
-                return {
-                    id: file.id,
-                    name: file.name,
-                    type: file.type,
-                    lastOpened: file.updatedAt,
-                    path,
-                };
+                return { id: file.id, name: file.name, type: file.type, lastOpened: file.updatedAt, path };
             })
             .filter((f): f is RecentFile => f !== null)
             .slice(0, 10);
     }, [workspaceData.recentFiles, workspaceData.files, workspaceData.folders]);
 
-    // Save workspace data with debounce
     const saveWorkspaceData = useCallback(async (data: WorkspaceData) => {
         setWorkspaceData(data);
         await debouncedSave(data);
     }, [debouncedSave]);
 
-    // Handle file selection
+    // Handle file selection - opens in tab
     const handleFileSelect = useCallback((fileId: string) => {
-        setSelectedFileId(fileId);
+        const openTabs = workspaceData.openTabs.includes(fileId)
+            ? workspaceData.openTabs
+            : [...workspaceData.openTabs, fileId];
 
-        // Update recent files
         const updatedRecentFiles = addToRecentFiles(fileId, workspaceData.recentFiles);
-        const updatedData = {
+        saveWorkspaceData({
             ...workspaceData,
+            openTabs,
+            activeTabId: fileId,
             recentFiles: updatedRecentFiles,
-        };
-        saveWorkspaceData(updatedData);
+        });
     }, [workspaceData, saveWorkspaceData]);
 
-    // Handle folder toggle
+    // Handle tab close
+    const handleTabClose = useCallback((fileId: string) => {
+        const newOpenTabs = workspaceData.openTabs.filter(id => id !== fileId);
+        let newActiveTabId = workspaceData.activeTabId;
+
+        if (workspaceData.activeTabId === fileId) {
+            const closedIndex = workspaceData.openTabs.indexOf(fileId);
+            newActiveTabId = newOpenTabs[closedIndex] || newOpenTabs[closedIndex - 1] || null;
+        }
+
+        saveWorkspaceData({
+            ...workspaceData,
+            openTabs: newOpenTabs,
+            activeTabId: newActiveTabId,
+        });
+    }, [workspaceData, saveWorkspaceData]);
+
+    // Handle tab reorder (drag and drop)
+    const handleReorderTabs = useCallback((newOrder: string[]) => {
+        saveWorkspaceData({
+            ...workspaceData,
+            openTabs: newOrder,
+        });
+    }, [workspaceData, saveWorkspaceData]);
+
+    // Handle sidebar toggle
+    const handleToggleSidebar = useCallback(() => {
+        const newVisible = !sidebarVisible;
+        setSidebarVisible(newVisible);
+        saveWorkspaceData({ ...workspaceData, sidebarVisible: newVisible });
+    }, [sidebarVisible, workspaceData, saveWorkspaceData]);
+
     const handleFolderToggle = useCallback((folderId: string) => {
         setExpandedFolders(prev => {
             const newSet = new Set(prev);
-            if (newSet.has(folderId)) {
-                newSet.delete(folderId);
-            } else {
-                newSet.add(folderId);
-            }
-
-            // Persist expanded folders
-            const updatedData = {
-                ...workspaceData,
-                expandedFolders: Array.from(newSet),
-            };
-            saveWorkspaceData(updatedData);
-
+            if (newSet.has(folderId)) newSet.delete(folderId);
+            else newSet.add(folderId);
+            saveWorkspaceData({ ...workspaceData, expandedFolders: Array.from(newSet) });
             return newSet;
         });
     }, [workspaceData, saveWorkspaceData]);
 
-    // Handle file creation
     const handleFileCreate = useCallback((parentId: string | null, type: FileType) => {
-        setNewItemModal({
-            isOpen: true,
-            parentId,
-            type: 'file',
-            fileType: type,
-        });
+        setNewItemModal({ isOpen: true, parentId, type: 'file', fileType: type });
     }, []);
 
-    // Handle folder creation
     const handleFolderCreate = useCallback((parentId: string | null) => {
-        setNewItemModal({
-            isOpen: true,
-            parentId,
-            type: 'folder',
-        });
+        setNewItemModal({ isOpen: true, parentId, type: 'folder' });
     }, []);
 
-    // Create new file
+
     const createFile = useCallback((name: string, parentId: string | null, type: FileType) => {
         const validation = validateFileName(name, type, parentId, workspaceData.files);
-        if (!validation.isValid) {
-            alert(validation.error);
-            return false;
-        }
+        if (!validation.isValid) { alert(validation.error); return false; }
 
         const now = new Date().toISOString();
         const newFile: WorkspaceFile = {
@@ -304,33 +279,27 @@ export function WorkspacePage({
             parentId,
             createdAt: now,
             updatedAt: now,
-            contentId: crypto.randomUUID(), // Generate content ID for storage
+            contentId: crypto.randomUUID(),
         };
 
-        const updatedData = {
+        const newOpenTabs = [...workspaceData.openTabs, newFile.id];
+        saveWorkspaceData({
             ...workspaceData,
             files: [...workspaceData.files, newFile],
             recentFiles: addToRecentFiles(newFile.id, workspaceData.recentFiles),
-        };
+            openTabs: newOpenTabs,
+            activeTabId: newFile.id,
+        });
 
-        saveWorkspaceData(updatedData);
-        setSelectedFileId(newFile.id);
-
-        // Expand parent folder if exists
         if (parentId && !expandedFolders.has(parentId)) {
             setExpandedFolders(prev => new Set([...prev, parentId]));
         }
-
         return true;
     }, [workspaceData, saveWorkspaceData, expandedFolders]);
 
-    // Create new folder
     const createFolder = useCallback((name: string, parentId: string | null) => {
         const validation = validateFolderName(name, parentId, workspaceData.folders);
-        if (!validation.isValid) {
-            alert(validation.error);
-            return false;
-        }
+        if (!validation.isValid) { alert(validation.error); return false; }
 
         const now = new Date().toISOString();
         const newFolder: WorkspaceFolder = {
@@ -341,140 +310,88 @@ export function WorkspacePage({
             updatedAt: now,
         };
 
-        const updatedData = {
-            ...workspaceData,
-            folders: [...workspaceData.folders, newFolder],
-        };
-
-        saveWorkspaceData(updatedData);
-
-        // Expand parent folder if exists
+        saveWorkspaceData({ ...workspaceData, folders: [...workspaceData.folders, newFolder] });
         if (parentId && !expandedFolders.has(parentId)) {
             setExpandedFolders(prev => new Set([...prev, parentId]));
         }
-
         return true;
     }, [workspaceData, saveWorkspaceData, expandedFolders]);
 
-
-    // Handle rename
     const handleRename = useCallback((id: string, isFolder: boolean) => {
         if (isFolder) {
             const folder = workspaceData.folders.find(f => f.id === id);
-            if (folder) {
-                setRenameModal({
-                    isOpen: true,
-                    id,
-                    isFolder: true,
-                    currentName: folder.name,
-                });
-            }
+            if (folder) setRenameModal({ isOpen: true, id, isFolder: true, currentName: folder.name });
         } else {
             const file = workspaceData.files.find(f => f.id === id);
-            if (file) {
-                setRenameModal({
-                    isOpen: true,
-                    id,
-                    isFolder: false,
-                    currentName: file.name,
-                });
-            }
+            if (file) setRenameModal({ isOpen: true, id, isFolder: false, currentName: file.name });
         }
     }, [workspaceData]);
 
-    // Execute rename
+    // Inline rename from content area
+    const handleInlineRename = useCallback((fileId: string, newName: string) => {
+        const file = workspaceData.files.find(f => f.id === fileId);
+        if (!file) return;
+
+        const validation = validateFileName(newName, file.type, file.parentId, workspaceData.files, fileId);
+        if (!validation.isValid) { alert(validation.error); return; }
+
+        const updatedFiles = workspaceData.files.map(f =>
+            f.id === fileId ? { ...f, name: newName.trim(), updatedAt: new Date().toISOString() } : f
+        );
+        saveWorkspaceData({ ...workspaceData, files: updatedFiles });
+    }, [workspaceData, saveWorkspaceData]);
+
     const executeRename = useCallback((newName: string) => {
         if (!renameModal) return;
-
         const { id, isFolder } = renameModal;
 
         if (isFolder) {
             const folder = workspaceData.folders.find(f => f.id === id);
             if (!folder) return;
-
             const validation = validateFolderName(newName, folder.parentId, workspaceData.folders, id);
-            if (!validation.isValid) {
-                alert(validation.error);
-                return;
-            }
-
+            if (!validation.isValid) { alert(validation.error); return; }
             const updatedFolders = workspaceData.folders.map(f =>
                 f.id === id ? { ...f, name: newName.trim(), updatedAt: new Date().toISOString() } : f
             );
-
-            saveWorkspaceData({
-                ...workspaceData,
-                folders: updatedFolders,
-            });
+            saveWorkspaceData({ ...workspaceData, folders: updatedFolders });
         } else {
             const file = workspaceData.files.find(f => f.id === id);
             if (!file) return;
-
             const validation = validateFileName(newName, file.type, file.parentId, workspaceData.files, id);
-            if (!validation.isValid) {
-                alert(validation.error);
-                return;
-            }
-
+            if (!validation.isValid) { alert(validation.error); return; }
             const updatedFiles = workspaceData.files.map(f =>
                 f.id === id ? { ...f, name: newName.trim(), updatedAt: new Date().toISOString() } : f
             );
-
-            saveWorkspaceData({
-                ...workspaceData,
-                files: updatedFiles,
-            });
+            saveWorkspaceData({ ...workspaceData, files: updatedFiles });
         }
-
         setRenameModal(null);
     }, [renameModal, workspaceData, saveWorkspaceData]);
 
-    // Handle delete
     const handleDelete = useCallback((id: string, isFolder: boolean) => {
         if (isFolder) {
             const folder = workspaceData.folders.find(f => f.id === id);
-            if (folder) {
-                setDeleteModal({
-                    isOpen: true,
-                    id,
-                    isFolder: true,
-                    name: folder.name,
-                });
-            }
+            if (folder) setDeleteModal({ isOpen: true, id, isFolder: true, name: folder.name });
         } else {
             const file = workspaceData.files.find(f => f.id === id);
-            if (file) {
-                setDeleteModal({
-                    isOpen: true,
-                    id,
-                    isFolder: false,
-                    name: file.name + FILE_EXTENSIONS[file.type],
-                });
-            }
+            if (file) setDeleteModal({ isOpen: true, id, isFolder: false, name: file.name + FILE_EXTENSIONS[file.type] });
         }
     }, [workspaceData]);
 
-    // Execute delete
     const executeDelete = useCallback(() => {
         if (!deleteModal) return;
-
         const { id, isFolder } = deleteModal;
 
         if (isFolder) {
-            // Get all descendants
             const { fileIds, folderIds } = getDescendants(id, workspaceData.files, workspaceData.folders);
-
-            // Remove folder and all descendants
             const updatedFiles = workspaceData.files.filter(f => !fileIds.includes(f.id));
             const updatedFolders = workspaceData.folders.filter(f => f.id !== id && !folderIds.includes(f.id));
             const updatedRecentFiles = workspaceData.recentFiles.filter(fId => !fileIds.includes(fId));
-
-            // Clear selection if deleted file was selected
-            if (selectedFileId && fileIds.includes(selectedFileId)) {
-                setSelectedFileId(null);
+            const updatedOpenTabs = workspaceData.openTabs.filter(fId => !fileIds.includes(fId));
+            let newActiveTabId = workspaceData.activeTabId;
+            if (newActiveTabId && fileIds.includes(newActiveTabId)) {
+                newActiveTabId = updatedOpenTabs[0] || null;
             }
 
-            // Remove from expanded folders
             setExpandedFolders(prev => {
                 const newSet = new Set(prev);
                 newSet.delete(id);
@@ -487,36 +404,34 @@ export function WorkspacePage({
                 files: updatedFiles,
                 folders: updatedFolders,
                 recentFiles: updatedRecentFiles,
+                openTabs: updatedOpenTabs,
+                activeTabId: newActiveTabId,
                 expandedFolders: Array.from(expandedFolders).filter(fId => fId !== id && !folderIds.includes(fId)),
             });
         } else {
-            // Remove single file
             const updatedFiles = workspaceData.files.filter(f => f.id !== id);
             const updatedRecentFiles = workspaceData.recentFiles.filter(fId => fId !== id);
-
-            // Clear selection if deleted file was selected
-            if (selectedFileId === id) {
-                setSelectedFileId(null);
+            const updatedOpenTabs = workspaceData.openTabs.filter(fId => fId !== id);
+            let newActiveTabId = workspaceData.activeTabId;
+            if (newActiveTabId === id) {
+                newActiveTabId = updatedOpenTabs[0] || null;
             }
 
             saveWorkspaceData({
                 ...workspaceData,
                 files: updatedFiles,
                 recentFiles: updatedRecentFiles,
+                openTabs: updatedOpenTabs,
+                activeTabId: newActiveTabId,
             });
         }
-
         setDeleteModal(null);
-    }, [deleteModal, workspaceData, selectedFileId, expandedFolders, saveWorkspaceData]);
+    }, [deleteModal, workspaceData, expandedFolders, saveWorkspaceData]);
 
-
-    // Handle move (drag and drop)
     const handleMove = useCallback((id: string, newParentId: string | null, isFolder: boolean) => {
         if (isFolder) {
             const folder = workspaceData.folders.find(f => f.id === id);
             if (!folder) return;
-
-            // Prevent moving folder into itself or its descendants
             if (newParentId) {
                 const { folderIds } = getDescendants(id, workspaceData.files, workspaceData.folders);
                 if (newParentId === id || folderIds.includes(newParentId)) {
@@ -524,162 +439,90 @@ export function WorkspacePage({
                     return;
                 }
             }
-
-            // Check for name conflict in new location
             const validation = validateFolderName(folder.name, newParentId, workspaceData.folders, id);
-            if (!validation.isValid) {
-                alert(validation.error);
-                return;
-            }
-
+            if (!validation.isValid) { alert(validation.error); return; }
             const updatedFolders = workspaceData.folders.map(f =>
                 f.id === id ? { ...f, parentId: newParentId, updatedAt: new Date().toISOString() } : f
             );
-
-            saveWorkspaceData({
-                ...workspaceData,
-                folders: updatedFolders,
-            });
+            saveWorkspaceData({ ...workspaceData, folders: updatedFolders });
         } else {
             const file = workspaceData.files.find(f => f.id === id);
             if (!file) return;
-
-            // Check for name conflict in new location
             const validation = validateFileName(file.name, file.type, newParentId, workspaceData.files, id);
-            if (!validation.isValid) {
-                alert(validation.error);
-                return;
-            }
-
+            if (!validation.isValid) { alert(validation.error); return; }
             const updatedFiles = workspaceData.files.map(f =>
                 f.id === id ? { ...f, parentId: newParentId, updatedAt: new Date().toISOString() } : f
             );
-
-            saveWorkspaceData({
-                ...workspaceData,
-                files: updatedFiles,
-            });
+            saveWorkspaceData({ ...workspaceData, files: updatedFiles });
         }
-
-        // Expand target folder
         if (newParentId && !expandedFolders.has(newParentId)) {
             setExpandedFolders(prev => new Set([...prev, newParentId]));
         }
     }, [workspaceData, expandedFolders, saveWorkspaceData]);
 
-    // Handle reorder (drag and drop for custom sorting)
+
     const handleReorder = useCallback((id: string, targetId: string, position: 'before' | 'after', isFolder: boolean) => {
-        // Get the item being dragged and the target
         const draggedItem = isFolder
             ? workspaceData.folders.find(f => f.id === id)
             : workspaceData.files.find(f => f.id === id);
-
         const targetItem = workspaceData.folders.find(f => f.id === targetId)
             || workspaceData.files.find(f => f.id === targetId);
 
         if (!draggedItem || !targetItem) return;
 
-        // Only allow reordering within the same parent folder
         const draggedParentId = 'type' in draggedItem && draggedItem.type ? (draggedItem as WorkspaceFile).parentId : (draggedItem as WorkspaceFolder).parentId;
         const targetParentId = 'type' in targetItem && targetItem.type ? (targetItem as WorkspaceFile).parentId : (targetItem as WorkspaceFolder).parentId;
 
         if (draggedParentId !== targetParentId) {
-            // Different parents - do a move instead
             handleMove(id, targetParentId, isFolder);
             return;
         }
 
-        // Get all siblings (files and folders in the same parent)
         const siblingFiles = workspaceData.files.filter(f => f.parentId === draggedParentId);
         const siblingFolders = workspaceData.folders.filter(f => f.parentId === draggedParentId);
 
-        // Combine and sort by current sortOrder
         type SiblingItem = { id: string; sortOrder?: number; isFolder: boolean };
         const siblings: SiblingItem[] = [
             ...siblingFolders.map(f => ({ id: f.id, sortOrder: f.sortOrder, isFolder: true })),
             ...siblingFiles.map(f => ({ id: f.id, sortOrder: f.sortOrder, isFolder: false })),
-        ].sort((a, b) => {
-            const orderA = a.sortOrder ?? Number.MAX_SAFE_INTEGER;
-            const orderB = b.sortOrder ?? Number.MAX_SAFE_INTEGER;
-            return orderA - orderB;
-        });
+        ].sort((a, b) => (a.sortOrder ?? Number.MAX_SAFE_INTEGER) - (b.sortOrder ?? Number.MAX_SAFE_INTEGER));
 
-        // Remove dragged item from list
         const filteredSiblings = siblings.filter(s => s.id !== id);
-
-        // Find target index
         const targetIndex = filteredSiblings.findIndex(s => s.id === targetId);
         if (targetIndex === -1) return;
 
-        // Insert at correct position
         const insertIndex = position === 'before' ? targetIndex : targetIndex + 1;
         filteredSiblings.splice(insertIndex, 0, { id, sortOrder: undefined, isFolder });
 
-        // Assign new sortOrder values (using increments of 1000 for future insertions)
         const newSortOrders = new Map<string, number>();
-        filteredSiblings.forEach((item, index) => {
-            newSortOrders.set(item.id, (index + 1) * 1000);
-        });
+        filteredSiblings.forEach((item, index) => newSortOrders.set(item.id, (index + 1) * 1000));
 
-        // Update files and folders with new sortOrder
         const updatedFiles = workspaceData.files.map(f => {
             const newOrder = newSortOrders.get(f.id);
-            if (newOrder !== undefined) {
-                return { ...f, sortOrder: newOrder, updatedAt: new Date().toISOString() };
-            }
-            return f;
+            return newOrder !== undefined ? { ...f, sortOrder: newOrder, updatedAt: new Date().toISOString() } : f;
         });
-
         const updatedFolders = workspaceData.folders.map(f => {
             const newOrder = newSortOrders.get(f.id);
-            if (newOrder !== undefined) {
-                return { ...f, sortOrder: newOrder, updatedAt: new Date().toISOString() };
-            }
-            return f;
+            return newOrder !== undefined ? { ...f, sortOrder: newOrder, updatedAt: new Date().toISOString() } : f;
         });
 
-        saveWorkspaceData({
-            ...workspaceData,
-            files: updatedFiles,
-            folders: updatedFolders,
-        });
+        saveWorkspaceData({ ...workspaceData, files: updatedFiles, folders: updatedFolders });
     }, [workspaceData, saveWorkspaceData, handleMove]);
 
-    // Handle back navigation
     const handleBack = useCallback(async () => {
-        // Cancel any pending debounced saves and save immediately
         cancelDebouncedSave('workspace');
-
-        // Save workspace state before leaving (wait for it to complete)
-        await saveWorkspace({
-            ...workspaceData,
-            expandedFolders: Array.from(expandedFolders),
-        });
-
+        await saveWorkspace({ ...workspaceData, expandedFolders: Array.from(expandedFolders), sidebarVisible });
         setPage('dashboard');
-    }, [workspaceData, expandedFolders, setPage]);
+    }, [workspaceData, expandedFolders, sidebarVisible, setPage]);
 
-    // Handle content change for .note files
     const handleContentChange = useCallback((fileId: string, content: string) => {
-        setNoteContents(prev => ({
-            ...prev,
-            [fileId]: content,
-        }));
-
-        // Update file's updatedAt timestamp
+        setNoteContents(prev => ({ ...prev, [fileId]: content }));
         const updatedFiles = workspaceData.files.map(f =>
             f.id === fileId ? { ...f, updatedAt: new Date().toISOString() } : f
         );
-
-        saveWorkspaceData({
-            ...workspaceData,
-            files: updatedFiles,
-        });
-
-        // TODO: Save note content to storage via IPC
+        saveWorkspaceData({ ...workspaceData, files: updatedFiles });
     }, [workspaceData, saveWorkspaceData]);
 
-    // Handle file creation from WelcomeView
     const handleFileCreateFromWelcome = useCallback((type: FileType) => {
         handleFileCreate(null, type);
     }, [handleFileCreate]);
@@ -696,84 +539,94 @@ export function WorkspacePage({
     }
 
     return (
-        <div className="h-full flex bg-gray-50 dark:bg-gray-900 rounded-3xl overflow-hidden">
-            {/* File Tree Sidebar */}
-            <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="w-64 flex-shrink-0"
-            >
-                <FileTree
-                    files={workspaceData.files}
-                    folders={workspaceData.folders}
-                    selectedFileId={selectedFileId}
-                    expandedFolders={expandedFolders}
-                    onFileSelect={handleFileSelect}
-                    onFolderToggle={handleFolderToggle}
-                    onFileCreate={handleFileCreate}
-                    onFolderCreate={handleFolderCreate}
-                    onRename={handleRename}
-                    onDelete={handleDelete}
-                    onMove={handleMove}
-                    onReorder={handleReorder}
-                    onBack={handleBack}
-                />
-            </motion.div>
+        <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900 rounded-3xl overflow-hidden">
+            {/* Tab Bar */}
+            <TabBar
+                openTabs={openTabFiles}
+                activeTabId={workspaceData.activeTabId}
+                sidebarVisible={sidebarVisible}
+                onTabSelect={handleFileSelect}
+                onTabClose={handleTabClose}
+                onToggleSidebar={handleToggleSidebar}
+                onBack={handleBack}
+                onRename={handleInlineRename}
+                onReorderTabs={handleReorderTabs}
+            />
 
-            {/* Content Area */}
-            <div className="flex-1 min-w-0">
-                <ContentArea
-                    selectedFile={selectedFile}
-                    recentFiles={recentFiles}
-                    onFileSelect={handleFileSelect}
-                    onFileCreate={handleFileCreateFromWelcome}
-                    onContentChange={handleContentChange}
-                    fileContent={selectedFile ? noteContents[selectedFile.id] || '' : ''}
-                    renderNerdbookEditor={(contentId) => (
-                        <NerdbookEditor
-                            contentId={contentId}
-                            onNotebookChange={(notebook) => {
-                                // Sync notebook title to workspace file name
-                                if (selectedFile && notebook.title !== selectedFile.name) {
-                                    const updatedFiles = workspaceData.files.map(f =>
-                                        f.id === selectedFile.id
-                                            ? { ...f, name: notebook.title, updatedAt: new Date().toISOString() }
-                                            : f
-                                    );
-                                    saveWorkspaceData({
-                                        ...workspaceData,
-                                        files: updatedFiles,
-                                    });
-                                }
-                            }}
-                        />
+            {/* Main content area */}
+            <div className="flex-1 flex min-h-0">
+                {/* File Tree Sidebar */}
+                <AnimatePresence initial={false}>
+                    {sidebarVisible && (
+                        <motion.div
+                            initial={{ width: 0, opacity: 0 }}
+                            animate={{ width: 256, opacity: 1 }}
+                            exit={{ width: 0, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="flex-shrink-0 overflow-hidden"
+                        >
+                            <FileTree
+                                files={workspaceData.files}
+                                folders={workspaceData.folders}
+                                selectedFileId={workspaceData.activeTabId}
+                                expandedFolders={expandedFolders}
+                                onFileSelect={handleFileSelect}
+                                onFolderToggle={handleFolderToggle}
+                                onFileCreate={handleFileCreate}
+                                onFolderCreate={handleFolderCreate}
+                                onRename={handleRename}
+                                onDelete={handleDelete}
+                                onMove={handleMove}
+                                onReorder={handleReorder}
+                            />
+                        </motion.div>
                     )}
-                    renderBoardEditor={(contentId) => (
-                        <BoardEditor
-                            contentId={contentId}
-                            onNameChange={(name) => {
-                                // Sync board name to workspace file name
-                                if (selectedFile && name !== selectedFile.name) {
-                                    const updatedFiles = workspaceData.files.map(f =>
-                                        f.id === selectedFile.id
-                                            ? { ...f, name: name, updatedAt: new Date().toISOString() }
-                                            : f
-                                    );
-                                    saveWorkspaceData({
-                                        ...workspaceData,
-                                        files: updatedFiles,
-                                    });
-                                }
-                            }}
-                        />
-                    )}
-                />
+                </AnimatePresence>
+
+                {/* Content Area */}
+                <div className="flex-1 min-w-0">
+                    <ContentArea
+                        selectedFile={activeFile}
+                        recentFiles={recentFiles}
+                        onFileSelect={handleFileSelect}
+                        onFileCreate={handleFileCreateFromWelcome}
+                        onContentChange={handleContentChange}
+                        fileContent={activeFile ? noteContents[activeFile.id] || '' : ''}
+                        renderNerdbookEditor={(contentId) => (
+                            <NerdbookEditor
+                                contentId={contentId}
+                                onNotebookChange={(notebook) => {
+                                    if (activeFile && notebook.title !== activeFile.name) {
+                                        const updatedFiles = workspaceData.files.map(f =>
+                                            f.id === activeFile.id
+                                                ? { ...f, name: notebook.title, updatedAt: new Date().toISOString() }
+                                                : f
+                                        );
+                                        saveWorkspaceData({ ...workspaceData, files: updatedFiles });
+                                    }
+                                }}
+                            />
+                        )}
+                        renderBoardEditor={(contentId) => (
+                            <BoardEditor
+                                contentId={contentId}
+                                onNameChange={(name) => {
+                                    if (activeFile && name !== activeFile.name) {
+                                        const updatedFiles = workspaceData.files.map(f =>
+                                            f.id === activeFile.id
+                                                ? { ...f, name: name, updatedAt: new Date().toISOString() }
+                                                : f
+                                        );
+                                        saveWorkspaceData({ ...workspaceData, files: updatedFiles });
+                                    }
+                                }}
+                            />
+                        )}
+                    />
+                </div>
             </div>
 
-
-            {/* Rename Modal */}
+            {/* Modals */}
             <AnimatePresence>
                 {renameModal?.isOpen && (
                     <RenameModal
@@ -785,7 +638,6 @@ export function WorkspacePage({
                 )}
             </AnimatePresence>
 
-            {/* Delete Confirmation Modal */}
             <AnimatePresence>
                 {deleteModal?.isOpen && (
                     <DeleteModal
@@ -797,18 +649,14 @@ export function WorkspacePage({
                 )}
             </AnimatePresence>
 
-            {/* New Item Modal */}
             <AnimatePresence>
                 {newItemModal?.isOpen && (
                     <NewItemModal
                         type={newItemModal.type}
                         fileType={newItemModal.fileType}
                         onConfirm={(name) => {
-                            if (newItemModal.type === 'folder') {
-                                createFolder(name, newItemModal.parentId);
-                            } else if (newItemModal.fileType) {
-                                createFile(name, newItemModal.parentId, newItemModal.fileType);
-                            }
+                            if (newItemModal.type === 'folder') createFolder(name, newItemModal.parentId);
+                            else if (newItemModal.fileType) createFile(name, newItemModal.parentId, newItemModal.fileType);
                             setNewItemModal(null);
                         }}
                         onCancel={() => setNewItemModal(null)}
@@ -819,27 +667,31 @@ export function WorkspacePage({
     );
 }
 
-// Modal Components
 
-interface RenameModalProps {
+// Rename Modal - Enter to confirm, Esc to cancel
+function RenameModal({
+    currentName,
+    isFolder,
+    onConfirm,
+    onCancel,
+}: {
     currentName: string;
     isFolder: boolean;
-    onConfirm: (newName: string) => void;
+    onConfirm: (name: string) => void;
     onCancel: () => void;
-}
-
-function RenameModal({ currentName, isFolder, onConfirm, onCancel }: RenameModalProps) {
+}) {
     const [name, setName] = useState(currentName);
+    const inputRef = React.useRef<HTMLInputElement>(null);
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (name.trim() && name.trim() !== currentName) {
-            onConfirm(name.trim());
-        }
-    };
+    useEffect(() => {
+        inputRef.current?.focus();
+        inputRef.current?.select();
+    }, []);
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Escape') {
+        if (e.key === 'Enter' && name.trim()) {
+            onConfirm(name.trim());
+        } else if (e.key === 'Escape') {
             onCancel();
         }
     };
@@ -849,56 +701,61 @@ function RenameModal({ currentName, isFolder, onConfirm, onCancel }: RenameModal
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
             onClick={onCancel}
         >
             <motion.div
                 initial={{ scale: 0.95, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.95, opacity: 0 }}
-                className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-4 w-80 max-w-[90vw]"
+                className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-4 w-72"
                 onClick={e => e.stopPropagation()}
             >
-                <form onSubmit={handleSubmit}>
-                    <input
-                        type="text"
-                        value={name}
-                        onChange={e => setName(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        autoFocus
-                        placeholder={isFolder ? 'Folder name' : 'File name'}
-                    />
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 text-center">
-                        Press Enter to confirm · Esc to cancel
-                    </p>
-                </form>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                    Rename {isFolder ? 'folder' : 'file'}
+                </p>
+                <input
+                    ref={inputRef}
+                    type="text"
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder={isFolder ? 'Folder name' : 'File name'}
+                />
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 text-center">
+                    Press Enter to confirm · Esc to cancel
+                </p>
             </motion.div>
         </motion.div>
     );
 }
 
-interface DeleteModalProps {
+// Delete Modal
+function DeleteModal({
+    name,
+    isFolder,
+    onConfirm,
+    onCancel,
+}: {
     name: string;
     isFolder: boolean;
     onConfirm: () => void;
     onCancel: () => void;
-}
-
-function DeleteModal({ name, isFolder, onConfirm, onCancel }: DeleteModalProps) {
+}) {
     return (
         <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
             onClick={onCancel}
         >
             <motion.div
                 initial={{ scale: 0.95, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.95, opacity: 0 }}
-                className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-96 max-w-[90vw]"
+                className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-80"
                 onClick={e => e.stopPropagation()}
             >
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
@@ -906,18 +763,18 @@ function DeleteModal({ name, isFolder, onConfirm, onCancel }: DeleteModalProps) 
                 </h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                     Are you sure you want to delete "{name}"?
-                    {isFolder && ' This will also delete all files and folders inside it.'}
+                    {isFolder && ' This will also delete all contents inside.'}
                 </p>
                 <div className="flex justify-end gap-2">
                     <button
                         onClick={onCancel}
-                        className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                        className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
                     >
                         Cancel
                     </button>
                     <button
                         onClick={onConfirm}
-                        className="px-4 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors"
+                        className="px-4 py-2 text-sm bg-red-500 text-white hover:bg-red-600 rounded-md transition-colors"
                     >
                         Delete
                     </button>
@@ -927,29 +784,39 @@ function DeleteModal({ name, isFolder, onConfirm, onCancel }: DeleteModalProps) 
     );
 }
 
-interface NewItemModalProps {
+// New Item Modal
+function NewItemModal({
+    type,
+    fileType,
+    onConfirm,
+    onCancel,
+}: {
     type: 'file' | 'folder';
     fileType?: FileType;
     onConfirm: (name: string) => void;
     onCancel: () => void;
-}
-
-function NewItemModal({ type, fileType, onConfirm, onCancel }: NewItemModalProps) {
+}) {
     const [name, setName] = useState('');
+    const inputRef = React.useRef<HTMLInputElement>(null);
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (name.trim()) {
+    useEffect(() => {
+        inputRef.current?.focus();
+    }, []);
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' && name.trim()) {
             onConfirm(name.trim());
+        } else if (e.key === 'Escape') {
+            onCancel();
         }
     };
 
     const getTitle = () => {
         if (type === 'folder') return 'New Folder';
         switch (fileType) {
-            case 'exec': return 'New Notebook (.exec)';
-            case 'board': return 'New Board (.board)';
-            case 'note': return 'New Note (.note)';
+            case 'exec': return 'New Nerdbook';
+            case 'board': return 'New Board';
+            case 'note': return 'New Note';
             default: return 'New File';
         }
     };
@@ -959,48 +826,32 @@ function NewItemModal({ type, fileType, onConfirm, onCancel }: NewItemModalProps
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
             onClick={onCancel}
         >
             <motion.div
                 initial={{ scale: 0.95, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.95, opacity: 0 }}
-                className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-96 max-w-[90vw]"
+                className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-4 w-72"
                 onClick={e => e.stopPropagation()}
             >
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                     {getTitle()}
-                </h3>
-                <form onSubmit={handleSubmit}>
-                    <input
-                        type="text"
-                        value={name}
-                        onChange={e => setName(e.target.value)}
-                        className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        autoFocus
-                        placeholder={type === 'folder' ? 'Folder name' : 'File name (without extension)'}
-                    />
-                    <div className="flex justify-end gap-2 mt-4">
-                        <button
-                            type="button"
-                            onClick={onCancel}
-                            className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            disabled={!name.trim()}
-                            className="px-4 py-2 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
-                        >
-                            Create
-                        </button>
-                    </div>
-                </form>
+                </p>
+                <input
+                    ref={inputRef}
+                    type="text"
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder={type === 'folder' ? 'Folder name' : 'File name'}
+                />
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 text-center">
+                    Press Enter to confirm · Esc to cancel
+                </p>
             </motion.div>
         </motion.div>
     );
 }
-
-export default WorkspacePage;

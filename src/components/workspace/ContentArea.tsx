@@ -1,13 +1,10 @@
 import { motion } from 'framer-motion';
-import clsx from 'clsx';
 import { WelcomeView } from './WelcomeView';
 import { TextNoteEditor } from './TextNoteEditor';
 import {
     WorkspaceFile,
     RecentFile,
     FileType,
-    FILE_ICONS,
-    FILE_EXTENSIONS,
 } from '../../types/workspace';
 
 interface ContentAreaProps {
@@ -39,6 +36,7 @@ export function ContentArea({
     renderNerdbookEditor,
     renderBoardEditor,
 }: ContentAreaProps) {
+
     // Show welcome view when no file is selected
     if (!selectedFile) {
         return (
@@ -51,9 +49,6 @@ export function ContentArea({
             </div>
         );
     }
-
-    const FileIcon = FILE_ICONS[selectedFile.type];
-    const extension = FILE_EXTENSIONS[selectedFile.type];
 
     // Render the appropriate editor based on file type
     const renderEditor = () => {
@@ -104,24 +99,7 @@ export function ContentArea({
             animate={{ opacity: 1 }}
             className="h-full flex flex-col bg-white dark:bg-gray-900"
         >
-            {/* File Header */}
-            <div
-                className={clsx(
-                    'flex items-center gap-2 px-4 py-2.5',
-                    'border-b border-gray-200 dark:border-gray-700',
-                    'bg-gray-50 dark:bg-gray-800/50'
-                )}
-            >
-                <FileIcon className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {selectedFile.name}
-                </span>
-                <span className="text-xs text-gray-400 dark:text-gray-500">
-                    {extension}
-                </span>
-            </div>
-
-            {/* Editor Container */}
+            {/* Editor Container - no header, tabs are in TabBar now */}
             <div className="flex-1 overflow-hidden">
                 {renderEditor()}
             </div>

@@ -15,6 +15,9 @@ export function getDefaultWorkspaceData(): WorkspaceData {
         folders: [],
         recentFiles: [],
         expandedFolders: [],
+        openTabs: [],
+        activeTabId: null,
+        sidebarVisible: true,
         migrationComplete: false,
     };
 }
@@ -54,6 +57,9 @@ export async function loadWorkspace(): Promise<WorkspaceData> {
                 folders: Array.isArray(data.folders) ? data.folders : [],
                 recentFiles: Array.isArray(data.recentFiles) ? data.recentFiles : [],
                 expandedFolders: Array.isArray(data.expandedFolders) ? data.expandedFolders : [],
+                openTabs: Array.isArray(data.openTabs) ? data.openTabs : [],
+                activeTabId: data.activeTabId ?? null,
+                sidebarVisible: data.sidebarVisible ?? true,
                 migrationComplete: Boolean(data.migrationComplete),
             };
         }
