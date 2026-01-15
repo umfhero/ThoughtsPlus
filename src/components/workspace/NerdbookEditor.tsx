@@ -847,10 +847,10 @@ sys.stderr = StringIO()
 
 
     return (
-        <div ref={containerRef} className="h-full flex flex-col overflow-hidden">
+        <div ref={containerRef} className="h-full flex flex-col overflow-hidden nerdbook-no-scroll">
             {/* Toolbar */}
-            <div className="sticky top-0 z-20 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 overflow-hidden">
-                <div className="flex items-center justify-between px-4 py-2 overflow-hidden">
+            <div className="sticky top-0 z-20 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+                <div className="flex items-center justify-between px-4 py-2">
                     <div className="flex items-center gap-1">
                         <ToolbarButton icon={Save} onClick={() => saveNotebook(notebook)} title="Save (Ctrl+S)" />
                         <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
@@ -998,7 +998,7 @@ sys.stderr = StringIO()
             </div>
 
             {/* Cells Container */}
-            <div className="flex-1 overflow-y-auto bg-white dark:bg-gray-900">
+            <div className="flex-1 overflow-y-auto bg-white dark:bg-gray-900 nerdbook-cells-scroll">
                 <div className="w-full max-w-[95%] xl:max-w-[90%] mx-auto py-6 px-2">
                     <AnimatePresence>
                         {notebook.cells.map((cell, index) => {

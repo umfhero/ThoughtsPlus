@@ -232,7 +232,8 @@ export function TabBar({
 
             <div
                 ref={tabsContainerRef}
-                className="flex-1 flex items-end overflow-x-auto scrollbar-none"
+                className="flex-1 flex items-end overflow-x-auto overflow-y-hidden workspace-tabbar-scroll"
+                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                 onDragOver={handleContainerDragOver}
                 onDrop={handleContainerDrop}
             >

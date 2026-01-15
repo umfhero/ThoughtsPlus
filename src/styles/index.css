@@ -442,3 +442,11 @@ body.is-scrolling ::-webkit-scrollbar-thumb {
 .prism-light .token.entity {
   cursor: help;
 }
+
+
+/* Hide scrollbar on workspace tab bar */
+.workspace-tabbar-scroll::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}

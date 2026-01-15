@@ -1313,7 +1313,9 @@ plt.show = _custom_show
     );
 
     return (
-        <div ref={containerRef} className="h-screen flex flex-col overflow-hidden bg-gray-100 dark:bg-gray-900">
+        <div ref={containerRef} className="h-screen flex flex-col overflow-hidden bg-gray-100 dark:bg-gray-900 pt-8">
+            {/* Title bar drag region */}
+            <div className="absolute top-0 left-0 w-full h-8 z-50" style={{ WebkitAppRegion: 'drag' } as any} />
             <AnimatePresence mode="wait">
                 {currentView === 'list' ? (
                     <motion.div
@@ -1489,9 +1491,9 @@ plt.show = _custom_show
                         className="h-full flex flex-col overflow-hidden"
                     >
                         {/* Sticky Top Toolbar - Jupyter Style */}
-                        <div className="sticky top-0 z-20 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 overflow-hidden">
-                            <div className="flex items-center justify-between px-4 py-2 overflow-hidden">
-                                <div className="flex items-center gap-1 flex-nowrap overflow-hidden">
+                        <div className="sticky top-0 z-20 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+                            <div className="flex items-center justify-between px-4 py-2">
+                                <div className="flex items-center gap-1 flex-nowrap">
                                     {/* Back button */}
                                     <button
                                         onClick={() => {
@@ -1597,7 +1599,7 @@ plt.show = _custom_show
                                 </div>
 
                                 {/* Notebook Title */}
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-3 overflow-hidden flex-shrink-0">
                                     {editingTitle ? (
                                         <div className="flex items-center gap-2">
                                             <input
@@ -1661,7 +1663,7 @@ plt.show = _custom_show
                         </div>
 
                         {/* Cells Container - Jupyter Style */}
-                        <div className="flex-1 overflow-y-auto bg-white dark:bg-gray-900">
+                        <div className="flex-1 overflow-y-auto bg-white dark:bg-gray-900 nerdbook-cells-scroll">
                             <div className="w-full max-w-[95%] xl:max-w-[90%] mx-auto py-6 px-2">
                                 <AnimatePresence>
                                     {activeNotebook?.cells.map((cell, index) => {
