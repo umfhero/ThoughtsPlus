@@ -849,8 +849,8 @@ sys.stderr = StringIO()
     return (
         <div ref={containerRef} className="h-full flex flex-col overflow-hidden">
             {/* Toolbar */}
-            <div className="sticky top-0 z-20 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-                <div className="flex items-center justify-between px-4 py-2">
+            <div className="sticky top-0 z-20 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-2 overflow-hidden">
                     <div className="flex items-center gap-1">
                         <ToolbarButton icon={Save} onClick={() => saveNotebook(notebook)} title="Save (Ctrl+S)" />
                         <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
@@ -1365,9 +1365,19 @@ sys.stderr = StringIO()
                                         {cell.output && (
                                             <div className={clsx(
                                                 "mt-2 rounded-lg px-4 py-3 font-mono text-sm overflow-x-auto",
-                                                cell.executionError
-                                                    ? "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800"
-                                                    : "bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700"
+                                                useCodeDarkTheme
+                                                    ? clsx(
+                                                        "bg-gray-900",
+                                                        cell.executionError
+                                                            ? "border border-red-500/50 text-red-400"
+                                                            : "text-green-400"
+                                                    )
+                                                    : clsx(
+                                                        "bg-gray-100",
+                                                        cell.executionError
+                                                            ? "border border-red-500/50 text-red-600"
+                                                            : "text-green-600"
+                                                    )
                                             )}>
                                                 <pre className="whitespace-pre-wrap">{cell.output}</pre>
                                             </div>

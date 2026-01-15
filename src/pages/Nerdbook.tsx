@@ -1313,7 +1313,7 @@ plt.show = _custom_show
     );
 
     return (
-        <div ref={containerRef} className="h-full flex flex-col overflow-hidden">
+        <div ref={containerRef} className="h-screen flex flex-col overflow-hidden bg-gray-100 dark:bg-gray-900">
             <AnimatePresence mode="wait">
                 {currentView === 'list' ? (
                     <motion.div
@@ -1486,12 +1486,12 @@ plt.show = _custom_show
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: 20 }}
                         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                        className="h-full flex flex-col"
+                        className="h-full flex flex-col overflow-hidden"
                     >
                         {/* Sticky Top Toolbar - Jupyter Style */}
-                        <div className="sticky top-0 z-20 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-                            <div className="flex items-center justify-between px-4 py-2">
-                                <div className="flex items-center gap-1">
+                        <div className="sticky top-0 z-20 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 overflow-hidden">
+                            <div className="flex items-center justify-between px-4 py-2 overflow-hidden">
+                                <div className="flex items-center gap-1 flex-nowrap overflow-hidden">
                                     {/* Back button */}
                                     <button
                                         onClick={() => {
@@ -1903,10 +1903,10 @@ plt.show = _custom_show
                                                                                 : "text-green-400"
                                                                         )
                                                                         : clsx(
-                                                                            "bg-gray-100 dark:bg-gray-800",
+                                                                            "bg-gray-100",
                                                                             cell.executionError
-                                                                                ? "border border-red-500/50 text-red-600 dark:text-red-400"
-                                                                                : "text-green-600 dark:text-green-400"
+                                                                                ? "border border-red-500/50 text-red-600"
+                                                                                : "text-green-600"
                                                                         )
                                                                 )}
                                                                 style={{ userSelect: 'text' }}
