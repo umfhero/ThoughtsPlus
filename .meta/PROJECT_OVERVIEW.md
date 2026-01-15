@@ -65,6 +65,7 @@ ThoughtsPlus/
 | `Timer.tsx`     | Timer/stopwatch with history                                                          |
 | `Board.tsx`     | Interactive whiteboard with sticky notes, backgrounds, calculator, per-board settings |
 | `Nerdbook.tsx`  | **Jupyter-style Notebook** for code execution (JS/Python) & rich notes                |
+| `Workspace.tsx` | **IDE-style workspace** with file tree, tabbed editors, and Quick Notes               |
 | `Settings.tsx`  | App configuration                                                                     |
 | `Github.tsx`    | GitHub profile & contributions                                                        |
 | `Stats.tsx`     | Fortnite creator statistics                                                           |
@@ -79,13 +80,16 @@ ThoughtsPlus/
 
 ### Important Components (`src/components/`)
 
-| File                    | Purpose                                            |
-| ----------------------- | -------------------------------------------------- |
-| `Sidebar.tsx`           | Navigation with reorderable items, feature toggles |
-| `AiQuickAddModal.tsx`   | Natural language event creation (Ctrl+M)           |
-| `TaskTrendChart.tsx`    | Completion rate graph with time range selection    |
-| `TimerAlertOverlay.tsx` | Timer completion alert + mini indicator            |
-| `SetupWizard.tsx`       | First-run onboarding flow                          |
+| File                     | Purpose                                            |
+| ------------------------ | -------------------------------------------------- |
+| `Sidebar.tsx`            | Navigation with reorderable items, feature toggles |
+| `AiQuickAddModal.tsx`    | Natural language event creation (Ctrl+M)           |
+| `TaskTrendChart.tsx`     | Completion rate graph with time range selection    |
+| `TimerAlertOverlay.tsx`  | Timer completion alert + mini indicator            |
+| `SetupWizard.tsx`        | First-run onboarding flow                          |
+| `ShortcutsOverlay.tsx`   | Dynamic Ctrl shortcuts overlay (syncs with Settings) |
+| `KeyboardShortcuts.tsx`  | Customizable keyboard shortcuts in Settings        |
+| `QuickCaptureOverlay.tsx`| Global quick note capture (Ctrl+Shift+N)           |
 
 ---
 
@@ -301,6 +305,10 @@ const result = await window.ipcRenderer.invoke("my-handler", arg1, arg2);
 | ----------------------------- | -------------------------------------------- |
 | `get-data` / `save-data`      | Calendar notes CRUD                          |
 | `get-boards` / `save-boards`  | Whiteboard data                              |
+| `get-workspace` / `save-workspace` | Workspace state and settings            |
+| `save-workspace-file`         | Save individual workspace files (.exec, .brd, .nt) |
+| `load-workspace-file`         | Load workspace file content                  |
+| `list-workspace-files`        | List files in workspace directory            |
 | `get-global-setting`          | Synced settings (theme, accent)              |
 | `save-global-setting`         | Persist synced settings                      |
 | `get-device-setting`          | Local settings (encrypted API keys)          |
@@ -310,10 +318,58 @@ const result = await window.ipcRenderer.invoke("my-handler", arg1, arg2);
 | `flash-window`                | Flash taskbar (timer alerts)                 |
 | `get-github-username`         | GitHub integration                           |
 | `get-creator-stats`           | Fortnite API stats                           |
+| `set-quick-capture-enabled`   | Enable/disable global quick capture hotkey   |
+| `set-quick-capture-hotkey`    | Change quick capture keyboard shortcut       |
 
 ---
 
 ## Recent Version History
+
+### V5.8.0 - The Workspace Update
+
+_Focus: IDE-style workspace, Quick Notes integration, Nerdbook enhancements, and Windows Store improvements._
+
+#### New Features
+
+- **IDE-Style Workspace**:
+  - **File Tree**: Browse and manage files in a tree structure with sorting options
+  - **Tabbed Editors**: Open multiple files in tabs with syntax highlighting
+  - **Quick Notes Integration**: Quick Capture notes automatically appear in workspace
+  - **Welcome View**: Clean landing page when no files are open
+
+- **Quick Notes System**:
+  - **Quick Capture Overlay**: Global hotkey (Ctrl+Shift+N) to capture notes from anywhere
+  - **Workspace Integration**: Quick notes saved as markdown files in workspace
+  - **Improved Focus Detection**: Better window focus handling for quick capture
+
+- **Nerdbook Enhancements**:
+  - **Python Execution**: Run Python code cells with Pyodide (WebAssembly)
+  - **Code Cell Themes**: Toggle between dark and light syntax highlighting
+  - **Always-Visible Actions**: Cell action buttons now always visible for better UX
+  - **Improved Cell Navigation**: Better keyboard shortcuts for cell management
+
+- **Windows Store Auto-Launch**:
+  - **APPX Support**: Proper startup registration for Microsoft Store builds
+  - **electron-winstore-auto-launch**: Uses Windows StartupTask extension
+  - **Default Enabled**: Auto-launch enabled by default on first run
+  - **Removed Toggle**: Simplified UX by removing manual toggle (users can disable via Task Manager)
+
+- **Dynamic Shortcuts Overlay**:
+  - **Synced with Settings**: Ctrl overlay now reflects customized shortcuts
+  - **Real-time Updates**: Changes in Settings immediately update the overlay
+  - **Disabled Shortcuts Hidden**: Only enabled shortcuts appear in overlay
+
+#### Improvements
+
+- **File Access Safety**:
+  - **Mutex Pattern**: Prevents race conditions during file operations
+  - **Atomic Writes**: Write to temp file then rename to prevent corruption
+  - **Better Error Handling**: Graceful recovery from file access issues
+
+- **Board Editor Refactor**: Improved board editing experience
+- **File Tree Sorting**: Sort files by name, date, or type
+
+---
 
 ### V5.7.1 - The Multi-Provider AI & Security Update
 
@@ -494,26 +550,38 @@ _Focus: Infinite canvas, sticky notes, and recurrence._
 
 ## File Locations
 
-| Data Type       | Location                                              |
-| --------------- | ----------------------------------------------------- |
-| Calendar data   | `OneDrive/ThoughtsPlus/` or `Documents/ThoughtsPlus/` |
-| Global settings | Same folder as calendar data                          |
-| Device settings | `%APPDATA%/thoughts-plus/device-settings.json`        |
-| Timer history   | `localStorage` key: `timer-history`                   |
-| Feature toggles | `localStorage` key: `feature-toggles`                 |
-| Sidebar order   | `localStorage` key: `sidebar-order`                   |
+| Data Type         | Location                                              |
+| ----------------- | ----------------------------------------------------- |
+| Calendar data     | `OneDrive/ThoughtsPlus/` or `Documents/ThoughtsPlus/` |
+| Workspace files   | `OneDrive/ThoughtsPlus/workspace/` (or Documents)     |
+| Global settings   | Same folder as calendar data                          |
+| Device settings   | `%APPDATA%/thoughts-plus/device-settings.json`        |
+| Timer history     | `localStorage` key: `timer-history`                   |
+| Feature toggles   | `localStorage` key: `feature-toggles`                 |
+| Sidebar order     | `localStorage` key: `sidebar-order`                   |
+| Keyboard shortcuts| `localStorage` key: `keyboard-shortcuts`              |
 
 ---
 
 ## Keyboard Shortcuts
 
-| Shortcut        | Action                  |
-| --------------- | ----------------------- |
-| `Ctrl+M`        | Open AI Quick Add modal |
-| `Ctrl+Enter`    | Open Quick Timer modal  |
-| `Ctrl+`         | Open Settings           |
-| `Space` (Timer) | Start/Pause timer       |
-| `Esc` (Timer)   | Stop/Reset timer        |
+| Shortcut          | Action                       |
+| ----------------- | ---------------------------- |
+| `Ctrl+M`          | Open AI Quick Add modal      |
+| `Ctrl+Enter`      | Open Quick Timer modal       |
+| `Ctrl+Shift+N`    | Quick Capture (global)       |
+| `Ctrl+S`          | Open Settings                |
+| `Ctrl+D`          | Open Dashboard               |
+| `Ctrl+C`          | Open Calendar                |
+| `Ctrl+T`          | Open Timer                   |
+| `Ctrl+B`          | Open Board                   |
+| `Ctrl+G`          | Open GitHub                  |
+| `Ctrl+P`          | Open Progress                |
+| `Ctrl+N`          | Open Notebook                |
+| `Space` (Timer)   | Start/Pause timer            |
+| `Esc` (Timer)     | Stop/Reset timer             |
+
+> **Note:** Shortcuts are customizable in Settings. The Ctrl overlay dynamically reflects your configured shortcuts.
 
 ---
 
@@ -640,4 +708,4 @@ Fixed critical blank white screen issue when app launches in Microsoft Store APP
 
 ---
 
-_Last updated: January 12, 2026 (v5.7.1)_
+_Last updated: January 15, 2026 (v5.8.0)_
