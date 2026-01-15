@@ -882,9 +882,9 @@ function setupIpcHandlers() {
                 const registered = globalShortcut.register(hotkey, () => {
                     console.log('Quick Capture hotkey triggered!');
                     if (win) {
-                        // Check if window was hidden/minimized before showing
-                        wasWindowHiddenBeforeQuickCapture = win.isMinimized() || !win.isVisible();
-                        console.log('[QuickCapture] Window was hidden before:', wasWindowHiddenBeforeQuickCapture);
+                        // Check if window was not focused before - includes minimized, hidden, or just not active
+                        wasWindowHiddenBeforeQuickCapture = win.isMinimized() || !win.isVisible() || !win.isFocused();
+                        console.log('[QuickCapture] Window was not focused before:', wasWindowHiddenBeforeQuickCapture);
                         // Bring window to front
                         if (win.isMinimized()) win.restore();
                         win.show();
@@ -938,8 +938,8 @@ function setupIpcHandlers() {
                 try {
                     const registered = globalShortcut.register(hotkey, () => {
                         if (win) {
-                            // Check if window was hidden/minimized before showing
-                            wasWindowHiddenBeforeQuickCapture = win.isMinimized() || !win.isVisible();
+                            // Check if window was not focused before - includes minimized, hidden, or just not active
+                            wasWindowHiddenBeforeQuickCapture = win.isMinimized() || !win.isVisible() || !win.isFocused();
                             if (win.isMinimized()) win.restore();
                             win.show();
                             win.focus();
@@ -979,8 +979,8 @@ function setupIpcHandlers() {
             try {
                 const registered = globalShortcut.register(hotkey, () => {
                     if (win) {
-                        // Check if window was hidden/minimized before showing
-                        wasWindowHiddenBeforeQuickCapture = win.isMinimized() || !win.isVisible();
+                        // Check if window was not focused before - includes minimized, hidden, or just not active
+                        wasWindowHiddenBeforeQuickCapture = win.isMinimized() || !win.isVisible() || !win.isFocused();
                         if (win.isMinimized()) win.restore();
                         win.show();
                         win.focus();
