@@ -8,7 +8,6 @@ import {
     FileType,
     RecentFile,
     FILE_EXTENSIONS,
-    WorkspaceSession,
 } from '../types/workspace';
 import {
     validateFileName,
@@ -21,8 +20,6 @@ import {
     addToRecentFiles,
     createDebouncedSave,
     cancelDebouncedSave,
-    saveSession,
-    deleteSession,
 } from '../utils/workspaceStorage';
 import {
     runMigrationWithResult,
@@ -119,7 +116,6 @@ export function WorkspacePage({
         type: 'file' | 'folder';
         fileType?: FileType;
     } | null>(null);
-    const [saveSessionModal, setSaveSessionModal] = useState(false);
 
     const debouncedSave = useMemo(() => createDebouncedSave('workspace'), []);
 
@@ -790,61 +786,6 @@ export function WorkspacePage({
         handleFileCreate(null, type);
     }, [handleFileCreate]);
 
-    // Session handlers
-    const handleSaveSession = useCallback(async (name: string) => {
-        if (workspaceData.openTabs.length === 0) return;
-
-        const updatedSessions = saveSession(
-            name,
-            workspaceData.openTabs,
-            workspaceData.activeTabId,
-            workspaceData.sessions || []
-        );
-
-        const updatedData = {
-            ...workspaceData,
-            sessions: updatedSessions,
-        };
-
-        setWorkspaceData(updatedData);
-        // Save immediately for sessions (don't use debounce)
-        await saveWorkspace(updatedData);
-        setSaveSessionModal(false);
-    }, [workspaceData]);
-
-    const handleSessionRestore = useCallback((session: WorkspaceSession) => {
-        // Filter out tabs for files that no longer exist
-        const validTabs = session.openTabs.filter(tabId =>
-            workspaceData.files.some(f => f.id === tabId)
-        );
-
-        if (validTabs.length === 0) {
-            alert('None of the files in this session exist anymore.');
-            return;
-        }
-
-        const activeTab = session.activeTabId && validTabs.includes(session.activeTabId)
-            ? session.activeTabId
-            : validTabs[0];
-
-        saveWorkspaceData({
-            ...workspaceData,
-            openTabs: validTabs,
-            activeTabId: activeTab,
-        });
-    }, [workspaceData, saveWorkspaceData]);
-
-    const handleSessionDelete = useCallback(async (sessionId: string) => {
-        const updatedSessions = deleteSession(sessionId, workspaceData.sessions || []);
-        const updatedData = {
-            ...workspaceData,
-            sessions: updatedSessions,
-        };
-        setWorkspaceData(updatedData);
-        // Save immediately for session deletion
-        await saveWorkspace(updatedData);
-    }, [workspaceData]);
-
     // Handle opening external file via file dialog
     const handleOpenExternalFile = useCallback(async () => {
         try {
@@ -925,7 +866,6 @@ export function WorkspacePage({
                 onBack={handleBack}
                 onRename={handleInlineRename}
                 onReorderTabs={handleReorderTabs}
-                onSaveSession={() => setSaveSessionModal(true)}
             />
 
             {/* Main content area */}
@@ -963,13 +903,10 @@ export function WorkspacePage({
                     <ContentArea
                         selectedFile={activeFile}
                         recentFiles={recentFiles}
-                        sessions={workspaceData.sessions || []}
                         files={workspaceData.files}
                         onFileSelect={handleFileSelect}
                         onFileCreate={handleFileCreateFromWelcome}
                         onContentChange={handleContentChange}
-                        onSessionRestore={handleSessionRestore}
-                        onSessionDelete={handleSessionDelete}
                         onOpenExternalFile={handleOpenExternalFile}
                         fileContent={activeFile ? noteContents[activeFile.id] || '' : ''}
                         renderNerdbookEditor={(contentId, filePath) => (
@@ -1040,15 +977,6 @@ export function WorkspacePage({
                             setNewItemModal(null);
                         }}
                         onCancel={() => setNewItemModal(null)}
-                    />
-                )}
-            </AnimatePresence>
-
-            <AnimatePresence>
-                {saveSessionModal && (
-                    <SaveSessionModal
-                        onConfirm={handleSaveSession}
-                        onCancel={() => setSaveSessionModal(false)}
                     />
                 )}
             </AnimatePresence>
@@ -1236,71 +1164,6 @@ function NewItemModal({
                     onKeyDown={handleKeyDown}
                     className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder={type === 'folder' ? 'Folder name' : 'File name'}
-                />
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 text-center">
-                    Press Enter to confirm · Esc to cancel
-                </p>
-            </motion.div>
-        </motion.div>
-    );
-}
-
-// Save Session Modal
-function SaveSessionModal({
-    onConfirm,
-    onCancel,
-}: {
-    onConfirm: (name: string) => void;
-    onCancel: () => void;
-}) {
-    const [name, setName] = useState('');
-    const inputRef = React.useRef<HTMLInputElement>(null);
-
-    useEffect(() => {
-        inputRef.current?.focus();
-    }, []);
-
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' && name.trim()) {
-            onConfirm(name.trim());
-        } else if (e.key === 'Escape') {
-            onCancel();
-        }
-    };
-
-    // Generate default name based on date/time
-    useEffect(() => {
-        const now = new Date();
-        const defaultName = `Session ${now.toLocaleDateString()} ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-        setName(defaultName);
-    }, []);
-
-    return (
-        <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-            onClick={onCancel}
-        >
-            <motion.div
-                initial={{ scale: 0.95, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.95, opacity: 0 }}
-                className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-4 w-72"
-                onClick={e => e.stopPropagation()}
-            >
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                    Save Session
-                </p>
-                <input
-                    ref={inputRef}
-                    type="text"
-                    value={name}
-                    onChange={e => setName(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Session name"
                 />
                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 text-center">
                     Press Enter to confirm · Esc to cancel

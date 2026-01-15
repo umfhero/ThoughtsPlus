@@ -1718,12 +1718,19 @@ IMPORTANT RULES:
         return { success: true };
     });
 
-    // Open data folder in file explorer
+    // Open data folder in file explorer (opens workspace subfolder)
     ipcMain.handle('open-data-folder', async () => {
         try {
             const dataDir = path.dirname(currentDataPath);
-            await shell.openPath(dataDir);
-            return { success: true, path: dataDir };
+            const workspaceDir = path.join(dataDir, 'workspace');
+
+            // Ensure workspace folder exists
+            if (!existsSync(workspaceDir)) {
+                await fs.mkdir(workspaceDir, { recursive: true });
+            }
+
+            await shell.openPath(workspaceDir);
+            return { success: true, path: workspaceDir };
         } catch (e) {
             console.error('Failed to open data folder:', e);
             return { success: false, error: (e as Error).message };
@@ -1743,10 +1750,10 @@ IMPORTANT RULES:
             const result = await dialog.showOpenDialog(win, {
                 title: 'Open Workspace File',
                 filters: [
+                    { name: 'All Workspace Files', extensions: ['exec', 'brd', 'nt'] },
                     { name: 'Notebook Files', extensions: ['exec'] },
                     { name: 'Board Files', extensions: ['brd'] },
                     { name: 'Note Files', extensions: ['nt'] },
-                    { name: 'All Workspace Files', extensions: ['exec', 'brd', 'nt'] },
                 ],
                 properties: ['openFile']
             });

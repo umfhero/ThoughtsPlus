@@ -5,19 +5,15 @@ import {
     WorkspaceFile,
     RecentFile,
     FileType,
-    WorkspaceSession,
 } from '../../types/workspace';
 
 interface ContentAreaProps {
     selectedFile: WorkspaceFile | null;
     recentFiles: RecentFile[];
-    sessions: WorkspaceSession[];
     files: WorkspaceFile[];
     onFileSelect: (fileId: string) => void;
     onFileCreate: (type: FileType) => void;
     onContentChange: (fileId: string, content: string) => void;
-    onSessionRestore: (session: WorkspaceSession) => void;
-    onSessionDelete: (sessionId: string) => void;
     onOpenExternalFile?: () => void;
     // Content for the currently selected file
     fileContent?: string;
@@ -35,13 +31,10 @@ interface ContentAreaProps {
 export function ContentArea({
     selectedFile,
     recentFiles,
-    sessions,
     files,
     onFileSelect,
     onFileCreate,
     onContentChange,
-    onSessionRestore,
-    onSessionDelete,
     onOpenExternalFile,
     fileContent = '',
     renderNerdbookEditor,
@@ -54,12 +47,9 @@ export function ContentArea({
             <div className="h-full bg-gray-50 dark:bg-gray-900">
                 <WelcomeView
                     recentFiles={recentFiles}
-                    sessions={sessions}
                     files={files}
                     onFileSelect={onFileSelect}
                     onFileCreate={onFileCreate}
-                    onSessionRestore={onSessionRestore}
-                    onSessionDelete={onSessionDelete}
                     onOpenExternalFile={onOpenExternalFile}
                 />
             </div>

@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, PanelLeftClose, PanelLeft, Home, Save } from 'lucide-react';
+import { X, PanelLeftClose, PanelLeft, Home } from 'lucide-react';
 import clsx from 'clsx';
 import { WorkspaceFile, FILE_ICONS, FILE_EXTENSIONS } from '../../types/workspace';
 
@@ -14,7 +14,6 @@ interface TabBarProps {
     onBack: () => void;
     onRename?: (fileId: string, newName: string) => void;
     onReorderTabs?: (newOrder: string[]) => void;
-    onSaveSession?: () => void;
 }
 
 /**
@@ -38,7 +37,6 @@ export function TabBar({
     onBack,
     onRename,
     onReorderTabs,
-    onSaveSession,
 }: TabBarProps) {
     const tabsContainerRef = useRef<HTMLDivElement>(null);
     const [editingTabId, setEditingTabId] = useState<string | null>(null);
@@ -230,17 +228,6 @@ export function TabBar({
                         <PanelLeft className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                     )}
                 </button>
-
-                {/* Save session button */}
-                {openTabs.length > 0 && onSaveSession && (
-                    <button
-                        onClick={onSaveSession}
-                        className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                        title="Save current tabs as session"
-                    >
-                        <Save className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                    </button>
-                )}
             </div>
 
             <div
