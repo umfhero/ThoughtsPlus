@@ -986,7 +986,7 @@ sys.stderr = StringIO()
             </div>
 
             {/* Cells Container */}
-            <div className="flex-1 overflow-y-auto bg-white dark:bg-gray-900">
+            <div className="flex-1 overflow-y-auto scrollbar-none bg-white dark:bg-gray-900">
                 <div className="w-full max-w-[95%] xl:max-w-[90%] mx-auto py-6 px-2">
                     <AnimatePresence>
                         {notebook.cells.map((cell, index) => {
