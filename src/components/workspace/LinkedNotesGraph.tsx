@@ -62,11 +62,11 @@ const getFileTypeColor = (type: FileType) => {
 };
 
 // Physics constants for force simulation - tuned for stability
-const REPULSION_STRENGTH = 500;        // Reduced to prevent oscillation
-const ATTRACTION_STRENGTH = 0.015;     // Reduced for gentler pull
+const REPULSION_STRENGTH = 15000;      // Massive repulsion for huge spacing
+const ATTRACTION_STRENGTH = 0.003;     // Very weak attraction
 const DAMPING = 0.75;                  // More damping to settle faster
-const CENTER_GRAVITY = 0.008;          // Slightly reduced
-const MIN_DISTANCE = 100;              // Increased minimum distance
+const CENTER_GRAVITY = 0.002;          // Base gravity (will be modified by connections)
+const MIN_DISTANCE = 500;              // Very large minimum distance
 const MAX_VELOCITY = 15;               // Cap velocity to prevent wild movements
 const VELOCITY_THRESHOLD = 0.1;        // Stop simulation when settled
 
@@ -93,6 +93,7 @@ export function LinkedNotesGraph({
     const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 });
     const [hoveredNode, setHoveredNode] = useState<string | null>(null);
     const [draggedNode, setDraggedNode] = useState<string | null>(null);
+    const [filterType, setFilterType] = useState<FileType | null>(null); // null = show all
     const [isLoading, setIsLoading] = useState(true);
     const [animationProgress, setAnimationProgress] = useState(0);
     const [revealedCount, setRevealedCount] = useState(0);
@@ -343,9 +344,10 @@ export function LinkedNotesGraph({
                     }
                 });
 
-                // Center gravity
-                fx += (centerX - node.x) * CENTER_GRAVITY;
-                fy += (centerY - node.y) * CENTER_GRAVITY;
+                // Center gravity - stronger for nodes with more connections
+                const connectionMultiplier = 1 + (node.connections * 0.8); // More connections = stronger pull to center
+                fx += (centerX - node.x) * CENTER_GRAVITY * connectionMultiplier;
+                fy += (centerY - node.y) * CENTER_GRAVITY * connectionMultiplier;
 
                 // Update velocity with damping
                 node.vx = (node.vx + fx) * DAMPING;
@@ -392,16 +394,57 @@ export function LinkedNotesGraph({
             canvas.height = container.clientHeight;
         }
 
-        // Clear canvas
-        ctx.fillStyle = theme === 'dark' ? '#111827' : '#f9fafb';
+        // Clear canvas with background
+        ctx.fillStyle = theme === 'dark' ? '#0f1419' : '#f8fafc';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+        // Draw infinite grid pattern (before transform so it scales with zoom)
+        ctx.save();
+
+        // Grid settings
+        const baseGridSize = 40;
+        const gridSize = baseGridSize * zoom;
+        const gridColor = theme === 'dark' ? 'rgba(55, 65, 81, 0.3)' : 'rgba(203, 213, 225, 0.5)';
+        const majorGridColor = theme === 'dark' ? 'rgba(55, 65, 81, 0.5)' : 'rgba(148, 163, 184, 0.4)';
+
+        // Calculate grid offset based on pan
+        const offsetX = (pan.x % gridSize + gridSize) % gridSize;
+        const offsetY = (pan.y % gridSize + gridSize) % gridSize;
+
+        ctx.strokeStyle = gridColor;
+        ctx.lineWidth = 1;
+
+        // Draw vertical lines
+        for (let x = offsetX; x < canvas.width; x += gridSize) {
+            const worldX = (x - pan.x - canvas.width / 2) / zoom;
+            const isMajor = Math.abs(Math.round(worldX / baseGridSize) % 5) === 0;
+            ctx.strokeStyle = isMajor ? majorGridColor : gridColor;
+            ctx.beginPath();
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, canvas.height);
+            ctx.stroke();
+        }
+
+        // Draw horizontal lines
+        for (let y = offsetY; y < canvas.height; y += gridSize) {
+            const worldY = (y - pan.y - canvas.height / 2) / zoom;
+            const isMajor = Math.abs(Math.round(worldY / baseGridSize) % 5) === 0;
+            ctx.strokeStyle = isMajor ? majorGridColor : gridColor;
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(canvas.width, y);
+            ctx.stroke();
+        }
+
+        ctx.restore();
+
+        // Apply transform for nodes and edges
         ctx.save();
         ctx.translate(pan.x + canvas.width / 2, pan.y + canvas.height / 2);
         ctx.scale(zoom, zoom);
         ctx.translate(-canvas.width / 2, -canvas.height / 2);
 
-        // Draw edges - only between revealed nodes
+        // Draw edges FIRST (so they appear under nodes)
         edges.forEach((edge) => {
             const source = nodes.find(n => n.id === edge.source);
             const target = nodes.find(n => n.id === edge.target);
@@ -410,8 +453,13 @@ export function LinkedNotesGraph({
             // Only draw edge if both nodes are revealed
             if (source.revealOrder >= revealedCount || target.revealOrder >= revealedCount) return;
 
+            // Check if edge involves filtered-out nodes
+            const isEdgeFiltered = filterType !== null &&
+                (source.type !== filterType || target.type !== filterType);
+
             // Edge opacity based on the later-revealed node's opacity
-            const edgeOpacity = Math.min(source.opacity, target.opacity);
+            let edgeOpacity = Math.min(source.opacity, target.opacity);
+            if (isEdgeFiltered) edgeOpacity *= 0.2; // Dim filtered edges
             if (edgeOpacity <= 0) return;
 
             const isHighlighted = hoveredNode === source.id || hoveredNode === target.id;
@@ -420,15 +468,15 @@ export function LinkedNotesGraph({
             ctx.beginPath();
             ctx.moveTo(source.x, source.y);
             ctx.lineTo(target.x, target.y);
-            ctx.strokeStyle = isHighlighted
-                ? accentColor
-                : theme === 'dark' ? 'rgba(156, 163, 175, 0.3)' : 'rgba(107, 114, 128, 0.3)';
-            ctx.lineWidth = isHighlighted ? 2 : 1;
+            ctx.strokeStyle = isHighlighted && !isEdgeFiltered
+                ? (theme === 'dark' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.35)')
+                : theme === 'dark' ? 'rgba(156, 163, 175, 0.4)' : 'rgba(107, 114, 128, 0.4)';
+            ctx.lineWidth = isHighlighted && !isEdgeFiltered ? 2.5 : 1.5;
             ctx.stroke();
             ctx.globalAlpha = 1;
         });
 
-        // Draw nodes - only show revealed nodes with their opacity
+        // Draw nodes AFTER edges (so nodes appear on top)
         nodes.forEach((node) => {
             // Skip nodes that haven't been revealed yet
             if (node.revealOrder >= revealedCount) return;
@@ -444,62 +492,187 @@ export function LinkedNotesGraph({
                 e => (e.source === hoveredNode && e.target === node.id) ||
                     (e.target === hoveredNode && e.source === node.id)
             );
-            const isDimmed = hoveredNode && !isHighlighted && !isConnected;
+            const isDimmedByHover = hoveredNode && !isHighlighted && !isConnected;
+
+            // Check if this node is filtered out by type filter
+            const isFilteredOut = filterType !== null && node.type !== filterType;
+            const isDimmed = isDimmedByHover || isFilteredOut;
 
             // Get the file type color for this node
             const nodeColor = getFileTypeColor(node.type);
 
-            // Node size based on connections, scaled by opacity for pop-in effect
-            const baseSize = 8 + Math.min(node.connections * 2, 12);
-            const scaleEffect = 0.5 + (node.opacity * 0.5); // Scale from 50% to 100%
-            const size = baseSize * scaleEffect * (isHighlighted ? 1.3 : 1);
+            // Icon size based on connections, scaled by opacity for pop-in effect
+            const baseSize = 24 + Math.min(node.connections * 4, 16); // 30% larger
+            const scaleEffect = 0.5 + (node.opacity * 0.5);
+            const size = baseSize * scaleEffect * (isHighlighted ? 1.2 : 1);
 
-            ctx.globalAlpha = node.opacity;
+            ctx.globalAlpha = node.opacity * (isFilteredOut ? 0.3 : 1);
 
-            // Draw node glow
-            if (isHighlighted && node.opacity > 0.5) {
-                const gradient = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, size * 2);
-                gradient.addColorStop(0, `${nodeColor}40`);
-                gradient.addColorStop(1, 'transparent');
-                ctx.fillStyle = gradient;
+            // Draw glow for highlighted nodes
+            if (isHighlighted && node.opacity > 0.5 && !isFilteredOut) {
+                const glowGradient = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, size * 1.5);
+                glowGradient.addColorStop(0, `${nodeColor}40`);
+                glowGradient.addColorStop(0.6, `${nodeColor}15`);
+                glowGradient.addColorStop(1, 'transparent');
+                ctx.fillStyle = glowGradient;
                 ctx.beginPath();
-                ctx.arc(node.x, node.y, size * 2, 0, Math.PI * 2);
+                ctx.arc(node.x, node.y, size * 1.5, 0, Math.PI * 2);
                 ctx.fill();
             }
 
-            // Draw node circle with file type color
-            ctx.beginPath();
-            ctx.arc(node.x, node.y, size, 0, Math.PI * 2);
-            if (isDimmed) {
-                ctx.fillStyle = theme === 'dark' ? 'rgba(75, 85, 99, 0.5)' : 'rgba(156, 163, 175, 0.5)';
-            } else if (isHighlighted) {
-                ctx.fillStyle = nodeColor;
-            } else {
-                // Use file type color with slight transparency when not highlighted
-                ctx.fillStyle = nodeColor + (theme === 'dark' ? 'cc' : 'dd'); // Add alpha
-            }
-            ctx.fill();
+            // Draw file type icon
+            const iconColor = isFilteredOut
+                ? (theme === 'dark' ? '#4b5563' : '#9ca3af')
+                : isDimmed
+                    ? (theme === 'dark' ? '#6b7280' : '#9ca3af')
+                    : nodeColor;
 
-            // Draw node border
-            ctx.strokeStyle = theme === 'dark' ? '#1f2937' : '#ffffff';
-            ctx.lineWidth = 2;
-            ctx.stroke();
+            ctx.strokeStyle = iconColor;
+            ctx.fillStyle = iconColor;
+            ctx.lineWidth = isHighlighted ? 2.5 : 2;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            const halfSize = size / 2;
+            const iconOffsetY = -size * 0.2; // Move icons up by 20%
+
+            // Draw different icons based on file type
+            if (node.type === 'exec') {
+                // FileCode icon - document with code brackets
+                const x = node.x - halfSize;
+                const y = node.y - halfSize + iconOffsetY;
+                const w = size;
+                const h = size;
+
+                // Document outline
+                ctx.beginPath();
+                ctx.moveTo(x + w * 0.15, y + h * 0.05);
+                ctx.lineTo(x + w * 0.6, y + h * 0.05);
+                ctx.lineTo(x + w * 0.85, y + h * 0.2);
+                ctx.lineTo(x + w * 0.85, y + h * 0.95);
+                ctx.lineTo(x + w * 0.15, y + h * 0.95);
+                ctx.closePath();
+                ctx.stroke();
+
+                // Code brackets < >
+                ctx.beginPath();
+                ctx.moveTo(x + w * 0.42, y + h * 0.4);
+                ctx.lineTo(x + w * 0.28, y + h * 0.55);
+                ctx.lineTo(x + w * 0.42, y + h * 0.7);
+                ctx.moveTo(x + w * 0.58, y + h * 0.4);
+                ctx.lineTo(x + w * 0.72, y + h * 0.55);
+                ctx.lineTo(x + w * 0.58, y + h * 0.7);
+                ctx.stroke();
+
+            } else if (node.type === 'board') {
+                // PenTool icon - pen/stylus
+                const x = node.x - halfSize;
+                const y = node.y - halfSize + iconOffsetY;
+                const w = size;
+                const h = size;
+
+                ctx.beginPath();
+                // Pen body (diagonal rectangle)
+                ctx.moveTo(x + w * 0.7, y + h * 0.1);
+                ctx.lineTo(x + w * 0.9, y + h * 0.3);
+                ctx.lineTo(x + w * 0.35, y + h * 0.85);
+                ctx.lineTo(x + w * 0.15, y + h * 0.65);
+                ctx.closePath();
+                ctx.stroke();
+
+                // Pen tip
+                ctx.beginPath();
+                ctx.moveTo(x + w * 0.15, y + h * 0.65);
+                ctx.lineTo(x + w * 0.35, y + h * 0.85);
+                ctx.lineTo(x + w * 0.1, y + h * 0.95);
+                ctx.closePath();
+                ctx.stroke();
+
+            } else {
+                // FileText icon - document with lines (for notes)
+                const x = node.x - halfSize;
+                const y = node.y - halfSize + iconOffsetY;
+                const w = size;
+                const h = size;
+
+                // Document outline
+                ctx.beginPath();
+                ctx.moveTo(x + w * 0.15, y + h * 0.05);
+                ctx.lineTo(x + w * 0.6, y + h * 0.05);
+                ctx.lineTo(x + w * 0.85, y + h * 0.2);
+                ctx.lineTo(x + w * 0.85, y + h * 0.95);
+                ctx.lineTo(x + w * 0.15, y + h * 0.95);
+                ctx.closePath();
+                ctx.stroke();
+
+                // Text lines
+                ctx.beginPath();
+                ctx.moveTo(x + w * 0.28, y + h * 0.4);
+                ctx.lineTo(x + w * 0.72, y + h * 0.4);
+                ctx.moveTo(x + w * 0.28, y + h * 0.55);
+                ctx.lineTo(x + w * 0.72, y + h * 0.55);
+                ctx.moveTo(x + w * 0.28, y + h * 0.7);
+                ctx.lineTo(x + w * 0.55, y + h * 0.7);
+                ctx.stroke();
+            }
 
             // Draw label
             if ((isHighlighted || zoom > 0.7) && node.opacity > 0.5) {
                 ctx.font = `${isHighlighted ? 'bold ' : ''}${12 / zoom}px Inter, sans-serif`;
-                ctx.fillStyle = isDimmed
-                    ? (theme === 'dark' ? 'rgba(156, 163, 175, 0.5)' : 'rgba(107, 114, 128, 0.5)')
-                    : theme === 'dark' ? '#e5e7eb' : '#374151';
                 ctx.textAlign = 'center';
-                ctx.fillText(node.name, node.x, node.y + size + 14);
+
+                // Measure text for highlight background
+                const textMetrics = ctx.measureText(node.name);
+                const textWidth = textMetrics.width;
+                const textHeight = 14 / zoom;
+                const textX = node.x;
+                const textY = node.y + halfSize + 13;
+
+                // Draw rotated highlight rectangle behind text
+                if (!isDimmed && !isFilteredOut) {
+                    const highlightColor = theme === 'dark' ? 'rgba(217, 169, 99, 0.25)' : 'rgba(237, 189, 119, 0.35)';
+                    const paddingX = 6 / zoom;
+                    const paddingY = 4 / zoom;
+                    const rectWidth = textWidth + paddingX * 2;
+                    const rectHeight = textHeight + paddingY * 2;
+                    const cornerRadius = 3 / zoom;
+
+                    ctx.save();
+                    ctx.translate(textX, textY - textHeight / 2 + 2);
+                    ctx.rotate(-5 * Math.PI / 180); // Rotate -10 degrees (anti-clockwise)
+
+                    // Draw rounded rectangle
+                    ctx.fillStyle = highlightColor;
+                    ctx.beginPath();
+                    const rx = -rectWidth / 2;
+                    const ry = -rectHeight / 2;
+                    ctx.moveTo(rx + cornerRadius, ry);
+                    ctx.lineTo(rx + rectWidth - cornerRadius, ry);
+                    ctx.quadraticCurveTo(rx + rectWidth, ry, rx + rectWidth, ry + cornerRadius);
+                    ctx.lineTo(rx + rectWidth, ry + rectHeight - cornerRadius);
+                    ctx.quadraticCurveTo(rx + rectWidth, ry + rectHeight, rx + rectWidth - cornerRadius, ry + rectHeight);
+                    ctx.lineTo(rx + cornerRadius, ry + rectHeight);
+                    ctx.quadraticCurveTo(rx, ry + rectHeight, rx, ry + rectHeight - cornerRadius);
+                    ctx.lineTo(rx, ry + cornerRadius);
+                    ctx.quadraticCurveTo(rx, ry, rx + cornerRadius, ry);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    ctx.restore();
+                }
+
+                // Main text (drawn after highlight, not rotated)
+                ctx.fillStyle = isDimmed || isFilteredOut
+                    ? (theme === 'dark' ? 'rgba(156, 163, 175, 0.5)' : 'rgba(107, 114, 128, 0.5)')
+                    : theme === 'dark' ? '#f3f4f6' : '#1f2937';
+                ctx.fillText(node.name, textX, textY);
             }
 
             ctx.globalAlpha = 1;
         });
 
         ctx.restore();
-    }, [nodes, edges, zoom, pan, hoveredNode, animationProgress, accentColor, theme, revealedCount]);
+    }, [nodes, edges, zoom, pan, hoveredNode, animationProgress, accentColor, theme, revealedCount, filterType]);
 
 
     // Mouse event handlers
@@ -614,6 +787,13 @@ export function LinkedNotesGraph({
         totalEdges: edges.length,
         connectedNodes: nodes.filter(n => n.connections > 0).length,
     }), [nodes, edges]);
+
+    // Count nodes by type
+    const typeCounts = useMemo(() => ({
+        exec: nodes.filter(n => n.type === 'exec').length,
+        board: nodes.filter(n => n.type === 'board').length,
+        note: nodes.filter(n => n.type === 'note').length,
+    }), [nodes]);
 
     if (!isOpen) return null;
 
@@ -759,30 +939,70 @@ export function LinkedNotesGraph({
                         </motion.div>
                     )}
 
-                    {/* Legend */}
+                    {/* Legend - Clickable to filter */}
                     <div className={clsx(
                         "absolute bottom-6 right-6 px-4 py-3 rounded-xl",
-                        "bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm",
+                        "bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm",
                         "border border-gray-200 dark:border-gray-700",
-                        "text-xs"
+                        "text-xs shadow-lg"
                     )}>
                         <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-1.5">
-                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#3b82f6' }} />
+                            <button
+                                onClick={() => setFilterType(filterType === 'exec' ? null : 'exec')}
+                                className={clsx(
+                                    "flex items-center gap-1.5 px-2 py-1 rounded-md transition-all",
+                                    filterType === 'exec'
+                                        ? "bg-blue-500/20 ring-2 ring-blue-500/50"
+                                        : filterType !== null
+                                            ? "opacity-40 hover:opacity-70"
+                                            : "hover:bg-gray-100 dark:hover:bg-gray-700"
+                                )}
+                                title="Click to filter notebooks"
+                            >
+                                <span className="font-semibold min-w-[1rem] text-center" style={{ color: '#3b82f6' }}>{typeCounts.exec}</span>
                                 <FileCode className="w-3.5 h-3.5" style={{ color: '#3b82f6' }} />
                                 <span style={{ color: '#3b82f6' }}>Notebook</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#a855f7' }} />
+                            </button>
+                            <button
+                                onClick={() => setFilterType(filterType === 'board' ? null : 'board')}
+                                className={clsx(
+                                    "flex items-center gap-1.5 px-2 py-1 rounded-md transition-all",
+                                    filterType === 'board'
+                                        ? "bg-purple-500/20 ring-2 ring-purple-500/50"
+                                        : filterType !== null
+                                            ? "opacity-40 hover:opacity-70"
+                                            : "hover:bg-gray-100 dark:hover:bg-gray-700"
+                                )}
+                                title="Click to filter boards"
+                            >
+                                <span className="font-semibold min-w-[1rem] text-center" style={{ color: '#a855f7' }}>{typeCounts.board}</span>
                                 <PenTool className="w-3.5 h-3.5" style={{ color: '#a855f7' }} />
                                 <span style={{ color: '#a855f7' }}>Board</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#22c55e' }} />
+                            </button>
+                            <button
+                                onClick={() => setFilterType(filterType === 'note' ? null : 'note')}
+                                className={clsx(
+                                    "flex items-center gap-1.5 px-2 py-1 rounded-md transition-all",
+                                    filterType === 'note'
+                                        ? "bg-green-500/20 ring-2 ring-green-500/50"
+                                        : filterType !== null
+                                            ? "opacity-40 hover:opacity-70"
+                                            : "hover:bg-gray-100 dark:hover:bg-gray-700"
+                                )}
+                                title="Click to filter notes"
+                            >
+                                <span className="font-semibold min-w-[1rem] text-center" style={{ color: '#22c55e' }}>{typeCounts.note}</span>
                                 <FileText className="w-3.5 h-3.5" style={{ color: '#22c55e' }} />
                                 <span style={{ color: '#22c55e' }}>Note</span>
-                            </div>
+                            </button>
                         </div>
+                        {filterType && (
+                            <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600 text-center">
+                                <span className="text-gray-500 dark:text-gray-400">
+                                    Filtering: {filterType === 'exec' ? 'Notebooks' : filterType === 'board' ? 'Boards' : 'Notes'}
+                                </span>
+                            </div>
+                        )}
                     </div>
 
                     {/* Zoom indicator */}
