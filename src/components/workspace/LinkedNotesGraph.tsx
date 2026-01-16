@@ -446,6 +446,9 @@ export function LinkedNotesGraph({
             );
             const isDimmed = hoveredNode && !isHighlighted && !isConnected;
 
+            // Get the file type color for this node
+            const nodeColor = getFileTypeColor(node.type);
+
             // Node size based on connections, scaled by opacity for pop-in effect
             const baseSize = 8 + Math.min(node.connections * 2, 12);
             const scaleEffect = 0.5 + (node.opacity * 0.5); // Scale from 50% to 100%
@@ -456,7 +459,7 @@ export function LinkedNotesGraph({
             // Draw node glow
             if (isHighlighted && node.opacity > 0.5) {
                 const gradient = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, size * 2);
-                gradient.addColorStop(0, `${accentColor}40`);
+                gradient.addColorStop(0, `${nodeColor}40`);
                 gradient.addColorStop(1, 'transparent');
                 ctx.fillStyle = gradient;
                 ctx.beginPath();
@@ -464,14 +467,17 @@ export function LinkedNotesGraph({
                 ctx.fill();
             }
 
-            // Draw node circle
+            // Draw node circle with file type color
             ctx.beginPath();
             ctx.arc(node.x, node.y, size, 0, Math.PI * 2);
-            ctx.fillStyle = isDimmed
-                ? (theme === 'dark' ? 'rgba(75, 85, 99, 0.5)' : 'rgba(156, 163, 175, 0.5)')
-                : isHighlighted || isConnected
-                    ? accentColor
-                    : theme === 'dark' ? '#6b7280' : '#9ca3af';
+            if (isDimmed) {
+                ctx.fillStyle = theme === 'dark' ? 'rgba(75, 85, 99, 0.5)' : 'rgba(156, 163, 175, 0.5)';
+            } else if (isHighlighted) {
+                ctx.fillStyle = nodeColor;
+            } else {
+                // Use file type color with slight transparency when not highlighted
+                ctx.fillStyle = nodeColor + (theme === 'dark' ? 'cc' : 'dd'); // Add alpha
+            }
             ctx.fill();
 
             // Draw node border
@@ -735,9 +741,10 @@ export function LinkedNotesGraph({
                                 const node = nodes.find(n => n.id === hoveredNode);
                                 if (!node) return null;
                                 const Icon = getFileIcon(node.type);
+                                const nodeColor = getFileTypeColor(node.type);
                                 return (
                                     <div className="flex items-center gap-3">
-                                        <Icon className="w-5 h-5" style={{ color: accentColor }} />
+                                        <Icon className="w-5 h-5" style={{ color: nodeColor }} />
                                         <div>
                                             <div className="font-medium text-gray-900 dark:text-white">
                                                 {node.name}
@@ -757,20 +764,23 @@ export function LinkedNotesGraph({
                         "absolute bottom-6 right-6 px-4 py-3 rounded-xl",
                         "bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm",
                         "border border-gray-200 dark:border-gray-700",
-                        "text-xs text-gray-500 dark:text-gray-400"
+                        "text-xs"
                     )}>
                         <div className="flex items-center gap-4">
                             <div className="flex items-center gap-1.5">
-                                <FileCode className="w-3.5 h-3.5" />
-                                <span>Notebook</span>
+                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#3b82f6' }} />
+                                <FileCode className="w-3.5 h-3.5" style={{ color: '#3b82f6' }} />
+                                <span style={{ color: '#3b82f6' }}>Notebook</span>
                             </div>
                             <div className="flex items-center gap-1.5">
-                                <PenTool className="w-3.5 h-3.5" />
-                                <span>Board</span>
+                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#a855f7' }} />
+                                <PenTool className="w-3.5 h-3.5" style={{ color: '#a855f7' }} />
+                                <span style={{ color: '#a855f7' }}>Board</span>
                             </div>
                             <div className="flex items-center gap-1.5">
-                                <FileText className="w-3.5 h-3.5" />
-                                <span>Note</span>
+                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#22c55e' }} />
+                                <FileText className="w-3.5 h-3.5" style={{ color: '#22c55e' }} />
+                                <span style={{ color: '#22c55e' }}>Note</span>
                             </div>
                         </div>
                     </div>
