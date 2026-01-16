@@ -704,6 +704,17 @@ function setupIpcHandlers() {
         return true;
     });
 
+    // Open external link in system browser
+    ipcMain.handle('open-external-link', async (_, url: string) => {
+        try {
+            await shell.openExternal(url);
+            return true;
+        } catch (error) {
+            console.error('Failed to open external link:', error);
+            return false;
+        }
+    });
+
     // Flash window for timer alert
     ipcMain.handle('flash-window', () => {
         if (win) {
