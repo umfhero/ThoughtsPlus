@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileTree, ContentArea, NerdbookEditor, BoardEditor, TabBar } from '../components/workspace';
+import { FileTree, ContentArea, NerdbookEditor, BoardEditor, TabBar, LinkedNotesGraph } from '../components/workspace';
 import {
     WorkspaceFile,
     WorkspaceFolder,
@@ -27,7 +27,6 @@ import {
     BoardForMigration,
 } from '../utils/workspaceMigration';
 import { Page, NerdNotebook, QuickNote } from '../types';
-
 /**
  * Loads existing data (nerdbooks, boards, quick notes) for migration
  */
@@ -117,6 +116,7 @@ export function WorkspacePage({
         type: 'file' | 'folder';
         fileType?: FileType;
     } | null>(null);
+    const [showLinkedNotesGraph, setShowLinkedNotesGraph] = useState(false);
 
     const debouncedSave = useMemo(() => createDebouncedSave('workspace'), []);
 
@@ -360,6 +360,88 @@ export function WorkspacePage({
         setWorkspaceData(data);
         await debouncedSave(data);
     }, [debouncedSave]);
+
+    // Get file content for linked notes graph
+    const getFileContent = useCallback(async (fileId: string): Promise<string> => {
+        const file = workspaceData.files.find(f => f.id === fileId);
+        if (!file) {
+            console.log(`[getFileContent] File not found: ${fileId}`);
+            return '';
+        }
+
+        try {
+            if (file.filePath) {
+                console.log(`[getFileContent] Loading file: ${file.name} (type: ${file.type}) from ${file.filePath}`);
+                // @ts-ignore - Electron API
+                const rawContent = await window.ipcRenderer?.invoke('load-workspace-file', file.filePath);
+
+                // Handle different content types (Buffer, string, object)
+                let content: string = '';
+                if (rawContent === null || rawContent === undefined) {
+                    console.log(`[getFileContent] No content returned for ${file.name}`);
+                    return '';
+                } else if (typeof rawContent === 'string') {
+                    content = rawContent;
+                } else if (rawContent && rawContent.type === 'Buffer' && Array.isArray(rawContent.data)) {
+                    // Handle serialized Buffer from IPC (common in Electron)
+                    content = String.fromCharCode.apply(null, rawContent.data);
+                } else if (typeof rawContent === 'object') {
+                    // IPC returns {success: true, content: {...}} - extract the content
+                    if (rawContent.success && rawContent.content) {
+                        content = typeof rawContent.content === 'string'
+                            ? rawContent.content
+                            : JSON.stringify(rawContent.content);
+                    } else {
+                        content = JSON.stringify(rawContent);
+                    }
+                } else {
+                    content = String(rawContent);
+                }
+
+                console.log(`[getFileContent] Content for ${file.name} (first 200 chars):`, content.substring(0, 200));
+
+                if (file.type === 'exec') {
+                    // Parse notebook and extract all cell content
+                    try {
+                        const notebook = typeof content === 'string' ? JSON.parse(content) : content;
+                        const cellContent = notebook.cells?.map((c: any) => c.content || '').join('\n') || '';
+                        console.log(`[getFileContent] Extracted cell content for ${file.name}:`, cellContent.substring(0, 200));
+                        return cellContent;
+                    } catch (parseError) {
+                        console.error(`[getFileContent] JSON parse error for ${file.name}:`, parseError);
+                        return '';
+                    }
+                } else if (file.type === 'note') {
+                    // Plain text note - might be wrapped in {success, content}
+                    try {
+                        const parsed = JSON.parse(content);
+                        if (parsed.success && typeof parsed.content === 'string') {
+                            return parsed.content;
+                        }
+                    } catch {
+                        // Not JSON, return as-is
+                    }
+                    return content;
+                } else if (file.type === 'board') {
+                    // Board files - extract text from elements if possible
+                    try {
+                        const board = typeof content === 'string' ? JSON.parse(content) : content;
+                        // Extract text from board notes
+                        const texts = board.notes?.filter((e: any) => e.type === 'text').map((e: any) => e.text || '').join('\n') || '';
+                        return texts;
+                    } catch {
+                        return '';
+                    }
+                }
+                return content;
+            } else {
+                console.log(`[getFileContent] No filePath for file: ${file.name}`);
+            }
+        } catch (e) {
+            console.error('Error loading file content:', e);
+        }
+        return '';
+    }, [workspaceData.files]);
 
     // Handle file selection - opens in tab
     const handleFileSelect = useCallback((fileId: string) => {
@@ -922,6 +1004,7 @@ export function WorkspacePage({
                                 onDelete={handleDelete}
                                 onMove={handleMove}
                                 onReorder={handleReorder}
+                                onOpenLinkedNotesGraph={() => setShowLinkedNotesGraph(true)}
                             />
                         </motion.div>
                     )}
@@ -1012,6 +1095,15 @@ export function WorkspacePage({
                     />
                 )}
             </AnimatePresence>
+
+            {/* Linked Notes Graph */}
+            <LinkedNotesGraph
+                isOpen={showLinkedNotesGraph}
+                onClose={() => setShowLinkedNotesGraph(false)}
+                workspaceFiles={workspaceData.files}
+                onNavigateToFile={handleFileSelect}
+                getFileContent={getFileContent}
+            />
         </div>
     );
 }

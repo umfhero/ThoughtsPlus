@@ -70,9 +70,9 @@ export function getMentionSuggestions(
 ): MentionSuggestion[] {
     const normalizedQuery = query.toLowerCase().trim();
 
-    // Filter to only exec (nerdbook) files, excluding current file
+    // Filter to all file types, excluding current file
     const eligibleFiles = workspaceFiles.filter(
-        f => f.type === 'exec' && f.id !== currentFileId
+        f => f.id !== currentFileId
     );
 
     if (!normalizedQuery) {

@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FilePlus, FolderPlus, Pencil, Trash2, ArrowUpDown } from 'lucide-react';
+import { FilePlus, FolderPlus, Pencil, Trash2, ArrowUpDown, Share2 } from 'lucide-react';
 import clsx from 'clsx';
 import { FileTreeNode } from './FileTreeNode';
 import { buildTreeStructure } from '../../utils/workspace';
@@ -23,6 +23,7 @@ interface FileTreeProps {
     onDelete: (id: string, isFolder: boolean) => void;
     onMove: (id: string, newParentId: string | null, isFolder: boolean) => void;
     onReorder: (id: string, targetId: string, position: 'before' | 'after', isFolder: boolean) => void;
+    onOpenLinkedNotesGraph?: () => void;
 }
 
 interface ContextMenuState {
@@ -64,6 +65,7 @@ export function FileTree({
     onDelete,
     onMove,
     onReorder,
+    onOpenLinkedNotesGraph,
 }: FileTreeProps) {
     const [contextMenu, setContextMenu] = useState<ContextMenuState>({
         visible: false,
@@ -349,6 +351,20 @@ export function FileTree({
             {/* Header with title and sort */}
             <div className="flex items-center gap-2 p-3 border-b border-gray-200 dark:border-gray-700">
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300 flex-1">Explorer</span>
+
+                {/* Graph view button */}
+                {onOpenLinkedNotesGraph && (
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onOpenLinkedNotesGraph();
+                        }}
+                        className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        title="View Linked Notes Graph"
+                    >
+                        <Share2 className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                    </button>
+                )}
 
                 {/* Sort button */}
                 <div className="relative">
