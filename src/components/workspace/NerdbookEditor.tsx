@@ -4,10 +4,24 @@ import {
     Plus, Trash2, Edit2, Check, X, ChevronDown,
     Code, Save, Scissors,
     Clipboard, Play, Square, Copy, ArrowUp, ArrowDown, RotateCcw,
-    Sun, Moon, Palette, Monitor
+    Sun, Moon, Palette, Monitor, Wand2
 } from 'lucide-react';
 import { NerdNotebook, NerdCell, NerdCellType } from '../../types';
 import { useTheme } from '../../contexts/ThemeContext';
+import { AiBackboneModal } from '../AiBackboneModal';
+import { MarkdownContextMenu } from '../MarkdownContextMenu';
+import {
+    getSelection,
+    toggleBold,
+    toggleItalic,
+    toggleStrikethrough,
+    toggleInlineCode,
+    handleEnterKey,
+    handleTabKey,
+    insertLink,
+    executeContextMenuAction,
+    ContextMenuAction
+} from '../../utils/smartMarkdown';
 import clsx from 'clsx';
 import Prism from 'prismjs';
 import 'prismjs/themes/prism-tomorrow.css';
@@ -57,6 +71,15 @@ export function NerdbookEditor({ contentId, filePath, onNotebookChange }: Nerdbo
     const [pyodideLoading, setPyodideLoading] = useState(false);
     const [pyodideReady, setPyodideReady] = useState(false);
     const pyodideRef = useRef<any>(null);
+    const [showAiBackboneModal, setShowAiBackboneModal] = useState(false);
+
+    // Context menu state for smart markdown editing
+    const [contextMenu, setContextMenu] = useState<{ isOpen: boolean; x: number; y: number; cellId: string | null }>({
+        isOpen: false,
+        x: 0,
+        y: 0,
+        cellId: null
+    });
 
     // Code theme setting
     const [codeTheme, setCodeTheme] = useState<CodeTheme>(() => {
@@ -360,6 +383,34 @@ export function NerdbookEditor({ contentId, filePath, onNotebookChange }: Nerdbo
         setSelectedCellId(newCell.id);
     }, [notebook, clipboard, getSelectedCellIndex]);
 
+    // Handle AI backbone generation - always append cells at the end
+    const handleAiBackboneGenerate = useCallback((newCells: NerdCell[]) => {
+        if (!notebook || newCells.length === 0) return;
+
+        const updatedCells = [...notebook.cells, ...newCells];
+
+        setNotebook({
+            ...notebook,
+            cells: updatedCells,
+            updatedAt: new Date().toISOString(),
+        });
+
+        // Select the first new cell
+        if (newCells.length > 0) {
+            setSelectedCellId(newCells[0].id);
+        }
+    }, [notebook]);
+
+    // Get existing content for AI context (truncated to save tokens)
+    const getExistingContent = useCallback(() => {
+        if (!notebook || notebook.cells.length === 0) return '';
+        // Only send first 3 cells as context summary
+        return notebook.cells
+            .slice(0, 3)
+            .map(cell => cell.content.substring(0, 150))
+            .join(' | ');
+    }, [notebook]);
+
     // Select cell above/below
     const selectAdjacentCell = useCallback((direction: 'up' | 'down') => {
         if (!notebook) return;
@@ -391,6 +442,142 @@ export function NerdbookEditor({ contentId, filePath, onNotebookChange }: Nerdbo
         textarea.style.height = `${textarea.scrollHeight}px`;
     };
 
+    // Smart markdown keyboard handler for markdown cells
+    const handleSmartMarkdownKeyDown = useCallback((
+        e: React.KeyboardEvent<HTMLTextAreaElement>,
+        cellId: string,
+        cellType: NerdCellType
+    ) => {
+        // Only apply to markdown cells
+        if (cellType !== 'markdown') return;
+
+        const textarea = e.currentTarget;
+        const content = textarea.value;
+        const selection = getSelection(textarea);
+
+        // Ctrl+B - Bold / Heading toggle
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+            e.preventDefault();
+            const result = toggleBold(content, selection);
+            handleUpdateCell(cellId, result.newContent);
+            setTimeout(() => {
+                textarea.setSelectionRange(result.newCursorStart, result.newCursorEnd);
+            }, 0);
+            return;
+        }
+
+        // Ctrl+I - Italic
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'i') {
+            e.preventDefault();
+            const result = toggleItalic(content, selection);
+            handleUpdateCell(cellId, result.newContent);
+            setTimeout(() => {
+                textarea.setSelectionRange(result.newCursorStart, result.newCursorEnd);
+            }, 0);
+            return;
+        }
+
+        // Ctrl+Shift+S - Strikethrough
+        if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 's') {
+            e.preventDefault();
+            const result = toggleStrikethrough(content, selection);
+            handleUpdateCell(cellId, result.newContent);
+            setTimeout(() => {
+                textarea.setSelectionRange(result.newCursorStart, result.newCursorEnd);
+            }, 0);
+            return;
+        }
+
+        // Ctrl+` - Inline code
+        if ((e.ctrlKey || e.metaKey) && e.key === '`') {
+            e.preventDefault();
+            const result = toggleInlineCode(content, selection);
+            handleUpdateCell(cellId, result.newContent);
+            setTimeout(() => {
+                textarea.setSelectionRange(result.newCursorStart, result.newCursorEnd);
+            }, 0);
+            return;
+        }
+
+        // Ctrl+K - Insert link
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+            e.preventDefault();
+            const result = insertLink(content, selection);
+            handleUpdateCell(cellId, result.newContent);
+            setTimeout(() => {
+                textarea.setSelectionRange(result.newCursorStart, result.newCursorEnd);
+            }, 0);
+            return;
+        }
+
+        // Enter - Smart list continuation
+        if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+            const result = handleEnterKey(content, textarea.selectionStart);
+            if (result) {
+                e.preventDefault();
+                handleUpdateCell(cellId, result.newContent);
+                setTimeout(() => {
+                    textarea.setSelectionRange(result.newCursorStart, result.newCursorEnd);
+                    autoResizeTextarea(textarea);
+                }, 0);
+                return;
+            }
+        }
+
+        // Tab - List indentation
+        if (e.key === 'Tab') {
+            const result = handleTabKey(content, textarea.selectionStart, e.shiftKey);
+            if (result) {
+                e.preventDefault();
+                handleUpdateCell(cellId, result.newContent);
+                setTimeout(() => {
+                    textarea.setSelectionRange(result.newCursorStart, result.newCursorEnd);
+                }, 0);
+                return;
+            }
+        }
+    }, [handleUpdateCell]);
+
+    // Handle context menu for markdown cells
+    const handleContextMenu = useCallback((
+        e: React.MouseEvent<HTMLTextAreaElement>,
+        cellId: string,
+        cellType: NerdCellType
+    ) => {
+        // Only show custom context menu for markdown cells
+        if (cellType !== 'markdown') return;
+
+        e.preventDefault();
+        setContextMenu({
+            isOpen: true,
+            x: e.clientX,
+            y: e.clientY,
+            cellId
+        });
+    }, []);
+
+    // Handle context menu action
+    const handleContextMenuAction = useCallback((action: ContextMenuAction) => {
+        if (!contextMenu.cellId) return;
+
+        const textarea = textareaRefs.current[contextMenu.cellId];
+        if (!textarea) return;
+
+        const cell = notebook?.cells.find(c => c.id === contextMenu.cellId);
+        if (!cell) return;
+
+        const content = textarea.value;
+        const selection = getSelection(textarea);
+        const result = executeContextMenuAction(action, content, selection);
+
+        handleUpdateCell(contextMenu.cellId, result.newContent);
+        setTimeout(() => {
+            textarea.focus();
+            textarea.setSelectionRange(result.newCursorStart, result.newCursorEnd);
+            autoResizeTextarea(textarea);
+        }, 0);
+    }, [contextMenu.cellId, notebook, handleUpdateCell]);
+
     // Detect language from code content
     const detectLanguage = useCallback((content: string): string => {
         const firstLine = content.trim().split('\n')[0].toLowerCase();
@@ -406,7 +593,10 @@ export function NerdbookEditor({ contentId, filePath, onNotebookChange }: Nerdbo
         if (content.includes('interface ') || content.includes(': string') || content.includes(': number')) return 'typescript';
         if (content.includes('def ') || content.includes('print(') || content.includes('import ') && !content.includes('from \'')) return 'python';
         if (content.includes('SELECT ') || content.includes('FROM ') || content.includes('WHERE ')) return 'sql';
-        if (content.includes('{') && content.includes(':') && content.includes(';') && !content.includes('function')) return 'css';
+        // More specific CSS detection - must have selector patterns and no JS keywords
+        if (content.includes('{') && content.includes(':') && content.includes(';') &&
+            !content.includes('function') && !content.includes('const') && !content.includes('let') &&
+            !content.includes('var') && !content.includes('=>') && !content.includes('return')) return 'css';
 
         return 'javascript';
     }, []);
@@ -683,14 +873,23 @@ sys.stderr = StringIO()
 
             // Command mode shortcuts
             if (cellMode === 'command' && !isInTextarea && !isContentEditable) {
+                // Check for text selection first - allow native copy/cut for selected text
+                if (['c', 'x', 'v'].includes(e.key.toLowerCase()) && (e.ctrlKey || e.metaKey)) {
+                    const selection = window.getSelection();
+                    if (selection && selection.toString().length > 0) {
+                        // Allow native clipboard operations for selected text
+                        return;
+                    }
+                }
+
                 switch (e.key.toLowerCase()) {
                     case 'a':
                         e.preventDefault();
-                        handleAddCell('code', 'above');
+                        handleAddCell('markdown', 'above');
                         break;
                     case 'b':
                         e.preventDefault();
-                        handleAddCell('code', 'below');
+                        handleAddCell('markdown', 'below');
                         break;
                     case 'd':
                         if (pendingDelete) {
@@ -753,7 +952,7 @@ sys.stderr = StringIO()
                     if (currentIndex < notebook.cells.length - 1) {
                         setSelectedCellId(notebook.cells[currentIndex + 1].id);
                     } else {
-                        handleAddCell('code', 'below');
+                        handleAddCell('markdown', 'below');
                     }
                     return;
                 }
@@ -781,17 +980,99 @@ sys.stderr = StringIO()
     ]);
 
     // Render markdown preview
-    const renderMarkdownPreview = (content: string) => {
-        let html = content
-            .replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">$1</h3>')
-            .replace(/^## (.*$)/gim, '<h2 class="text-xl font-bold text-gray-900 dark:text-white mb-2">$1</h2>')
-            .replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">$1</h1>')
-            .replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>')
-            .replace(/\*(.*)\*/gim, '<em>$1</em>')
-            .replace(/`([^`]+)`/gim, '<code class="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-sm font-mono">$1</code>')
-            .replace(/\n/gim, '<br />');
+    const renderMarkdownPreview = (content: string, cellId: string) => {
+        let html = content;
+        let checkboxIndex = 0;
+
+        // Code blocks (triple backticks) - must be first to prevent inner content from being processed
+        html = html.replace(/```(\w*)\n([\s\S]*?)```/gm, (_, _lang, code) => {
+            const escapedCode = code.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            return `<pre class="my-2 p-3 rounded-lg bg-gray-100 dark:bg-gray-800 overflow-x-auto"><code class="text-sm font-mono">${escapedCode}</code></pre>`;
+        });
+
+        html = html
+            // Horizontal rule
+            .replace(/^---+$/gim, '<hr class="my-3 border-t border-gray-300 dark:border-gray-600" />')
+            // Headings
+            .replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold text-gray-900 dark:text-white mt-3 mb-1">$1</h3>')
+            .replace(/^## (.*$)/gim, '<h2 class="text-xl font-bold text-gray-900 dark:text-white mt-4 mb-2">$1</h2>')
+            .replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold text-gray-900 dark:text-white mt-4 mb-2">$1</h1>')
+            // Blockquotes
+            .replace(/^>\s+(.*)$/gim, '<div class="pl-3 border-l-4 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 italic my-1">$1</div>');
+
+        // Checkboxes - process ALL in a single pass to maintain correct indices
+        html = html.replace(/^(\s*)[-*+]\s+\[([ xX])\]\s+(.*)$/gim, (_match, _indent, check, text) => {
+            const idx = checkboxIndex++;
+            const isChecked = check.toLowerCase() === 'x';
+            if (isChecked) {
+                return `<label class="flex items-center gap-2 cursor-pointer my-0.5" data-checkbox="${idx}"><input type="checkbox" checked class="rounded accent-current pointer-events-none" /><span class="line-through text-gray-500">${text}</span></label>`;
+            } else {
+                return `<label class="flex items-center gap-2 cursor-pointer my-0.5" data-checkbox="${idx}"><input type="checkbox" class="rounded pointer-events-none" /><span>${text}</span></label>`;
+            }
+        });
+
+        html = html
+            // Unordered lists
+            .replace(/^(\s*)[-*+]\s+(.*)$/gim, '<div class="flex items-start gap-2 my-0.5">$1<span class="text-gray-400">•</span><span>$2</span></div>')
+            // Links [text](url) - with data-href for external opening
+            .replace(/\[([^\]]+)\]\(([^)]+)\)/gim, '<a data-href="$2" class="text-blue-500 hover:text-blue-600 underline cursor-pointer">$1</a>')
+            // Bold
+            .replace(/\*\*([^*]+)\*\*/gim, '<strong>$1</strong>')
+            // Italic
+            .replace(/(?<!\*)\*([^*]+)\*(?!\*)/gim, '<em>$1</em>')
+            // Strikethrough
+            .replace(/~~([^~]+)~~/gim, '<del class="text-gray-500">$1</del>')
+            // Inline code
+            .replace(/`([^`]+)`/gim, '<code class="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-sm font-mono">$1</code>');
+
+        // Convert newlines to <br> but not after block elements
+        html = html.replace(/\n(?!<\/?(div|pre|h[1-6]|hr|label))/gim, '<br />');
+
         return html;
     };
+
+    // Handle clicks on markdown preview (links, checkboxes)
+    const handlePreviewClick = useCallback((e: React.MouseEvent<HTMLDivElement>, cellId: string, cellContent: string) => {
+        const target = e.target as HTMLElement;
+
+        // Handle link clicks - open in system browser
+        const link = target.closest('a[data-href]') as HTMLAnchorElement;
+        if (link) {
+            e.preventDefault();
+            e.stopPropagation();
+            const href = link.getAttribute('data-href');
+            if (href) {
+                // @ts-ignore - Electron API
+                window.ipcRenderer?.invoke('open-external-link', href);
+            }
+            return;
+        }
+
+        // Handle checkbox clicks
+        const label = target.closest('label[data-checkbox]') as HTMLLabelElement;
+        if (label) {
+            e.preventDefault();
+            e.stopPropagation();
+            const checkboxIdx = parseInt(label.getAttribute('data-checkbox') || '0');
+
+            // Toggle checkbox in content - count ALL checkboxes (both checked and unchecked)
+            let idx = 0;
+            const newContent = cellContent.replace(/^(\s*[-*+]\s+\[)([ xX])(\]\s+.*)$/gim, (match, before, check, after) => {
+                const currentIdx = idx++;
+                if (currentIdx === checkboxIdx) {
+                    return before + (check === ' ' ? 'x' : ' ') + after;
+                }
+                return match;
+            });
+
+            handleUpdateCell(cellId, newContent);
+            return;
+        }
+
+        // Default: enter edit mode
+        setSelectedCellId(cellId);
+        setCellMode('edit');
+    }, [handleUpdateCell]);
 
     // Toolbar button component
     const ToolbarButton = ({ icon: Icon, label, onClick, disabled = false, title }: {
@@ -837,12 +1118,12 @@ sys.stderr = StringIO()
     return (
         <div ref={containerRef} className="h-full flex flex-col overflow-hidden">
             {/* Toolbar */}
-            <div className="sticky top-0 z-20 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+            <div className="sticky top-0 z-20 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
                 <div className="flex items-center justify-between px-4 py-2">
                     <div className="flex items-center gap-1">
                         <ToolbarButton icon={Save} onClick={() => saveNotebook(notebook)} title="Save (Ctrl+S)" />
                         <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
-                        <ToolbarButton icon={Plus} onClick={() => handleAddCell('code', 'below')} title="Add cell below (B)" />
+                        <ToolbarButton icon={Plus} onClick={() => handleAddCell('markdown', 'below')} title="Add cell below (B)" />
                         <ToolbarButton icon={Scissors} onClick={handleCutCell} disabled={!selectedCellId} title="Cut cell (X)" />
                         <ToolbarButton icon={Copy} onClick={handleCopyCell} disabled={!selectedCellId} title="Copy cell (C)" />
                         <ToolbarButton icon={Clipboard} onClick={handlePasteCell} disabled={!clipboard} title="Paste cell (V)" />
@@ -852,6 +1133,9 @@ sys.stderr = StringIO()
                         <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
                         <ToolbarButton icon={RotateCcw} onClick={handleUndoDelete} disabled={deletedCells.length === 0} title="Undo delete (Z)" />
                         <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
+
+                        {/* AI Backbone Generator Button */}
+                        <ToolbarButton icon={Wand2} onClick={() => setShowAiBackboneModal(true)} title="AI Backbone Generator - Create note structures" />
 
                         {/* Code Theme Dropdown */}
                         <div className="relative" ref={codeThemeDropdownRef}>
@@ -1002,6 +1286,12 @@ sys.stderr = StringIO()
                                     exit={{ opacity: 0, y: -10 }}
                                     className="group relative flex mb-2"
                                     onClick={() => {
+                                        // Don't select cell if user is selecting text
+                                        const selection = window.getSelection();
+                                        if (selection && selection.toString().length > 0) {
+                                            return;
+                                        }
+
                                         setSelectedCellId(cell.id);
                                         if (cellMode === 'edit') {
                                             textareaRefs.current[cell.id]?.focus();
@@ -1142,13 +1432,28 @@ sys.stderr = StringIO()
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        handleAddCell('code', 'below', cell.id);
+                                                        handleAddCell('markdown', 'below', cell.id);
                                                     }}
                                                     className="p-1 rounded transition-colors text-gray-500 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20"
                                                     title="Add cell below"
                                                 >
                                                     <Plus className="w-4 h-4" />
                                                 </button>
+                                                {/* Cell Type Selector */}
+                                                <select
+                                                    value={cell.type}
+                                                    onChange={(e) => {
+                                                        e.stopPropagation();
+                                                        handleChangeCellType(cell.id, e.target.value as NerdCellType);
+                                                    }}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    className="px-1.5 py-1 rounded text-xs bg-gray-100 dark:bg-gray-700 border-none focus:outline-none text-gray-600 dark:text-gray-300 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                                                    title="Cell type"
+                                                >
+                                                    <option value="code">Code</option>
+                                                    <option value="markdown">Markdown</option>
+                                                    <option value="text">Text</option>
+                                                </select>
                                                 {/* Delete cell button */}
                                                 <button
                                                     onClick={(e) => {
@@ -1241,13 +1546,28 @@ sys.stderr = StringIO()
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        handleAddCell('code', 'below', cell.id);
+                                                        handleAddCell('markdown', 'below', cell.id);
                                                     }}
                                                     className="p-1 rounded transition-colors text-gray-500 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20"
                                                     title="Add cell below"
                                                 >
                                                     <Plus className="w-4 h-4" />
                                                 </button>
+                                                {/* Cell Type Selector */}
+                                                <select
+                                                    value={cell.type}
+                                                    onChange={(e) => {
+                                                        e.stopPropagation();
+                                                        handleChangeCellType(cell.id, e.target.value as NerdCellType);
+                                                    }}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    className="px-1.5 py-1 rounded text-xs bg-gray-100 dark:bg-gray-700 border-none focus:outline-none text-gray-600 dark:text-gray-300 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                                                    title="Cell type"
+                                                >
+                                                    <option value="code">Code</option>
+                                                    <option value="markdown">Markdown</option>
+                                                    <option value="text">Text</option>
+                                                </select>
                                                 {/* Delete cell button */}
                                                 <button
                                                     onClick={(e) => {
@@ -1279,13 +1599,16 @@ sys.stderr = StringIO()
                                                     handleUpdateCell(cell.id, e.target.value);
                                                     autoResizeTextarea(e.target);
                                                 }}
+                                                onKeyDown={(e) => handleSmartMarkdownKeyDown(e, cell.id, cell.type)}
+                                                onContextMenu={(e) => handleContextMenu(e, cell.id, cell.type)}
                                                 placeholder={
                                                     cell.type === 'markdown'
-                                                        ? "Write markdown here..."
+                                                        ? "Write markdown here... (Ctrl+B bold, Ctrl+I italic)"
                                                         : cell.type === 'code'
                                                             ? "// Write code here..."
                                                             : "Start typing..."
                                                 }
+                                                spellCheck={cell.type !== 'code'}
                                                 className={clsx(
                                                     "w-full resize-none focus:outline-none",
                                                     cell.type === 'code'
@@ -1306,9 +1629,13 @@ sys.stderr = StringIO()
                                                     cell.type !== 'code' && "py-2",
                                                     !cell.content && "text-gray-400 italic"
                                                 )}
-                                                onClick={() => {
-                                                    setSelectedCellId(cell.id);
-                                                    setCellMode('edit');
+                                                onClick={(e) => {
+                                                    if (cell.type === 'markdown') {
+                                                        handlePreviewClick(e, cell.id, cell.content);
+                                                    } else {
+                                                        setSelectedCellId(cell.id);
+                                                        setCellMode('edit');
+                                                    }
                                                 }}
                                             >
                                                 {cell.content ? (
@@ -1316,7 +1643,7 @@ sys.stderr = StringIO()
                                                         <div
                                                             className="prose dark:prose-invert prose-sm max-w-none"
                                                             dangerouslySetInnerHTML={{
-                                                                __html: renderMarkdownPreview(cell.content)
+                                                                __html: renderMarkdownPreview(cell.content, cell.id)
                                                             }}
                                                         />
                                                     ) : cell.type === 'code' ? (
@@ -1347,9 +1674,19 @@ sys.stderr = StringIO()
                                         {cell.output && (
                                             <div className={clsx(
                                                 "mt-2 rounded-lg px-4 py-3 font-mono text-sm overflow-x-auto",
-                                                cell.executionError
-                                                    ? "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800"
-                                                    : "bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700"
+                                                useCodeDarkTheme
+                                                    ? clsx(
+                                                        "bg-gray-900",
+                                                        cell.executionError
+                                                            ? "border border-red-500/50 text-red-400"
+                                                            : "text-green-400"
+                                                    )
+                                                    : clsx(
+                                                        "bg-gray-100",
+                                                        cell.executionError
+                                                            ? "border border-red-500/50 text-red-600"
+                                                            : "text-green-600"
+                                                    )
                                             )}>
                                                 <pre className="whitespace-pre-wrap">{cell.output}</pre>
                                             </div>
@@ -1365,7 +1702,7 @@ sys.stderr = StringIO()
                     {/* Add cell button at bottom */}
                     <div className="flex justify-center mt-4">
                         <button
-                            onClick={() => handleAddCell('code', 'below')}
+                            onClick={() => handleAddCell('markdown', 'below')}
                             className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                         >
                             <Plus className="w-4 h-4" />
@@ -1374,6 +1711,22 @@ sys.stderr = StringIO()
                     </div>
                 </div>
             </div>
+
+            {/* AI Backbone Modal */}
+            <AiBackboneModal
+                isOpen={showAiBackboneModal}
+                onClose={() => setShowAiBackboneModal(false)}
+                onGenerate={handleAiBackboneGenerate}
+                existingContent={getExistingContent()}
+            />
+
+            {/* Markdown Context Menu */}
+            <MarkdownContextMenu
+                isOpen={contextMenu.isOpen}
+                position={{ x: contextMenu.x, y: contextMenu.y }}
+                onClose={() => setContextMenu(prev => ({ ...prev, isOpen: false }))}
+                onAction={handleContextMenuAction}
+            />
         </div>
     );
 }

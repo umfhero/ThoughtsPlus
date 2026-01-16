@@ -221,12 +221,15 @@ export function FileTree({
 
         if (!draggedItem || draggedItem.id === targetId) return;
 
+        // If dragging over a folder, always allow dropping into it
+        if (targetIsFolder) {
+            setDragOverFolder(targetId);
+            setDragOverItem(null);
+            return;
+        }
+
         // Only allow reordering in custom sort mode
         if (sortOption !== 'custom') {
-            // In non-custom mode, only allow dropping into folders
-            if (targetIsFolder) {
-                setDragOverFolder(targetId);
-            }
             return;
         }
 
@@ -264,18 +267,19 @@ export function FileTree({
             return;
         }
 
-        // In custom sort mode with dragOverItem, do reorder
-        if (sortOption === 'custom' && dragOverItem && dragOverItem.id === targetId) {
-            onReorder(draggedItem.id, targetId, dragOverItem.position, draggedItem.isFolder);
-        } else if (targetIsFolder) {
-            // Drop into folder
+        // If dropping on a folder (dragOverFolder is set), move into folder
+        if (targetIsFolder && dragOverFolder === targetId) {
             onMove(draggedItem.id, targetId, draggedItem.isFolder);
+        }
+        // In custom sort mode with dragOverItem, do reorder
+        else if (sortOption === 'custom' && dragOverItem && dragOverItem.id === targetId) {
+            onReorder(draggedItem.id, targetId, dragOverItem.position, draggedItem.isFolder);
         }
 
         setDraggedItem(null);
         setDragOverFolder(null);
         setDragOverItem(null);
-    }, [draggedItem, dragOverItem, sortOption, onMove, onReorder]);
+    }, [draggedItem, dragOverFolder, dragOverItem, sortOption, onMove, onReorder]);
 
     const handleDragEnd = useCallback(() => {
         setDraggedItem(null);

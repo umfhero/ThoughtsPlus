@@ -5,11 +5,18 @@
 @tailwind components;
 @tailwind utilities;
 
+html,
+body,
+#root {
+  overflow: hidden;
+  height: 100%;
+  width: 100%;
+}
+
 body {
   @apply bg-gray-50 text-gray-900 font-sans;
   /* Use CSS variable system - falls back to system fonts if local fonts unavailable */
   font-family: var(--app-font, 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif);
-  overflow: hidden;
 }
 
 @keyframes shake {
@@ -434,4 +441,12 @@ body.is-scrolling ::-webkit-scrollbar-thumb {
 
 .prism-light .token.entity {
   cursor: help;
+}
+
+
+/* Hide scrollbar on workspace tab bar */
+.workspace-tabbar-scroll::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }

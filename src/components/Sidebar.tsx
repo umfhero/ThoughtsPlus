@@ -279,6 +279,22 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                 return;
             }
 
+            // Allow native clipboard operations (Ctrl+C/X/V) when:
+            // 1. User is in an input/textarea
+            // 2. User has text selected anywhere
+            // 3. User is on notebook/nerdbook page (has its own clipboard handling)
+            if (isCtrl && ['c', 'x', 'v'].includes(e.key.toLowerCase())) {
+                const target = e.target as HTMLElement;
+                const isInInput = target.tagName === 'TEXTAREA' || target.tagName === 'INPUT' || target.getAttribute('contenteditable') === 'true';
+                const hasSelection = window.getSelection()?.toString().length ?? 0 > 0;
+                const isOnNotebookPage = currentPage === 'notebook' || currentPage === 'workspace';
+
+                if (isInInput || hasSelection || isOnNotebookPage) {
+                    // Let native clipboard or page-specific handler work
+                    return;
+                }
+            }
+
             // Find matching shortcut
             const matchingShortcut = shortcuts.find(s => {
                 const keyMatch = s.key.toLowerCase() === e.key.toLowerCase();

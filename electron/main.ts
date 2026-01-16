@@ -704,6 +704,17 @@ function setupIpcHandlers() {
         return true;
     });
 
+    // Open external link in system browser
+    ipcMain.handle('open-external-link', async (_, url: string) => {
+        try {
+            await shell.openExternal(url);
+            return true;
+        } catch (error) {
+            console.error('Failed to open external link:', error);
+            return false;
+        }
+    });
+
     // Flash window for timer alert
     ipcMain.handle('flash-window', () => {
         if (win) {
@@ -1273,6 +1284,62 @@ IMPORTANT RULES:
             }
         } catch (error: any) {
             console.error("AI Draft Error:", error);
+            return {
+                error: 'GENERATION_ERROR',
+                message: 'Something went wrong. Please try again.'
+            };
+        }
+    });
+
+    // AI Backbone Generator - Generate notebook structure for Nerdbook
+    ipcMain.handle('generate-nerdbook-backbone', async (_, userRequest: string, existingContent: string) => {
+        try {
+            if (!deviceSettings.apiKey) {
+                return {
+                    error: 'API_KEY_MISSING',
+                    message: 'Please configure your AI API key in Settings.'
+                };
+            }
+
+            // Truncate existing content to save tokens (max ~500 chars for context)
+            const truncatedContent = existingContent
+                ? existingContent.substring(0, 500) + (existingContent.length > 500 ? '...' : '')
+                : '';
+
+            const aiPrompt = `Generate notebook cells for: "${userRequest}"
+${truncatedContent ? `\nContext: ${truncatedContent}` : ''}
+
+Rules: Scaffolding only (headings, code templates with TODO/comments). 5-7 cells max. British English. NO intro cell - start with first topic. Keep markdown brief.
+
+Return JSON array: [{"type":"markdown"|"code","content":"..."},...]`;
+
+            try {
+                const content = await generateAIContent(aiPrompt);
+                // Clean up potential markdown code blocks
+                const jsonStr = content.replace(/```json/g, '').replace(/```/g, '').trim();
+                const cells = JSON.parse(jsonStr);
+
+                // Validate the response
+                if (!Array.isArray(cells) || cells.length === 0) {
+                    throw new Error('Invalid response structure');
+                }
+
+                // Ensure each cell has required fields
+                const validatedCells = cells.map((cell: any) => ({
+                    type: cell.type || 'text',
+                    content: cell.content || ''
+                }));
+
+                return { cells: validatedCells };
+            } catch (error: any) {
+                console.warn('AI backbone generation failed:', error.message);
+                return {
+                    error: 'GENERATION_ERROR',
+                    message: error.message || 'AI service temporarily unavailable.'
+                };
+            }
+        } catch (error: any) {
+            console.error("AI Backbone Error:", error);
             return {
                 error: 'GENERATION_ERROR',
                 message: 'Something went wrong. Please try again.'
