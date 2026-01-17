@@ -1,6 +1,6 @@
 import { useNotification } from '../contexts/NotificationContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { AlertTriangle, CheckCircle, Info, AlertCircle, ToggleLeft, ToggleRight, Trash2, RefreshCw, Rocket, Bell, MousePointerClick, Camera } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Info, AlertCircle, ToggleLeft, ToggleRight, Trash2, RefreshCw, Rocket, Bell, MousePointerClick, Camera, Download } from 'lucide-react';
 import clsx from 'clsx';
 
 interface DevPageProps {
@@ -459,6 +459,26 @@ export function DevPage({ isMockMode, toggleMockMode, onForceSetup, onForceSnaps
                                 </div>
                             </button>
                         )}
+
+                        {/* Force Update Notification */}
+                        <button
+                            onClick={() => {
+                                window.dispatchEvent(new Event('force-show-update-notification'));
+                                addNotification({
+                                    title: 'Update Notification Triggered',
+                                    message: 'The update notification should appear at the top.',
+                                    type: 'info',
+                                    duration: 2000
+                                });
+                            }}
+                            className="w-full flex items-center gap-3 p-4 rounded-lg border border-blue-200 dark:border-blue-800/30 bg-white/50 dark:bg-gray-800/50 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-blue-600 dark:text-blue-400"
+                        >
+                            <Download size={20} className="flex-shrink-0" />
+                            <div className="text-left flex-1 min-w-0">
+                                <div className="font-medium truncate">Force Update Notification</div>
+                                <div className="text-xs opacity-80 truncate">Test the "Update Available" overlay</div>
+                            </div>
+                        </button>
                     </div>
                 </div>
             </div>

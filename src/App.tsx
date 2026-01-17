@@ -9,6 +9,7 @@ import { QuickCaptureOverlay } from './components/QuickCaptureOverlay';
 import { useNotification } from './contexts/NotificationContext';
 import { TimerProvider } from './contexts/TimerContext';
 import { TimerAlertOverlay, TimerMiniIndicator } from './components/TimerAlertOverlay';
+import { UpdateNotification } from './components/UpdateNotification';
 import { QuickTimerModal } from './components/QuickTimerModal';
 import { DevPage } from './pages/Dev';
 import { Page, Note, NotesData, Milestone, MilestonesData, LifeChapter, LifeChaptersData, Snapshot, SnapshotsData, QuickNote, NerdNotebook, NerdNotebooksData } from './types';
@@ -1157,6 +1158,9 @@ function AppContent(props: AppContentProps) {
 
             {/* Timer overlays - visible on all pages */}
             <TimerAlertOverlay isSidebarCollapsed={isSidebarCollapsed} />
+
+            {/* Update notification - checks for new versions */}
+            <UpdateNotification isSidebarCollapsed={isSidebarCollapsed} />
 
             {/* Quick Timer Modal */}
             <QuickTimerModal

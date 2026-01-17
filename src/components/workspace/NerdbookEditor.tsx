@@ -13,6 +13,7 @@ import { AiBackboneModal } from '../AiBackboneModal';
 import { MarkdownContextMenu } from '../MarkdownContextMenu';
 import { MentionAutocomplete } from './MentionAutocomplete';
 import { ImageEditor } from './ImageEditor';
+import { TableEditor } from './TableEditor';
 import {
     getSelection,
     toggleBold,
@@ -135,6 +136,17 @@ export function NerdbookEditor({ contentId, filePath, onNotebookChange, workspac
         currentWidth: undefined,
         currentHeight: undefined,
         currentCrop: false,
+    });
+
+    // Table editor state
+    const [tableEditor, setTableEditor] = useState<{
+        isOpen: boolean;
+        cellId: string | null;
+        tableMarkdown: string;
+    }>({
+        isOpen: false,
+        cellId: null,
+        tableMarkdown: '',
     });
 
     // Code theme setting
@@ -870,6 +882,25 @@ export function NerdbookEditor({ contentId, filePath, onNotebookChange, workspac
         handleUpdateCell(imageEditor.cellId, newContent);
     }, [imageEditor, notebook, handleUpdateCell]);
 
+    // Handle table editor save
+    const handleTableEditorSave = useCallback((newMarkdown: string) => {
+        if (!tableEditor.cellId || !notebook) return;
+
+        const cell = notebook.cells.find(c => c.id === tableEditor.cellId);
+        if (!cell) return;
+
+        // Find and replace the old table markdown with the new one
+        // The old markdown was encoded in the data attribute
+        try {
+            // Find the table in the content by decoding the stored markdown
+            const oldMarkdown = tableEditor.tableMarkdown;
+            const newContent = cell.content.replace(oldMarkdown, newMarkdown);
+            handleUpdateCell(tableEditor.cellId, newContent);
+        } catch (err) {
+            console.error('Failed to update table:', err);
+        }
+    }, [tableEditor, notebook, handleUpdateCell]);
+
     // Detect language from code content
     const detectLanguage = useCallback((content: string): string => {
         const firstLine = content.trim().split('\n')[0].toLowerCase();
@@ -1346,21 +1377,44 @@ sys.stderr = StringIO()
             .replace(/^>\s+(.*)$/gim, '<div class="pl-3 border-l-4 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 italic my-1">$1</div>');
 
         // Tables - convert markdown tables to HTML
-        // Normalize line endings first for consistent matching
-        const normalizedHtml = html.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-        html = normalizedHtml.replace(/(\|.+\|\n)(\|[\s:-]+\|\n)((?:\|.+\|(?:\n|$))+)/gm, (_match, header, _separator, rows) => {
-            const headerCells = header.split('|').filter((cell: string) => cell.trim()).map((cell: string) =>
-                `<th class="border border-gray-300 dark:border-gray-600 px-3 py-2 bg-gray-100 dark:bg-gray-800 font-semibold text-left">${cell.trim()}</th>`
-            ).join('');
+        // First normalize line endings
+        html = html.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
-            const bodyRows = rows.trim().split('\n').filter((row: string) => row.trim()).map((row: string) => {
-                const cells = row.split('|').filter((cell: string) => cell.trim()).map((cell: string) =>
-                    `<td class="border border-gray-300 dark:border-gray-600 px-3 py-2">${cell.trim()}</td>`
+        // Match tables: header row | separator row | body rows
+        html = html.replace(/^(\|[^\n]+\|)\n(\|[\s:\-|]+\|)\n((?:\|[^\n]+\|\n?)+)/gm, (match, header, _separator, rows) => {
+            // Store original markdown for editing
+            const originalMarkdown = match.trim();
+            const encodedMarkdown = btoa(encodeURIComponent(originalMarkdown));
+
+            // Parse header cells
+            const headerCells = header
+                .split('|')
+                .map((cell: string) => cell.trim())
+                .filter((cell: string) => cell.length > 0)
+                .map((cell: string) =>
+                    `<th class="border border-gray-300 dark:border-gray-600 px-3 py-2 bg-gray-100 dark:bg-gray-800 font-semibold text-left">${cell}</th>`
                 ).join('');
-                return `<tr>${cells}</tr>`;
-            }).join('');
 
-            return `<table class="my-3 border-collapse w-full"><thead><tr>${headerCells}</tr></thead><tbody>${bodyRows}</tbody></table>`;
+            // Parse body rows
+            const bodyRows = rows
+                .trim()
+                .split('\n')
+                .filter((row: string) => row.trim().length > 0)
+                .map((row: string) => {
+                    const cells = row
+                        .split('|')
+                        .map((cell: string) => cell.trim())
+                        .filter((cell: string, idx: number, arr: string[]) => idx > 0 && idx < arr.length - 1 || cell.length > 0)
+                        .filter((cell: string) => cell.length > 0)
+                        .map((cell: string) =>
+                            `<td class="border border-gray-300 dark:border-gray-600 px-3 py-2">${cell}</td>`
+                        ).join('');
+                    return cells ? `<tr>${cells}</tr>` : '';
+                })
+                .filter((row: string) => row.length > 0)
+                .join('');
+
+            return `<table class="my-3 border-collapse w-full cursor-pointer hover:ring-2 hover:ring-blue-400 hover:ring-offset-2 rounded-lg transition-all" data-table-markdown="${encodedMarkdown}" title="Click to edit table"><thead><tr>${headerCells}</tr></thead><tbody>${bodyRows}</tbody></table>`;
         });
 
         // Checkboxes - process ALL in a single pass to maintain correct indices
@@ -1421,6 +1475,27 @@ sys.stderr = StringIO()
                     currentHeight: height ? parseInt(height) : undefined,
                     currentCrop: crop,
                 });
+            }
+            return;
+        }
+
+        // Handle table clicks - open table editor
+        const table = target.closest('table[data-table-markdown]') as HTMLTableElement;
+        if (table) {
+            e.preventDefault();
+            e.stopPropagation();
+            const encodedMarkdown = table.getAttribute('data-table-markdown');
+            if (encodedMarkdown) {
+                try {
+                    const tableMarkdown = decodeURIComponent(atob(encodedMarkdown));
+                    setTableEditor({
+                        isOpen: true,
+                        cellId,
+                        tableMarkdown,
+                    });
+                } catch (err) {
+                    console.error('Failed to decode table markdown:', err);
+                }
             }
             return;
         }
@@ -2159,6 +2234,14 @@ sys.stderr = StringIO()
                 currentCrop={imageEditor.currentCrop}
                 onClose={() => setImageEditor(prev => ({ ...prev, isOpen: false }))}
                 onSave={handleImageEditorSave}
+            />
+
+            {/* Table Editor */}
+            <TableEditor
+                isOpen={tableEditor.isOpen}
+                initialMarkdown={tableEditor.tableMarkdown}
+                onClose={() => setTableEditor(prev => ({ ...prev, isOpen: false }))}
+                onSave={handleTableEditorSave}
             />
         </div>
     );
