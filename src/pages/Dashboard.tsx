@@ -1314,7 +1314,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                             <div className="w-1 h-4 rounded-full" style={{ backgroundColor: accentColor }}></div>
                             <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Your briefing</p>
                         </div>
-                        <div className="p-5 rounded-2xl bg-gradient-to-br from-indigo-50/50 to-white dark:from-gray-800 dark:to-gray-900 border border-indigo-100/50 dark:border-gray-700 min-h-[80px] flex items-center flex-1 overflow-y-auto custom-scrollbar">
+                        <div className="flex items-center flex-1">
                             <AnimatePresence mode="wait">
                                 {isBriefingLoading ? (
                                     <motion.div
@@ -1322,7 +1322,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                                         initial={{ opacity: 0 }}
                                         animate={{ opacity: 1 }}
                                         exit={{ opacity: 0 }}
-                                        className="flex items-center gap-3 text-indigo-600 w-full"
+                                        className="flex items-center gap-3 text-indigo-600 dark:text-indigo-400 w-full"
                                     >
                                         <Loader className="w-5 h-5 animate-spin flex-shrink-0" />
                                         <motion.p
@@ -1475,7 +1475,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                                     </div>
                                 </div>
 
-                                <div className="space-y-4 flex-1 overflow-y-auto px-2 pb-2 custom-scrollbar [&::-webkit-scrollbar-button]:hidden">
+                                <div className="space-y-4 flex-1 overflow-y-auto px-2 pb-2 thin-scrollbar [&::-webkit-scrollbar-button]:hidden">
                                     {filteredEventsForTab.length === 0 ? (
                                         <p className="text-gray-400 dark:text-gray-500 text-sm">
                                             {eventTab === 'upcoming' ? 'No tasks.' : eventTab === 'completed' ? 'No completed events.' : 'No missed events.'}
