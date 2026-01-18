@@ -8,7 +8,7 @@
 [![Sponsor](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4%EF%B8%8F&color=white&labelColor=white&style=flat&logo=github&logoColor=black)](https://github.com/sponsors/umfhero)
 
 [![Microsoft Store](https://img.shields.io/badge/Microsoft_Store-Download-white?style=for-the-badge&logo=microsoft&logoColor=0078D4)](https://apps.microsoft.com/detail/9nb8vzfwnv81?hl=en-GB&gl=GB)
-[![Website](https://img.shields.io/badge/Website-Visit_Site-white?style=for-the-badge&logo=googlechrome&logoColor=4285F4)](https://thoughtsplus.com/)
+[![Website](https://img.shields.io/badge/Website-Visit_Site-white?style=for-the-badge&logo=googlechrome&logoColor=4285F4)](https://thoughtsplus.me/)
 
 </div>
 
