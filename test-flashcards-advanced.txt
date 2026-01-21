@@ -1,0 +1,20 @@
+What is the difference between let and const in JavaScript?	let allows reassignment, const does not allow reassignment after initialization
+Explain the concept of closure in JavaScript	A closure is a function that has access to variables in its outer (enclosing) function's scope, even after the outer function has returned
+What is the Virtual DOM in React?	A lightweight copy of the actual DOM that React uses to optimize rendering by comparing changes and updating only what's necessary
+What is the difference between == and === in JavaScript?	== performs type coercion before comparison, === compares both value and type without coercion
+What is async/await in JavaScript?	Syntactic sugar for working with Promises, making asynchronous code look and behave more like synchronous code
+What is the purpose of useEffect in React?	A Hook that lets you perform side effects in function components, such as data fetching, subscriptions, or manually changing the DOM
+What is the difference between null and undefined?	undefined means a variable has been declared but not assigned a value, null is an assignment value representing no value or no object
+What is event bubbling in JavaScript?	When an event is triggered on an element, it first runs the handlers on it, then on its parent, then all the way up on other ancestors
+What is the difference between map() and forEach()?	map() returns a new array with transformed elements, forEach() just iterates and returns undefined
+What is a Promise in JavaScript?	An object representing the eventual completion or failure of an asynchronous operation and its resulting value
+What is the purpose of the key prop in React?	Helps React identify which items have changed, been added, or removed, improving rendering performance
+What is hoisting in JavaScript?	JavaScript's default behavior of moving declarations to the top of the current scope before code execution
+What is the difference between function declaration and function expression?	Function declarations are hoisted and can be called before they're defined, function expressions are not hoisted
+What is destructuring in JavaScript?	A syntax that allows unpacking values from arrays or properties from objects into distinct variables
+What is the spread operator in JavaScript?	The ... operator that expands an iterable (like an array) into individual elements
+What is a higher-order function?	A function that takes another function as an argument or returns a function as a result
+What is the difference between localStorage and sessionStorage?	localStorage persists until explicitly cleared, sessionStorage is cleared when the page session ends
+What is CORS?	Cross-Origin Resource Sharing - a security feature that restricts web pages from making requests to a different domain
+What is a callback function?	A function passed as an argument to another function, to be executed later
+What is the difference between synchronous and asynchronous code?	Synchronous code executes line by line and blocks execution, asynchronous code allows other operations to continue while waiting

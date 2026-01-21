@@ -1,7 +1,7 @@
-import { FileCode, PenTool, FileText, LucideIcon, GitPullRequest } from 'lucide-react';
+import { FileCode, PenTool, FileText, LucideIcon, GitPullRequest, Brain } from 'lucide-react';
 
 // File extension types
-export type FileType = 'exec' | 'board' | 'note' | 'nbm';
+export type FileType = 'exec' | 'board' | 'note' | 'nbm' | 'flashcards';
 
 // File extension mapping
 export const FILE_EXTENSIONS: Record<FileType, string> = {
@@ -9,6 +9,7 @@ export const FILE_EXTENSIONS: Record<FileType, string> = {
     board: '.brd',
     note: '.nt',
     nbm: '.nbm',
+    flashcards: '.deck',
 };
 
 // Icon mapping for file types
@@ -17,6 +18,7 @@ export const FILE_ICONS: Record<FileType, LucideIcon> = {
     board: PenTool,
     note: FileText,
     nbm: GitPullRequest,
+    flashcards: Brain,
 };
 
 // File name validation - cannot contain: / \ : * ? " < > |

@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FilePlus, FolderPlus, Pencil, Trash2, ArrowUpDown, Share2, Image, Link, FolderOpen } from 'lucide-react';
+import { FolderPlus, FilePlus, Pencil, Trash2, ArrowUpDown, Share2, Image, Link, FolderOpen, Brain } from 'lucide-react';
 import clsx from 'clsx';
 import { FileTreeNode } from './FileTreeNode';
 import { buildTreeStructure } from '../../utils/workspace';
@@ -25,6 +25,7 @@ interface FileTreeProps {
     onReorder: (id: string, targetId: string, position: 'before' | 'after', isFolder: boolean) => void;
     onOpenLinkedNotesGraph?: () => void;
     onOpenImageGallery?: () => void;
+    onOpenFlashcards?: () => void;
     onOpenConnections?: (fileId: string) => void;
     onOpenFile?: () => void;
 }
@@ -70,6 +71,7 @@ export function FileTree({
     onReorder,
     onOpenLinkedNotesGraph,
     onOpenImageGallery,
+    onOpenFlashcards,
     onOpenConnections,
     onOpenFile,
 }: FileTreeProps) {
@@ -402,6 +404,20 @@ export function FileTree({
                     </button>
                 )}
 
+                {/* Flashcards button */}
+                {onOpenFlashcards && (
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onOpenFlashcards();
+                        }}
+                        className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        title="Flashcards"
+                    >
+                        <Brain className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                    </button>
+                )}
+
                 {/* Sort button */}
                 <div className="relative">
                     <button
@@ -652,10 +668,11 @@ function NewFileTypeMenu({
     onSelect: (type: FileType) => void;
     onClose: () => void;
 }) {
+    // NBM (Node Map) is deprecated - existing files can still be opened but new ones cannot be created
     const fileTypes: { type: FileType; label: string; description: string }[] = [
         { type: 'exec', label: 'Notebook (.exec)', description: 'Executable notebook' },
         { type: 'board', label: 'Board (.board)', description: 'Whiteboard canvas' },
-        { type: 'nbm', label: 'Node Map (.nbm)', description: 'Node-based workflow map' },
+        { type: 'flashcards', label: 'Flashcards (.deck)', description: 'Spaced repetition learning' },
         { type: 'note', label: 'Note (.note)', description: 'Quick text note' },
     ];
 

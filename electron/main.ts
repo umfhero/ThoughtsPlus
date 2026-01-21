@@ -2385,6 +2385,173 @@ Return JSON array: [{"type":"markdown"|"code","content":"..."},...]`;
     });
 
     // ============================================================================
+    // ANKI PACKAGE PARSER - Parse .apkg files for flashcard import
+    // ============================================================================
+    // .apkg files are ZIP archives containing a SQLite database (collection.anki2)
+    // This handler extracts and parses the database to get flashcard data
+    // ============================================================================
+    ipcMain.handle('parse-anki-package', async (_, filePath) => {
+        try {
+            console.log('[parse-anki-package] Parsing:', filePath);
+
+            // Use require for native modules instead of dynamic import
+            // This avoids Rollup bundling issues with native bindings
+            const AdmZip = require('adm-zip');
+            const Database = require('better-sqlite3');
+
+            // Create temp directory for extraction
+            const tempDir = path.join(os.tmpdir(), 'anki-import-' + Date.now());
+
+            try {
+                // Extract .apkg file (it's a ZIP archive)
+                const zip = new AdmZip(filePath);
+                zip.extractAllTo(tempDir, true);
+                console.log('[parse-anki-package] Extracted to:', tempDir);
+
+                // Find the database file (usually collection.anki2 or collection.anki21)
+                const dbFiles = ['collection.anki2', 'collection.anki21'];
+                let dbPath: string | null = null;
+
+                for (const dbFile of dbFiles) {
+                    const testPath = path.join(tempDir, dbFile);
+                    if (existsSync(testPath)) {
+                        dbPath = testPath;
+                        break;
+                    }
+                }
+
+                if (!dbPath) {
+                    throw new Error('No Anki database found in package. Expected collection.anki2 or collection.anki21');
+                }
+
+                console.log('[parse-anki-package] Opening database:', dbPath);
+
+                // Open the SQLite database
+                const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+
+                // Get deck name from the decks table
+                let deckName = 'Imported Deck';
+                try {
+                    const decksRow = db.prepare('SELECT decks FROM col').get() as { decks: string } | undefined;
+                    if (decksRow?.decks) {
+                        const decksData = JSON.parse(decksRow.decks);
+                        // Get the first non-default deck name
+                        const deckNames = Object.values(decksData)
+                            .filter((d: any) => d.name && d.name !== 'Default')
+                            .map((d: any) => d.name);
+                        if (deckNames.length > 0) {
+                            deckName = deckNames[0] as string;
+                        }
+                    }
+                } catch (e) {
+                    console.warn('[parse-anki-package] Could not extract deck name:', e);
+                }
+
+                // Query notes from the database
+                // Anki stores notes with fields separated by \x1f (ASCII Unit Separator)
+                const notes = db.prepare('SELECT flds, tags FROM notes').all() as Array<{ flds: string; tags: string }>;
+
+                console.log('[parse-anki-package] Found', notes.length, 'notes');
+
+                if (notes.length === 0) {
+                    // Try alternative: query cards table with note join
+                    console.log('[parse-anki-package] No notes found, trying cards table...');
+                    try {
+                        const cardsQuery = db.prepare(`
+                            SELECT n.flds, n.tags 
+                            FROM cards c 
+                            JOIN notes n ON c.nid = n.id
+                        `).all() as Array<{ flds: string; tags: string }>;
+
+                        console.log('[parse-anki-package] Found', cardsQuery.length, 'cards via join');
+
+                        if (cardsQuery.length === 0) {
+                            db.close();
+                            await fs.rm(tempDir, { recursive: true, force: true });
+                            return {
+                                success: false,
+                                error: 'No cards found in the Anki package.'
+                            };
+                        }
+                        notes.push(...cardsQuery);
+                    } catch (joinError) {
+                        console.error('[parse-anki-package] Cards table query failed:', joinError);
+                        db.close();
+                        await fs.rm(tempDir, { recursive: true, force: true });
+                        return {
+                            success: false,
+                            error: 'No cards found in the Anki package.'
+                        };
+                    }
+                }
+
+                // Parse notes into flashcards
+                const cards = notes.map((note: { flds: string; tags: string }, index: number) => {
+                    // Split fields by \x1f separator
+                    const fields = note.flds.split('\x1f');
+
+                    // Log first few cards for debugging
+                    if (index < 3) {
+                        console.log('[parse-anki-package] Card', index, 'fields:', fields.length, 'first field length:', fields[0]?.length);
+                    }
+
+                    // Most Anki cards have at least 2 fields: front and back
+                    const front = fields[0] || '';
+                    const back = fields[1] || '';
+
+                    return {
+                        front: front.trim(),
+                        back: back.trim(),
+                        tags: note.tags || ''
+                    };
+                }).filter((card: { front: string; back: string }, index: number) => {
+                    const isValid = card.front && card.back;
+                    if (!isValid && index < 3) {
+                        console.log('[parse-anki-package] Card', index, 'filtered out - front:', card.front?.length || 0, 'back:', card.back?.length || 0);
+                    }
+                    return isValid;
+                }); // Filter out empty cards
+
+                db.close();
+
+                // Clean up temp directory
+                await fs.rm(tempDir, { recursive: true, force: true });
+
+                console.log('[parse-anki-package] Successfully parsed', cards.length, 'cards from', notes.length, 'notes');
+
+                if (cards.length === 0) {
+                    return {
+                        success: false,
+                        error: 'No valid cards found after parsing. Cards may be empty or in an unsupported format.'
+                    };
+                }
+
+                return {
+                    success: true,
+                    deckName,
+                    cards
+                };
+
+            } catch (dbError) {
+                // Clean up temp directory on error
+                try {
+                    if (existsSync(tempDir)) {
+                        await fs.rm(tempDir, { recursive: true, force: true });
+                    }
+                } catch { /* ignore cleanup errors */ }
+                throw dbError;
+            }
+
+        } catch (e) {
+            console.error('[parse-anki-package] Error:', e);
+            return {
+                success: false,
+                error: 'Failed to parse Anki package: ' + (e as Error).message
+            };
+        }
+    });
+
+    // ============================================================================
     // @ CONNECTIONS - Add/Remove @mentions from file content
     // ============================================================================
 

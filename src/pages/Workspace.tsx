@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileTree, ContentArea, NerdbookEditor, BoardEditor, TabBar, LinkedNotesGraph, ImageGallery, ConnectionsPanel, NodeMapEditor } from '../components/workspace';
+import { FileTree, ContentArea, NerdbookEditor, BoardEditor, TabBar, LinkedNotesGraph, ImageGallery, ConnectionsPanel, NodeMapEditor, FlashcardsGallery } from '../components/workspace';
 import {
     WorkspaceFile,
     WorkspaceFolder,
@@ -569,6 +569,16 @@ export function WorkspacePage({
                 edges: [],
                 viewport: { x: 0, y: 0, zoom: 1 }
             };
+        } else if (type === 'flashcards') {
+            // Create a new flashcard deck structure
+            initialContent = {
+                id: contentId,
+                name: name.trim(),
+                color: '#3B82F6',
+                cards: [],
+                createdAt: now,
+                totalReviews: 0
+            };
         } else {
             // Note type
             initialContent = {
@@ -914,6 +924,40 @@ export function WorkspacePage({
         saveWorkspaceData({ ...workspaceData, files: updatedFiles });
     }, [workspaceData, saveWorkspaceData]);
 
+    // Handle opening flashcards - creates a virtual flashcards file if it doesn't exist
+    const handleOpenFlashcards = useCallback(() => {
+        // Check if flashcards file already exists
+        const existingFlashcardsFile = workspaceData.files.find(f => f.type === 'flashcards');
+
+        if (existingFlashcardsFile) {
+            // Open existing flashcards file
+            handleFileSelect(existingFlashcardsFile.id);
+        } else {
+            // Create a new flashcards file
+            const now = new Date().toISOString();
+            const newFile: WorkspaceFile = {
+                id: crypto.randomUUID(),
+                name: 'Flashcards',
+                type: 'flashcards',
+                parentId: null,
+                createdAt: now,
+                updatedAt: now,
+                contentId: 'flashcards-main', // Virtual content ID
+            };
+
+            const newOpenTabs = [...workspaceData.openTabs, newFile.id];
+            const updatedData = {
+                ...workspaceData,
+                files: [...workspaceData.files, newFile],
+                recentFiles: addToRecentFiles(newFile.id, workspaceData.recentFiles),
+                openTabs: newOpenTabs,
+                activeTabId: newFile.id,
+            };
+
+            saveWorkspaceData(updatedData);
+        }
+    }, [workspaceData, handleFileSelect, saveWorkspaceData]);
+
     const handleFileCreateFromWelcome = useCallback((type: FileType) => {
         handleFileCreate(null, type);
     }, [handleFileCreate]);
@@ -1027,6 +1071,7 @@ export function WorkspacePage({
                                 onReorder={handleReorder}
                                 onOpenLinkedNotesGraph={() => setShowLinkedNotesGraph(true)}
                                 onOpenImageGallery={() => setShowImageGallery(true)}
+                                onOpenFlashcards={handleOpenFlashcards}
                                 onOpenConnections={(fileId) => {
                                     const file = workspaceData.files.find(f => f.id === fileId);
                                     if (file) setConnectionsModalFile(file);
@@ -1092,6 +1137,14 @@ export function WorkspacePage({
                                     // Trigger workspace refresh if needed
                                 }}
                             />
+                        )}
+                        renderFlashcardsEditor={() => (
+                            <FlashcardsGallery onBack={() => {
+                                // Close the flashcards tab
+                                if (activeFile) {
+                                    handleTabClose(activeFile.id);
+                                }
+                            }} />
                         )}
                     />
                 </div>

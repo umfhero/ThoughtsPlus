@@ -16,7 +16,7 @@ export default defineConfig({
         vite: {
           build: {
             rollupOptions: {
-              external: ['cheerio'],
+              external: ['cheerio', 'better-sqlite3', 'adm-zip'],
             },
           },
         },

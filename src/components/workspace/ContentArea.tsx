@@ -17,10 +17,11 @@ interface ContentAreaProps {
     onOpenExternalFile?: () => void;
     // Content for the currently selected file
     fileContent?: string;
-    // Render props for external editors (Nerdbook, Board)
+    // Render props for external editors (Nerdbook, Board, etc.)
     renderNerdbookEditor?: (contentId: string, filePath?: string) => React.ReactNode;
     renderBoardEditor?: (contentId: string, filePath?: string) => React.ReactNode;
     renderNodeMapEditor?: (contentId: string, filePath?: string) => React.ReactNode;
+    renderFlashcardsEditor?: (contentId: string, filePath?: string) => React.ReactNode;
 }
 
 /**
@@ -41,6 +42,7 @@ export function ContentArea({
     renderNerdbookEditor,
     renderBoardEditor,
     renderNodeMapEditor,
+    renderFlashcardsEditor,
 }: ContentAreaProps) {
 
     // Show welcome view when no file is selected
@@ -100,6 +102,17 @@ export function ContentArea({
                 return (
                     <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
                         <p>Node Map editor not available</p>
+                    </div>
+                );
+
+            case 'flashcards':
+                // Render FlashcardsEditor for .deck files
+                if (renderFlashcardsEditor) {
+                    return renderFlashcardsEditor(selectedFile.contentId, selectedFile.filePath);
+                }
+                return (
+                    <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
+                        <p>Flashcards editor not available</p>
                     </div>
                 );
 

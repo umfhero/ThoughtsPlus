@@ -1,4 +1,4 @@
-import { Home, Calendar as CalendarIcon, PieChart, Settings, ChevronDown, ChevronRight, PanelLeftClose, PanelLeftOpen, Github, Code, Timer, TrendingUp, NotebookPen } from 'lucide-react';
+import { Home, Calendar as CalendarIcon, PieChart, Settings, ChevronDown, ChevronRight, PanelLeftClose, PanelLeftOpen, Github, Code, Timer, TrendingUp, NotebookPen, Brain } from 'lucide-react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import clsx from 'clsx';
 import { useState, useEffect } from 'react';
@@ -787,6 +787,71 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                                                                         </motion.div>
                                                                     </div>
                                                                     <span className="font-medium text-sm">Workspace</span>
+                                                                </div>
+                                                            )}
+                                                        </button>
+                                                    </IconTooltip>
+                                                </Reorder.Item>
+                                            );
+                                        }
+
+                                        // Flashcards
+                                        if (id === 'flashcards') {
+                                            return (
+                                                <Reorder.Item key={id} value={id} dragListener={isEditMode} className="relative overflow-visible">
+                                                    <IconTooltip label="Flashcards" show={isIconOnly}>
+                                                        <button
+                                                            onClick={() => setPage('flashcards')}
+                                                            className={clsx(
+                                                                isIconOnly
+                                                                    ? "w-12 h-12 flex items-center justify-center rounded-full transition-colors duration-300 relative"
+                                                                    : "w-full flex items-center justify-start p-3 rounded-xl transition-colors duration-300 group relative overflow-visible",
+                                                                currentPage === 'flashcards'
+                                                                    ? isIconOnly ? "" : "text-white shadow-lg shadow-gray-900/20 dark:shadow-gray-950/30"
+                                                                    : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100"
+                                                            )}
+                                                        >
+                                                            {currentPage === 'flashcards' && (
+                                                                isIconOnly ? (
+                                                                    <motion.div
+                                                                        layoutId="activeCircle"
+                                                                        className="absolute inset-0 rounded-full bg-gray-100 dark:bg-gray-700/60"
+                                                                        transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                                                                    />
+                                                                ) : (
+                                                                    <motion.div
+                                                                        layoutId="activeBg"
+                                                                        className="absolute bg-gray-900 dark:bg-gray-700 rounded-xl top-0 bottom-0"
+                                                                        initial={{ left: 0, width: "100%" }}
+                                                                        animate={{
+                                                                            left: showShortcuts ? -24 : 0,
+                                                                            width: showShortcuts ? "calc(100% + 24px)" : "100%"
+                                                                        }}
+                                                                        transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                                                                    />
+                                                                )
+                                                            )}
+
+                                                            {isIconOnly ? (
+                                                                <div className="relative z-10">
+                                                                    <Brain className="w-5 h-5" style={currentPage === 'flashcards' ? { color: 'var(--accent-primary)' } : undefined} />
+                                                                </div>
+                                                            ) : (
+                                                                <div className="flex items-center gap-3 relative z-10 w-full">
+                                                                    <div className="relative w-5 h-5 shrink-0 flex items-center justify-center">
+                                                                        <motion.div
+                                                                            animate={{
+                                                                                opacity: showShortcuts && currentPage !== 'drawing' && currentPage !== 'notebook' && currentPage !== 'workspace' ? 0 : 1,
+                                                                                scale: showShortcuts && currentPage !== 'drawing' && currentPage !== 'notebook' && currentPage !== 'workspace' ? 0.5 : 1,
+                                                                                x: showShortcuts && currentPage !== 'drawing' && currentPage !== 'notebook' && currentPage !== 'workspace' ? -15 : 0
+                                                                            }}
+                                                                            transition={{ type: "spring", stiffness: 500, damping: 14 }}
+                                                                            whileHover={{ scale: 1.1 }}
+                                                                        >
+                                                                            <Brain className={clsx("w-5 h-5 shrink-0")} style={currentPage === 'flashcards' ? { color: 'var(--accent-primary)' } : undefined} />
+                                                                        </motion.div>
+                                                                    </div>
+                                                                    <span className="font-medium text-sm">Flashcards</span>
                                                                 </div>
                                                             )}
                                                         </button>

@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { FileCode, PenTool, FolderOpen, FileUp, GitPullRequest } from 'lucide-react';
+import { FileCode, PenTool, FolderOpen, FileUp, Brain } from 'lucide-react';
 import { RecentFile, FileType, WorkspaceFile } from '../../types/workspace';
 
 interface WelcomeViewProps {
@@ -80,11 +80,11 @@ export function WelcomeView({
                                 New Board...
                             </button>
                             <button
-                                onClick={() => onFileCreate('nbm')}
+                                onClick={() => onFileCreate('flashcards')}
                                 className="flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:underline text-sm py-1"
                             >
-                                <GitPullRequest className="w-4 h-4" />
-                                New Node Map...
+                                <Brain className="w-4 h-4" />
+                                New Flashcard Deck...
                             </button>
                             <div className="h-3" />
                             <button

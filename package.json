@@ -21,6 +21,8 @@
     "@types/canvas-confetti": "^1.9.0",
     "@types/papaparse": "^5.5.0",
     "@types/prismjs": "^1.26.5",
+    "adm-zip": "^0.5.16",
+    "better-sqlite3": "^12.6.2",
     "canvas-confetti": "^1.9.4",
     "cheerio": "^1.1.2",
     "clsx": "^2.1.0",
@@ -45,6 +47,8 @@
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.1",
+    "@types/adm-zip": "^0.5.7",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/react": "^18.2.64",
     "@types/react-dom": "^18.2.21",
     "@vitejs/plugin-react": "^4.2.1",

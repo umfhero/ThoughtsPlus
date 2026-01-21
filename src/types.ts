@@ -1,4 +1,4 @@
-export type Page = 'dashboard' | 'calendar' | 'stats' | 'settings' | 'drawing' | 'github' | 'dev' | 'custom' | 'timer' | 'progress' | 'notebook' | 'workspace' | 'icons';
+export type Page = 'dashboard' | 'calendar' | 'stats' | 'settings' | 'drawing' | 'github' | 'dev' | 'custom' | 'timer' | 'progress' | 'notebook' | 'workspace' | 'icons' | 'flashcards';
 
 export interface QuickNote {
     id: string;
@@ -121,4 +121,76 @@ export interface NerdNotebook {
 export interface NerdNotebooksData {
     notebooks: NerdNotebook[];
     activeNotebookId?: string;
+}
+
+// Flashcard System - Spaced repetition learning with AI generation
+export interface FlashCard {
+    id: string;
+    front: string;           // Question/prompt side
+    back: string;            // Answer side
+    hint?: string;           // Optional hint
+    tags?: string[];         // For categorization
+    createdAt: string;       // ISO date string
+    updatedAt?: string;      // ISO date string
+    // Spaced repetition fields (SM-2 algorithm)
+    easeFactor: number;      // Difficulty multiplier (default 2.5)
+    interval: number;        // Days until next review
+    repetitions: number;     // Number of successful reviews in a row
+    nextReviewDate: string;  // ISO date string for next review
+    lastReviewDate?: string; // ISO date string of last review
+    // Source tracking for AI-generated cards
+    source?: {
+        type: 'manual' | 'ai-folder' | 'ai-file' | 'ai-topic' | 'ai-url' | 'anki-import';
+        path?: string;       // File/folder path or URL
+        topic?: string;      // Topic description
+    };
+}
+
+export interface FlashcardDeck {
+    id: string;
+    name: string;
+    description?: string;
+    color: string;           // Accent color for the deck
+    icon?: string;           // Optional lucide icon name
+    cards: FlashCard[];
+    createdAt: string;       // ISO date string
+    updatedAt?: string;      // ISO date string
+    // Stats
+    totalReviews: number;
+    lastStudied?: string;    // ISO date string
+    // Import metadata
+    importedFrom?: {
+        type: 'anki' | 'csv' | 'json';
+        fileName: string;
+        importDate: string;
+    };
+}
+
+export interface StudySession {
+    id: string;
+    deckId: string;
+    startedAt: string;       // ISO date string
+    endedAt?: string;        // ISO date string
+    cardsStudied: number;
+    correctAnswers: number;
+    averageTime: number;     // Average time per card in ms
+}
+
+export interface CardReview {
+    cardId: string;
+    rating: 0 | 1 | 2 | 3 | 4 | 5; // 0=complete fail, 5=perfect
+    timeSpent: number;       // Time in ms to answer
+    reviewedAt: string;      // ISO date string
+}
+
+export interface FlashcardsData {
+    decks: FlashcardDeck[];
+    studySessions: StudySession[];
+    settings: {
+        dailyNewCards: number;      // Max new cards per day
+        dailyReviewCards: number;   // Max review cards per day
+        showHints: boolean;
+        autoPlayAudio: boolean;
+        reviewOrder: 'random' | 'oldest' | 'hardest';
+    };
 }

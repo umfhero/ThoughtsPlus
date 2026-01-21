@@ -1361,13 +1361,14 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                 );
             case 'main_content':
                 return (
-                    <>
+                    <div className="w-full relative" style={{ minHeight: isMobile ? `${eventsHeight + trendsHeight + 24}px` : 'auto', zIndex: 1 }}>
                         <div ref={containerRef} style={{ height: overrideHeight ? `${overrideHeight}px` : (isMobile ? 'auto' : `${panelHeight}px`) }} className={clsx("flex select-none", isMobile ? "flex-col gap-6" : "flex-row gap-0")}>
                             {/* Upcoming Events - Resizable Left Column */}
                             <motion.div
                                 style={{
                                     width: isMobile ? '100%' : `${leftWidth}%`,
-                                    height: isMobile ? `${eventsHeight}px` : `${panelHeight}px`
+                                    height: isMobile ? `${eventsHeight}px` : `${panelHeight}px`,
+                                    flexShrink: 0
                                 }}
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
@@ -1708,7 +1709,8 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                             <motion.div
                                 style={{
                                     width: isMobile ? '100%' : `calc(${100 - leftWidth}% - 1.5rem)`,
-                                    height: isMobile ? `${trendsHeight}px` : `${panelHeight}px`
+                                    height: isMobile ? `${trendsHeight}px` : `${panelHeight}px`,
+                                    flexShrink: 0
                                 }}
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
@@ -1758,7 +1760,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                         </div>
 
                         {/* Shared Height Resize Handle Removed */}
-                    </>
+                    </div>
                 );
             case 'github':
                 if (!enabledFeatures.github) return null;
@@ -2817,6 +2819,13 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                         return null;
                     }
 
+                    // Check if previous row contains main_content
+                    const prevRow = rowIndex > 0 ? dashboardLayout[rowIndex - 1] : null;
+                    const prevHasMainContent = prevRow?.widgets.includes('main_content');
+                    // Use 55% of the calculated height for spacing
+                    const needsExtraSpacing = isMobile && prevHasMainContent;
+                    const extraSpacing = needsExtraSpacing ? (eventsHeight + trendsHeight) * 0.55 : 0;
+
                     return (
                         <Reorder.Item
                             key={row.id}
@@ -2831,6 +2840,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                                 damping: 20,
                                 delay: 0.05 + rowIndex * 0.05
                             }}
+                            style={{ marginTop: extraSpacing > 0 ? `${extraSpacing}px` : undefined }}
                         >
                             <div
                                 className={clsx("relative", isEditMode && "shake-animation")}

@@ -1,0 +1,23 @@
+Card with "quotes" in question	Answer with "quotes" too
+Card with 'single quotes'	Answer with 'single quotes'
+Card with	multiple	tabs	Answer with	tabs
+Card with
+newlines	Answer with
+multiple
+lines
+Card with special chars: @#$%^&*()	Answer: !@#$%^&*()_+-={}[]|:;"'<>,.?/
+Card with emoji 🎉🚀💻	Answer with emoji ✅🎯🔥
+Card with HTML <b>tags</b>	Answer with <i>italic</i> and <u>underline</u>
+Card with &amp; entity	Answer with &lt; and &gt; entities
+Card with very long text that goes on and on and on and on and on and on and on and on and on and on and on	Answer that is also very long and detailed with lots of information that spans multiple conceptual ideas and requires careful reading
+Empty answer test	
+	Empty question test
+Card with numbers 123456789	Answer with decimals 3.14159
+Card with math: x² + y² = z²	Answer: Pythagorean theorem
+Card with code: const x = 5;	Answer: Variable declaration
+Card with URL: https://example.com	Answer: A website URL
+Card with email: test@example.com	Answer: An email address
+Card with path: C:\Users\Documents\file.txt	Answer: A Windows file path
+Card with unicode: café, naïve, résumé	Answer: French accented characters
+Card with symbols: ±, ≠, ≤, ≥, ∞	Answer: Mathematical symbols
+Card with currency: $100, €50, £30, ¥1000	Answer: Different currencies
