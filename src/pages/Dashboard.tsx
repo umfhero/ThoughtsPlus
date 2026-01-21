@@ -1,9 +1,10 @@
-import { CustomWidgetContainer } from '../components/CustomWidgetContainer';
-import { AddCustomWidgetModal } from '../components/AddCustomWidgetModal';
-import { getWidgetConfigs, deleteWidgetConfig } from '../utils/customWidgetManager';
-import { CustomWidgetConfig } from '../types';
+// Custom widget imports - commented out but preserved for future use
+// import { CustomWidgetContainer } from '../components/CustomWidgetContainer';
+// import { AddCustomWidgetModal } from '../components/AddCustomWidgetModal';
+// import { getWidgetConfigs, deleteWidgetConfig } from '../utils/customWidgetManager';
+// import { CustomWidgetConfig } from '../types';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
-import { ArrowUpRight, Loader, Circle, Search, Filter, Activity as ActivityIcon, CheckCircle2, Sparkles, X, Plus, MousePointerClick, Merge, Trash2, Repeat, Folder, Clock, XCircle, ChevronLeft, ChevronRight, Box, LayoutGrid } from 'lucide-react';
+import { ArrowUpRight, Loader, Circle, Search, Filter, Activity as ActivityIcon, CheckCircle2, Sparkles, X, Plus, MousePointerClick, Merge, Trash2, Repeat, Folder, Clock, XCircle, ChevronLeft, ChevronRight, Box, LayoutGrid, RotateCcw } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, addMonths, subMonths } from 'date-fns';
 import { NotesData, Note } from '../types';
@@ -90,51 +91,51 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
     };
     const [recentBoards, setRecentBoards] = useState<BoardPreview[]>([]);
 
-    // Edit Mode State
-    const [customConfigs, setCustomConfigs] = useState<CustomWidgetConfig[]>([]);
-    const [isAddWidgetModalOpen, setIsAddWidgetModalOpen] = useState(false);
+    // Edit Mode State - Custom widgets functionality commented out but preserved for future use
+    // const [customConfigs, setCustomConfigs] = useState<CustomWidgetConfig[]>([]);
+    // const [isAddWidgetModalOpen, setIsAddWidgetModalOpen] = useState(false);
 
-    const refreshCustomWidgets = () => {
-        setCustomConfigs(getWidgetConfigs());
-    };
+    // const refreshCustomWidgets = () => {
+    //     setCustomConfigs(getWidgetConfigs());
+    // };
 
-    useEffect(() => {
-        refreshCustomWidgets();
-    }, []);
+    // useEffect(() => {
+    //     refreshCustomWidgets();
+    // }, []);
 
-    const handleDeleteCustomWidget = (id: string) => {
-        if (confirm('Are you sure you want to delete this widget?')) {
-            deleteWidgetConfig(id);
-            refreshCustomWidgets();
-            // Remove from layout
-            setDashboardLayout(prev => prev.map(row => ({
-                ...row,
-                widgets: row.widgets.filter(w => w !== id)
-            })).filter(row => row.widgets.length > 0));
-            // Remove from hidden
-            setHiddenWidgets(prev => prev.filter(w => w !== id));
-        }
-    };
+    // const handleDeleteCustomWidget = (id: string) => {
+    //     if (confirm('Are you sure you want to delete this widget?')) {
+    //         deleteWidgetConfig(id);
+    //         refreshCustomWidgets();
+    //         // Remove from layout
+    //         setDashboardLayout(prev => prev.map(row => ({
+    //             ...row,
+    //             widgets: row.widgets.filter(w => w !== id)
+    //         })).filter(row => row.widgets.length > 0));
+    //         // Remove from hidden
+    //         setHiddenWidgets(prev => prev.filter(w => w !== id));
+    //     }
+    // };
 
-    const handleCustomWidgetSaved = () => {
-        refreshCustomWidgets();
-        // The new widget is saved in localStorage, but we need to add it to the layout or hidden list.
-        // Since we don't know the ID here easily without passing it back, let's just reload configs.
-        // Actually, let's make AddCustomWidgetModal return the new ID or config, but for now, 
-        // we can just find the new one.
-        const configs = getWidgetConfigs();
-        const allWidgetIds = new Set([...dashboardLayout.flatMap(r => r.widgets), ...hiddenWidgets]);
+    // const handleCustomWidgetSaved = () => {
+    //     refreshCustomWidgets();
+    //     // The new widget is saved in localStorage, but we need to add it to the layout or hidden list.
+    //     // Since we don't know the ID here easily without passing it back, let's just reload configs.
+    //     // Actually, let's make AddCustomWidgetModal return the new ID or config, but for now, 
+    //     // we can just find the new one.
+    //     const configs = getWidgetConfigs();
+    //     const allWidgetIds = new Set([...dashboardLayout.flatMap(r => r.widgets), ...hiddenWidgets]);
 
-        configs.forEach(c => {
-            if (!allWidgetIds.has(c.id)) {
-                // New widget found, add to layout
-                setDashboardLayout(prev => [
-                    ...prev,
-                    { id: `row-${Date.now()}`, widgets: [c.id] }
-                ]);
-            }
-        });
-    };
+    //     configs.forEach(c => {
+    //         if (!allWidgetIds.has(c.id)) {
+    //             // New widget found, add to layout
+    //             setDashboardLayout(prev => [
+    //                 ...prev,
+    //                 { id: `row-${Date.now()}`, widgets: [c.id] }
+    //             ]);
+    //         }
+    //     });
+    // };
 
     // New grid-based layout structure
     // Each row can contain 1-2 widgets
@@ -164,7 +165,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
         if (saved) {
             return JSON.parse(saved);
         }
-        return ['fortnite'];
+        return [];
     });
     const longPressTimer = useRef<NodeJS.Timeout | null>(null);
     const [showEditTip, setShowEditTip] = useState(false);
@@ -1284,20 +1285,21 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
     };
 
     const renderWidget = (id: string, overrideHeight?: number) => {
-        if (id.startsWith('custom_')) {
-            const config = customConfigs.find(c => c.id === id);
-            if (config) {
-                return (
-                    <div style={{ height: overrideHeight ? `${overrideHeight}px` : '350px' }}>
-                        <CustomWidgetContainer
-                            config={config}
-                            onDelete={() => handleDeleteCustomWidget(id)}
-                            isEditMode={isEditMode}
-                        />
-                    </div>
-                );
-            }
-        }
+        // Custom widgets functionality commented out but preserved for future use
+        // if (id.startsWith('custom_')) {
+        //     const config = customConfigs.find(c => c.id === id);
+        //     if (config) {
+        //         return (
+        //             <div style={{ height: overrideHeight ? `${overrideHeight}px` : '350px' }}>
+        //                 <CustomWidgetContainer
+        //                     config={config}
+        //                     onDelete={() => handleDeleteCustomWidget(id)}
+        //                     isEditMode={isEditMode}
+        //                 />
+        //             </div>
+        //         );
+        //     }
+        // }
 
         switch (id) {
             case 'briefing':
@@ -3022,11 +3024,11 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                             className="fixed bottom-24 right-8 z-50 flex flex-col items-end gap-4 w-auto max-w-sm"
                         >
                             {/* Hidden Widgets List */}
-                            {hiddenWidgets.length > 0 && (
+                            {hiddenWidgets.filter(w => w !== 'fortnite').length > 0 && (
                                 <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-md p-4 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full">
                                     <h3 className="text-sm font-bold text-gray-500 dark:text-gray-400 mb-3 text-center uppercase tracking-wider">Add Widgets</h3>
                                     <div className="flex flex-wrap gap-2 justify-center">
-                                        {hiddenWidgets.map(widgetId => (
+                                        {hiddenWidgets.filter(w => w !== 'fortnite').map(widgetId => (
                                             <button
                                                 key={widgetId}
                                                 onClick={() => toggleWidgetVisibility(widgetId)}
@@ -3040,12 +3042,32 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                                 </div>
                             )}
 
+                            {/* Reset Dashboard Button */}
                             <button
-                                onClick={() => setIsAddWidgetModalOpen(true)}
-                                className="px-6 py-3 bg-blue-600 text-white rounded-full font-bold shadow-xl hover:bg-blue-700 transition-colors flex items-center gap-2"
+                                onClick={() => {
+                                    if (confirm('Reset dashboard to default layout? This will remove all customizations.')) {
+                                        // Reset to default layout
+                                        const defaultLayout = [
+                                            { id: 'row-1', widgets: ['briefing'] },
+                                            { id: 'row-2', widgets: ['main_content'] },
+                                            { id: 'row-3', widgets: ['board'] },
+                                            { id: 'row-4', widgets: ['github'] }
+                                        ];
+                                        setDashboardLayout(defaultLayout);
+                                        setHiddenWidgets([]);
+                                        localStorage.setItem('dashboard_layout_v2', JSON.stringify(defaultLayout));
+                                        localStorage.setItem('dashboard_hidden_widgets', JSON.stringify([]));
+                                        addNotification({
+                                            title: 'Dashboard Reset',
+                                            message: 'Dashboard has been reset to default layout.',
+                                            type: 'success'
+                                        });
+                                    }
+                                }}
+                                className="px-6 py-3 bg-gray-600 text-white rounded-full font-bold shadow-xl hover:bg-gray-700 transition-colors flex items-center gap-2"
                             >
-                                <Plus className="w-5 h-5" />
-                                Create Custom Widget
+                                <RotateCcw className="w-5 h-5" />
+                                Reset Dashboard
                             </button>
                         </motion.div>
 
@@ -3062,11 +3084,13 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                 )}
             </AnimatePresence>
 
+            {/* Custom Widget Modal - Removed from UI but kept for potential future use
             <AddCustomWidgetModal
                 isOpen={isAddWidgetModalOpen}
                 onClose={() => setIsAddWidgetModalOpen(false)}
                 onSave={handleCustomWidgetSaved}
             />
+            */}
 
             {/* Edit Mode Tip Notification */}
             <AnimatePresence>

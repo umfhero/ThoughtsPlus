@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Folder, Sparkles, Github, Code, Check, ChevronRight, ChevronLeft, BookOpen, Clock, Layout, MessageSquare, Cloud, Shield, Palette, Repeat, Calendar, Target, Sidebar as SidebarIcon, Heart } from 'lucide-react';
+import { Folder, Sparkles, Github, Check, ChevronRight, ChevronLeft, BookOpen, Clock, Layout, MessageSquare, Cloud, Shield, Palette, Repeat, Calendar, Target, Sidebar as SidebarIcon, Heart } from 'lucide-react';
 import logoPng from '../assets/Thoughts+.png';
 import clsx from 'clsx';
 import { useDashboardLayout, DashboardLayoutType } from '../contexts/DashboardLayoutContext';
@@ -22,7 +22,6 @@ export function SetupWizard({ onComplete, isDemoMode = false }: SetupWizardProps
     const [selectedLocation, setSelectedLocation] = useState<'onedrive' | 'local' | 'custom'>('onedrive');
     const [apiKey, setApiKey] = useState('');
     const [githubUsername, setGithubUsername] = useState('');
-    const [creatorCodes, setCreatorCodes] = useState('');
     const [isValidating, setIsValidating] = useState(false);
 
     // Layout selection state
@@ -135,16 +134,11 @@ export function SetupWizard({ onComplete, isDemoMode = false }: SetupWizardProps
             }
             setStep(3);
         } else if (step === 3) {
-            // Save GitHub and Creator Codes if provided
+            // Save GitHub if provided
             if (!isDemoMode) {
                 if (githubUsername.trim()) {
                     // @ts-ignore
                     await window.ipcRenderer.invoke('set-github-username', githubUsername);
-                }
-                if (creatorCodes.trim()) {
-                    const codes = creatorCodes.split(',').map(c => c.trim()).filter(c => c.length > 0);
-                    // @ts-ignore
-                    await window.ipcRenderer.invoke('set-creator-codes', codes);
                 }
             }
             setStep(4);
@@ -231,8 +225,8 @@ export function SetupWizard({ onComplete, isDemoMode = false }: SetupWizardProps
                                 <p className="text-[10px] font-medium text-gray-700 leading-tight">Daily Briefing</p>
                             </div>
                             <div className="p-2.5 rounded-xl bg-gray-50 border border-gray-100 flex flex-col items-center text-center">
-                                <Code className="w-4 h-4 text-blue-500 mb-1.5" />
-                                <p className="text-[10px] font-medium text-gray-700 leading-tight">Fortnite Stats</p>
+                                <Target className="w-4 h-4 text-blue-500 mb-1.5" />
+                                <p className="text-[10px] font-medium text-gray-700 leading-tight">Progress Tracking</p>
                             </div>
                             <div className="p-2.5 rounded-xl bg-gray-50 border border-gray-100 flex flex-col items-center text-center">
                                 <Github className="w-4 h-4 text-blue-500 mb-1.5" />
@@ -499,7 +493,7 @@ export function SetupWizard({ onComplete, isDemoMode = false }: SetupWizardProps
                                                 Integrations (Optional)
                                             </h2>
                                             <p className="text-sm text-gray-500">
-                                                Connect GitHub and Fortnite Creator Stats
+                                                Connect your GitHub profile
                                             </p>
                                         </div>
                                     </div>
@@ -515,20 +509,6 @@ export function SetupWizard({ onComplete, isDemoMode = false }: SetupWizardProps
                                                 onChange={(e) => setGithubUsername(e.target.value)}
                                                 placeholder="yourusername (optional)"
                                                 className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-blue-500/20 outline-none"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="text-sm font-medium text-gray-600 mb-2 block flex items-center gap-2">
-                                                <Code className="w-4 h-4" />
-                                                Fortnite Island Codes
-                                            </label>
-                                            <textarea
-                                                value={creatorCodes}
-                                                onChange={(e) => setCreatorCodes(e.target.value)}
-                                                placeholder="1234-5678-9012, 2345-6789-0123, ... (optional)"
-                                                rows={3}
-                                                className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-blue-500/20 outline-none resize-none"
                                             />
                                         </div>
                                     </div>

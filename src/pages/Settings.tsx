@@ -1575,7 +1575,8 @@ export function SettingsPage() {
                         </label>
                     </motion.div>
 
-                    {/* Fortnite Creator Codes */}
+                    {/* Fortnite Creator Codes - Hidden but API logic preserved */}
+                    {/* Uncomment this section if you need to re-enable Fortnite creator codes in the future
                     <motion.div
                         initial={{ y: -15, scale: 0.97 }}
                         animate={{ y: 0, scale: 1 }}
@@ -1630,6 +1631,7 @@ export function SettingsPage() {
                             </div>
                         </div>
                     </motion.div>
+                    */}
                 </div>
 
                 {/* Language Section - COMMENTED OUT: Awaiting translation JSON files and flag icons
