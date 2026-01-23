@@ -17,6 +17,7 @@ import { Page, Note, NotesData, Milestone, MilestonesData, LifeChapter, LifeChap
 import { DashboardLayoutProvider, useDashboardLayout } from './contexts/DashboardLayoutContext';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { ratingPrompt } from './utils/ratingPrompt';
+import { TutorialManager } from './components/TutorialManager';
 
 // Lazy load pages for better performance
 const CalendarPage = lazy(() => import('./pages/Calendar').then(m => ({ default: m.CalendarPage })));
@@ -72,6 +73,9 @@ function App() {
     const [isAiModalOpen, setIsAiModalOpen] = useState(false);
     const [isQuickTimerOpen, setIsQuickTimerOpen] = useState(false);
     const { addNotification } = useNotification();
+
+    // Tutorial State
+    const [activeTutorialId, setActiveTutorialId] = useState<string | null>(null);
 
     // Global Edit Mode
     const [isEditMode, setIsEditMode] = useState(false);
@@ -818,6 +822,17 @@ function App() {
         });
     };
 
+    // Listen for tutorial start events from Settings
+    useEffect(() => {
+        const handleStartTutorial = (event: CustomEvent) => {
+            const { tutorialId } = event.detail;
+            setActiveTutorialId(tutorialId);
+        };
+
+        window.addEventListener('start-tutorial', handleStartTutorial as EventListener);
+        return () => window.removeEventListener('start-tutorial', handleStartTutorial as EventListener);
+    }, []);
+
     if (checkingSetup) {
         return (
             <div className="w-screen h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
@@ -886,6 +901,8 @@ function App() {
                         handleDeleteNerdbook={handleDeleteNerdbook}
                         showRatingPrompt={showRatingPrompt}
                         setShowRatingPrompt={setShowRatingPrompt}
+                        activeTutorialId={activeTutorialId}
+                        setActiveTutorialId={setActiveTutorialId}
                     />
                 </TimerProvider>
             </DashboardLayoutProvider>
@@ -946,6 +963,8 @@ interface AppContentProps {
     handleDeleteNerdbook: (notebookId: string) => void;
     showRatingPrompt: boolean;
     setShowRatingPrompt: (value: boolean) => void;
+    activeTutorialId: string | null;
+    setActiveTutorialId: (id: string | null) => void;
 }
 
 // Wrapper component to handle switching between Notebook and Nerdbook views
@@ -1020,7 +1039,8 @@ function AppContent(props: AppContentProps) {
         wasWindowHiddenBeforeQuickCapture, setWasWindowHiddenBeforeQuickCapture,
         handleAddQuickNote, handleUpdateQuickNote, handleDeleteQuickNote,
         nerdbooks, handleAddNerdbook, handleUpdateNerdbook, handleDeleteNerdbook,
-        showRatingPrompt, setShowRatingPrompt
+        showRatingPrompt, setShowRatingPrompt,
+        activeTutorialId, setActiveTutorialId
     } = props;
 
     // Check if we're on workspace page - it needs full width layout
@@ -1237,6 +1257,13 @@ function AppContent(props: AppContentProps) {
                     </motion.div>
                 </motion.div>
             )}
+
+            {/* Tutorial Manager - handles interactive tutorials */}
+            <TutorialManager
+                activeTutorialId={activeTutorialId}
+                onComplete={() => setActiveTutorialId(null)}
+                onNavigate={(page) => setCurrentPage(page)}
+            />
         </div>
     );
 }

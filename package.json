@@ -42,6 +42,7 @@
     "react-dom": "^18.2.0",
     "react-github-calendar": "^5.0.0",
     "recharts": "^3.4.1",
+    "shepherd.js": "^14.5.1",
     "tailwind-merge": "^2.2.1"
   },
   "devDependencies": {

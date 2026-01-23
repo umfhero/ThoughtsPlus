@@ -1,0 +1,211 @@
+/* Custom Shepherd.js Theme for ThoughtsPlus */
+
+/* Import base Shepherd styles */
+@import 'shepherd.js/dist/css/shepherd.css';
+
+/* Override with custom theme */
+.shepherd-modal-overlay-container {
+    opacity: 1 !important;
+}
+
+.shepherd-modal-overlay-container.shepherd-modal-is-visible {
+    opacity: 0.6 !important;
+}
+
+/* Dark overlay */
+.shepherd-modal-overlay-container {
+    background-color: rgba(0, 0, 0, 0.6) !important;
+    backdrop-filter: blur(4px) !important;
+}
+
+/* Tooltip container */
+.shepherd-element {
+    z-index: 10001 !important;
+    max-width: 500px !important;
+}
+
+.shepherd-content {
+    background: white !important;
+    border-radius: 16px !important;
+    padding: 0 !important;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+    border: 1px solid rgb(229, 231, 235) !important;
+}
+
+/* Dark mode */
+.dark .shepherd-content {
+    background: rgb(31, 41, 55) !important;
+    border-color: rgb(55, 65, 81) !important;
+    color: rgb(243, 244, 246) !important;
+}
+
+/* Header */
+.shepherd-header {
+    padding: 20px 24px 16px !important;
+    background: transparent !important;
+    border-bottom: 1px solid rgb(229, 231, 235) !important;
+}
+
+.dark .shepherd-header {
+    border-bottom-color: rgb(55, 65, 81) !important;
+}
+
+.shepherd-title {
+    font-size: 18px !important;
+    font-weight: 700 !important;
+    color: rgb(17, 24, 39) !important;
+    margin: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+.dark .shepherd-title {
+    color: rgb(243, 244, 246) !important;
+}
+
+/* Close button */
+.shepherd-cancel-icon {
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 8px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: background-color 0.2s !important;
+    color: rgb(107, 114, 128) !important;
+}
+
+.shepherd-cancel-icon:hover {
+    background-color: rgb(243, 244, 246) !important;
+    color: rgb(17, 24, 39) !important;
+}
+
+.dark .shepherd-cancel-icon:hover {
+    background-color: rgb(55, 65, 81) !important;
+    color: rgb(243, 244, 246) !important;
+}
+
+/* Text content */
+.shepherd-text {
+    padding: 20px 24px !important;
+    font-size: 15px !important;
+    line-height: 1.6 !important;
+    color: rgb(55, 65, 81) !important;
+}
+
+.dark .shepherd-text {
+    color: rgb(209, 213, 219) !important;
+}
+
+/* Footer */
+.shepherd-footer {
+    padding: 16px 24px 20px !important;
+    background: transparent !important;
+    border-top: 1px solid rgb(229, 231, 235) !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+}
+
+.dark .shepherd-footer {
+    border-top-color: rgb(55, 65, 81) !important;
+}
+
+/* Progress indicator */
+.shepherd-progress {
+    font-size: 13px !important;
+    color: rgb(107, 114, 128) !important;
+    font-weight: 500 !important;
+}
+
+.dark .shepherd-progress {
+    color: rgb(156, 163, 175) !important;
+}
+
+/* Buttons */
+.shepherd-button {
+    padding: 8px 16px !important;
+    border-radius: 8px !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    transition: all 0.2s !important;
+    border: none !important;
+    cursor: pointer !important;
+}
+
+.shepherd-button-secondary {
+    background: transparent !important;
+    color: rgb(107, 114, 128) !important;
+}
+
+.shepherd-button-secondary:hover {
+    background: rgb(243, 244, 246) !important;
+    color: rgb(17, 24, 39) !important;
+}
+
+.dark .shepherd-button-secondary:hover {
+    background: rgb(55, 65, 81) !important;
+    color: rgb(243, 244, 246) !important;
+}
+
+.shepherd-button-primary {
+    background: var(--accent-primary, rgb(59, 130, 246)) !important;
+    color: white !important;
+}
+
+.shepherd-button-primary:hover {
+    opacity: 0.9 !important;
+    transform: translateY(-1px) !important;
+}
+
+/* Highlight effect on target element */
+.shepherd-target {
+    position: relative !important;
+    z-index: 10000 !important;
+}
+
+.shepherd-enabled.shepherd-target {
+    box-shadow: 0 0 0 4px var(--accent-primary, rgb(59, 130, 246)), 0 0 0 9999px rgba(0, 0, 0, 0.6) !important;
+    border-radius: 8px !important;
+}
+
+/* Arrow */
+.shepherd-arrow {
+    display: none !important;
+}
+
+/* Animation */
+.shepherd-element {
+    animation: shepherdFadeIn 0.2s ease-out !important;
+}
+
+@keyframes shepherdFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+    .shepherd-element {
+        max-width: calc(100vw - 32px) !important;
+    }
+
+    .shepherd-content {
+        border-radius: 12px !important;
+    }
+
+    .shepherd-header,
+    .shepherd-text,
+    .shepherd-footer {
+        padding-left: 16px !important;
+        padding-right: 16px !important;
+    }
+}

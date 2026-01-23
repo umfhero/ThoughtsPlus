@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Folder, Sparkles, Github, Check, ChevronRight, ChevronLeft, BookOpen, Clock, Layout, MessageSquare, Cloud, Shield, Palette, Repeat, Calendar, Target, Sidebar as SidebarIcon, Heart } from 'lucide-react';
+import { Folder, Sparkles, Github, Check, ChevronRight, ChevronLeft, BookOpen, Target, Sidebar as SidebarIcon, Heart } from 'lucide-react';
 import logoPng from '../assets/Thoughts+.png';
 import clsx from 'clsx';
 import { useDashboardLayout, DashboardLayoutType } from '../contexts/DashboardLayoutContext';
@@ -9,6 +9,7 @@ import { LAYOUT_CONFIGS, getAllLayoutTypes } from '../utils/dashboardLayouts';
 import { useTheme } from '../contexts/ThemeContext';
 import { Contributor, fetchGithubContributors } from '../utils/github';
 import { getAppVersion } from '../utils/version';
+import movieScreenshot from '../assets/moviescreenshot.jpg';
 
 interface SetupWizardProps {
     onComplete: () => void;
@@ -21,6 +22,7 @@ export function SetupWizard({ onComplete, isDemoMode = false }: SetupWizardProps
     const [dataPath, setDataPath] = useState('');
     const [selectedLocation, setSelectedLocation] = useState<'onedrive' | 'local' | 'custom'>('onedrive');
     const [apiKey, setApiKey] = useState('');
+    const [perplexityApiKey, setPerplexityApiKey] = useState('');
     const [githubUsername, setGithubUsername] = useState('');
     const [isValidating, setIsValidating] = useState(false);
 
@@ -120,7 +122,7 @@ export function SetupWizard({ onComplete, isDemoMode = false }: SetupWizardProps
             }
             setStep(2);
         } else if (step === 2) {
-            // Validate and save API key if provided
+            // Validate and save API keys if provided
             if (apiKey.trim()) {
                 const valid = await validateApiKey();
                 if (!valid) return; // Don't proceed if invalid
@@ -131,6 +133,11 @@ export function SetupWizard({ onComplete, isDemoMode = false }: SetupWizardProps
                     localStorage.setItem('api_key_validated', 'true');
                     localStorage.setItem('api_key_hash', btoa(apiKey.substring(0, 10)));
                 }
+            }
+            // Save Perplexity API key if provided
+            if (perplexityApiKey.trim() && !isDemoMode) {
+                // @ts-ignore
+                await window.ipcRenderer.invoke('set-perplexity-api-key', perplexityApiKey);
             }
             setStep(3);
         } else if (step === 3) {
@@ -168,13 +175,13 @@ export function SetupWizard({ onComplete, isDemoMode = false }: SetupWizardProps
     };
 
     return (
-        <div className="fixed inset-0 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 flex items-center justify-center p-8 z-50">
+        <div className="fixed inset-0 bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 flex items-center justify-center p-4 z-50">
             {/* Drag Region for Setup Wizard */}
             <div className="absolute top-0 left-0 w-full h-12 z-50" style={{ WebkitAppRegion: 'drag' } as any} />
             <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="bg-white rounded-3xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-8 border border-gray-200 relative z-10"
+                className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto p-6 pb-8 border border-gray-200 relative z-10"
                 style={{ WebkitAppRegion: 'no-drag' } as any}
             >
                 {showWelcome ? (
@@ -183,88 +190,202 @@ export function SetupWizard({ onComplete, isDemoMode = false }: SetupWizardProps
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -20 }}
-                        className="text-center"
+                        className="relative"
                     >
-                        <div className="mb-6 flex justify-center">
-                            <div className="p-3">
-                                <img src={logoPng} alt="Thoughts+" className="w-24 h-24" />
+                        {/* Main Content */}
+                        <div className="text-center">
+                            {/* Logo and Title - Same Line */}
+                            <div className="flex items-center justify-center gap-3 mb-3">
+                                <img src={logoPng} alt="Thoughts+" className="w-12 h-12" />
+                                <h1 className="text-4xl font-bold text-gray-900">
+                                    Welcome to <span className="text-amber-600">ThoughtsPlus</span>
+                                </h1>
                             </div>
+
+                            <p className="text-xl text-gray-700 mb-2 max-w-2xl mx-auto font-medium">
+                                Built for lazy nerds who want to capture thoughts instantly, not waste time organizing them.
+                            </p>
+
+                            <p className="text-base text-gray-600 mb-6 max-w-xl mx-auto">
+                                100% free. Open source. No ads. No subscriptions ever.
+                            </p>
+
+                            {/* Quick Capture Flow Diagram */}
+                            <div className="mb-6 max-w-full mx-auto px-4">
+                                <h3 className="text-xs font-semibold text-gray-600 mb-3 uppercase tracking-wide">
+                                    Quick Capture Flow
+                                </h3>
+                                {/* Desktop/Tablet: Horizontal Layout */}
+                                <div className="hidden md:flex items-start justify-center gap-3">
+                                    {/* Step 1: During Task with Movie Background */}
+                                    <div className="flex flex-col items-center">
+                                        <div className="relative w-52 h-28 rounded-xl overflow-hidden shadow-lg border-2 border-amber-200">
+                                            {/* Blurred Movie Background */}
+                                            <img
+                                                src={movieScreenshot}
+                                                alt="Movie background"
+                                                className="absolute inset-0 w-full h-full object-cover blur-[1px]"
+                                            />
+                                            {/* Quick Capture Overlay */}
+                                            <div className="absolute inset-0 flex items-center justify-center p-3">
+                                                <div className="w-full bg-white/95 backdrop-blur-sm rounded-lg shadow-xl p-2.5 border border-gray-200">
+                                                    <div className="text-xs text-gray-400 mb-1">Quick Capture</div>
+                                                    <div className="h-px bg-gray-200 mb-1.5"></div>
+                                                    <div className="text-sm text-gray-600">Type your thought...</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="mt-2 flex items-center gap-1.5 justify-center">
+                                            <span className="text-xs font-mono font-bold text-gray-700 bg-amber-100 px-2 py-0.5 rounded border border-amber-200">
+                                                Ctrl+Shift+N
+                                            </span>
+                                            <span className="text-xs text-gray-500 font-medium">During any task</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Arrow */}
+                                    <ChevronRight className="w-5 h-5 text-amber-400 flex-shrink-0 mt-12" />
+
+                                    {/* Step 2: Type with Cursor */}
+                                    <div className="flex flex-col items-center">
+                                        <div className="w-52 h-28 rounded-xl bg-white border-2 border-amber-200 flex flex-col justify-center p-3 shadow-lg">
+                                            <div className="text-xs text-gray-400 mb-1.5">Quick Capture</div>
+                                            <div className="h-px bg-gray-200 mb-2"></div>
+                                            <div className="text-sm text-gray-700 font-medium flex items-center">
+                                                Buy RAM when prices drop
+                                                <svg className="w-2.5 h-4 text-amber-600 ml-0.5 animate-pulse" viewBox="0 0 10 20" fill="currentColor">
+                                                    <path d="M0 0 L10 0 L10 2 L6 2 L6 18 L10 18 L10 20 L0 20 L0 18 L4 18 L4 2 L0 2 Z" />
+                                                </svg>
+                                            </div>
+                                        </div>
+                                        <p className="text-xs text-gray-500 mt-2 font-medium">Capture your thought</p>
+                                    </div>
+
+                                    {/* Arrow */}
+                                    <ChevronRight className="w-5 h-5 text-amber-400 flex-shrink-0 mt-12" />
+
+                                    {/* Step 3: Auto-saved - File Tree Visual */}
+                                    <div className="flex flex-col items-center">
+                                        <div className="w-52 h-28 rounded-xl bg-white border-2 border-amber-200 flex flex-col justify-center p-3 shadow-lg">
+                                            <div className="text-xs font-semibold text-amber-700 mb-2 flex items-center gap-1">
+                                                <Check className="w-3 h-3" />
+                                                Saved to Workspace
+                                            </div>
+                                            <div className="space-y-1 text-left">
+                                                <div className="flex items-center gap-2 text-xs text-gray-500">
+                                                    <Folder className="w-3 h-3" />
+                                                    <span>Workspace</span>
+                                                </div>
+                                                <div className="flex items-center gap-2 text-xs text-gray-500 ml-3">
+                                                    <Folder className="w-3 h-3" />
+                                                    <span>Quick Notes</span>
+                                                </div>
+                                                <div className="flex items-center gap-2 text-xs text-gray-700 ml-6 font-medium bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                                                    <BookOpen className="w-3 h-3 text-amber-600" />
+                                                    <span>2025-01-23.md</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <p className="text-xs text-gray-500 mt-2 font-medium">
+                                            <span className="font-mono font-bold text-gray-700 bg-amber-100 px-2 py-0.5 rounded border border-amber-200">ESC</span> closes instantly, back to task
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Mobile/Small Screens: Vertical Layout */}
+                                <div className="flex md:hidden flex-col items-center gap-3">
+                                    {/* Step 1: During Task with Movie Background */}
+                                    <div className="flex flex-col items-center w-full max-w-xs">
+                                        <div className="relative w-full h-32 rounded-xl overflow-hidden shadow-lg border-2 border-amber-200">
+                                            {/* Blurred Movie Background */}
+                                            <img
+                                                src={movieScreenshot}
+                                                alt="Movie background"
+                                                className="absolute inset-0 w-full h-full object-cover blur-[1px]"
+                                            />
+                                            {/* Quick Capture Overlay */}
+                                            <div className="absolute inset-0 flex items-center justify-center p-3">
+                                                <div className="w-full bg-white/95 backdrop-blur-sm rounded-lg shadow-xl p-2.5 border border-gray-200">
+                                                    <div className="text-xs text-gray-400 mb-1">Quick Capture</div>
+                                                    <div className="h-px bg-gray-200 mb-1.5"></div>
+                                                    <div className="text-sm text-gray-600">Type your thought...</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="mt-2 flex items-center gap-1.5 justify-center">
+                                            <span className="text-xs font-mono font-bold text-gray-700 bg-amber-100 px-2 py-0.5 rounded border border-amber-200">
+                                                Ctrl+Shift+N
+                                            </span>
+                                            <span className="text-xs text-gray-500 font-medium">During any task</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Arrow Down */}
+                                    <ChevronRight className="w-5 h-5 text-amber-400 flex-shrink-0 rotate-90" />
+
+                                    {/* Step 2: Type with Cursor */}
+                                    <div className="flex flex-col items-center w-full max-w-xs">
+                                        <div className="w-full h-32 rounded-xl bg-white border-2 border-amber-200 flex flex-col justify-center p-3 shadow-lg">
+                                            <div className="text-xs text-gray-400 mb-1.5">Quick Capture</div>
+                                            <div className="h-px bg-gray-200 mb-2"></div>
+                                            <div className="text-sm text-gray-700 font-medium flex items-center">
+                                                Buy RAM when prices drop
+                                                <svg className="w-2.5 h-4 text-amber-600 ml-0.5 animate-pulse" viewBox="0 0 10 20" fill="currentColor">
+                                                    <path d="M0 0 L10 0 L10 2 L6 2 L6 18 L10 18 L10 20 L0 20 L0 18 L4 18 L4 2 L0 2 Z" />
+                                                </svg>
+                                            </div>
+                                        </div>
+                                        <p className="text-xs text-gray-500 mt-2 font-medium">Capture your thought</p>
+                                    </div>
+
+                                    {/* Arrow Down */}
+                                    <ChevronRight className="w-5 h-5 text-amber-400 flex-shrink-0 rotate-90" />
+
+                                    {/* Step 3: Auto-saved - File Tree Visual */}
+                                    <div className="flex flex-col items-center w-full max-w-xs">
+                                        <div className="w-full h-32 rounded-xl bg-white border-2 border-amber-200 flex flex-col justify-center p-3 shadow-lg">
+                                            <div className="text-xs font-semibold text-amber-700 mb-2 flex items-center gap-1">
+                                                <Check className="w-3 h-3" />
+                                                Saved to Workspace
+                                            </div>
+                                            <div className="space-y-1 text-left">
+                                                <div className="flex items-center gap-2 text-xs text-gray-500">
+                                                    <Folder className="w-3 h-3" />
+                                                    <span>Workspace</span>
+                                                </div>
+                                                <div className="flex items-center gap-2 text-xs text-gray-500 ml-3">
+                                                    <Folder className="w-3 h-3" />
+                                                    <span>Quick Notes</span>
+                                                </div>
+                                                <div className="flex items-center gap-2 text-xs text-gray-700 ml-6 font-medium bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                                                    <BookOpen className="w-3 h-3 text-amber-600" />
+                                                    <span>2025-01-23.md</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <p className="text-xs text-gray-500 mt-2 font-medium">
+                                            <span className="font-mono font-bold text-gray-700 bg-amber-100 px-2 py-0.5 rounded border border-amber-200">ESC</span> closes instantly, back to task
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={handleGetStarted}
+                                className="px-8 py-3 rounded-xl text-amber-700 font-semibold transition-all border-2 border-amber-600 hover:bg-amber-50 flex items-center gap-2 mx-auto mb-4"
+                            >
+                                Get Started
+                                <ChevronRight className="w-4 h-4" />
+                            </button>
                         </div>
-
-                        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                            Welcome to <span className="text-blue-500">ThoughtsPlus</span>
-                        </h1>
-
-                        <p className="text-base text-gray-600 mb-6 max-w-xl mx-auto">
-                            Your personal productivity suite for managing events, notes, and tracking your creative projects.
-                        </p>
-
-                        <div className="grid grid-cols-4 gap-3 mb-8 max-w-4xl mx-auto">
-                            <div className="p-2.5 rounded-xl bg-gray-50 border border-gray-100 flex flex-col items-center text-center">
-                                <Layout className="w-4 h-4 text-blue-500 mb-1.5" />
-                                <p className="text-[10px] font-medium text-gray-700 leading-tight">Dashboard Hub</p>
-                            </div>
-                            <div className="p-2.5 rounded-xl bg-gray-50 border border-gray-100 flex flex-col items-center text-center">
-                                <Calendar className="w-4 h-4 text-blue-500 mb-1.5" />
-                                <p className="text-[10px] font-medium text-gray-700 leading-tight">Smart Calendar</p>
-                            </div>
-                            <div className="p-2.5 rounded-xl bg-gray-50 border border-gray-100 flex flex-col items-center text-center">
-                                <Clock className="w-4 h-4 text-blue-500 mb-1.5" />
-                                <p className="text-[10px] font-medium text-gray-700 leading-tight">Advanced Timer</p>
-                            </div>
-                            <div className="p-2.5 rounded-xl bg-gray-50 border border-gray-100 flex flex-col items-center text-center">
-                                <BookOpen className="w-4 h-4 text-blue-500 mb-1.5" />
-                                <p className="text-[10px] font-medium text-gray-700 leading-tight">Nerdbook</p>
-                            </div>
-                            <div className="p-2.5 rounded-xl bg-gray-50 border border-gray-100 flex flex-col items-center text-center">
-                                <Sparkles className="w-4 h-4 text-blue-500 mb-1.5" />
-                                <p className="text-[10px] font-medium text-gray-700 leading-tight">AI Quick Notes</p>
-                            </div>
-                            <div className="p-2.5 rounded-xl bg-gray-50 border border-gray-100 flex flex-col items-center text-center">
-                                <MessageSquare className="w-4 h-4 text-blue-500 mb-1.5" />
-                                <p className="text-[10px] font-medium text-gray-700 leading-tight">Daily Briefing</p>
-                            </div>
-                            <div className="p-2.5 rounded-xl bg-gray-50 border border-gray-100 flex flex-col items-center text-center">
-                                <Target className="w-4 h-4 text-blue-500 mb-1.5" />
-                                <p className="text-[10px] font-medium text-gray-700 leading-tight">Progress Tracking</p>
-                            </div>
-                            <div className="p-2.5 rounded-xl bg-gray-50 border border-gray-100 flex flex-col items-center text-center">
-                                <Github className="w-4 h-4 text-blue-500 mb-1.5" />
-                                <p className="text-[10px] font-medium text-gray-700 leading-tight">GitHub Profile</p>
-                            </div>
-                            <div className="p-2.5 rounded-xl bg-gray-50 border border-gray-100 flex flex-col items-center text-center">
-                                <Cloud className="w-4 h-4 text-blue-500 mb-1.5" />
-                                <p className="text-[10px] font-medium text-gray-700 leading-tight">Cloud Sync</p>
-                            </div>
-                            <div className="p-2.5 rounded-xl bg-gray-50 border border-gray-100 flex flex-col items-center text-center">
-                                <Shield className="w-4 h-4 text-blue-500 mb-1.5" />
-                                <p className="text-[10px] font-medium text-gray-700 leading-tight">Local Privacy</p>
-                            </div>
-                            <div className="p-2.5 rounded-xl bg-gray-50 border border-gray-100 flex flex-col items-center text-center">
-                                <Palette className="w-4 h-4 text-blue-500 mb-1.5" />
-                                <p className="text-[10px] font-medium text-gray-700 leading-tight">Custom Themes</p>
-                            </div>
-                            <div className="p-2.5 rounded-xl bg-gray-50 border border-gray-100 flex flex-col items-center text-center">
-                                <Repeat className="w-4 h-4 text-blue-500 mb-1.5" />
-                                <p className="text-[10px] font-medium text-gray-700 leading-tight">Recurring Events</p>
-                            </div>
-                        </div>
-
-                        <button
-                            onClick={handleGetStarted}
-                            className="px-6 py-3 rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-semibold transition-all shadow-lg hover:shadow-xl flex items-center gap-2 mx-auto"
-                        >
-                            Get Started
-                            <ChevronRight className="w-4 h-4" />
-                        </button>
 
                         {/* Contributors & Version Section */}
-                        <div className="mt-6 pt-4 border-t border-gray-200">
-                            <div className="flex items-center justify-center gap-1.5 text-sm text-gray-500 mb-3">
+                        <div className="mt-4 pt-3 border-t border-gray-200">
+                            <div className="flex items-center justify-center gap-1.5 text-sm text-gray-500 mb-2">
                                 Created with <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500" /> by
                             </div>
                             {contributors.length > 0 ? (
-                                <div className="flex justify-center gap-2 flex-wrap mb-3">
+                                <div className="flex justify-center gap-2 flex-wrap mb-2">
                                     {contributors.slice(0, 4).map((contributor) => (
                                         <div
                                             key={contributor.id}
@@ -299,9 +420,9 @@ export function SetupWizard({ onComplete, isDemoMode = false }: SetupWizardProps
                                     )}
                                 </div>
                             ) : (
-                                <p className="text-xs text-gray-400 text-center mb-3">@umfhero</p>
+                                <p className="text-xs text-gray-400 text-center mb-2">@umfhero</p>
                             )}
-                            <p className="text-xs text-gray-400 text-center">
+                            <p className="text-xs text-gray-500 text-center mb-2">
                                 Version {appVersion}
                             </p>
                         </div>
@@ -316,7 +437,7 @@ export function SetupWizard({ onComplete, isDemoMode = false }: SetupWizardProps
                                         className={clsx(
                                             "w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all shrink-0",
                                             step >= s
-                                                ? "bg-blue-500 text-white"
+                                                ? "bg-amber-600 text-white"
                                                 : "bg-gray-200 text-gray-400"
                                         )}
                                     >
@@ -326,7 +447,7 @@ export function SetupWizard({ onComplete, isDemoMode = false }: SetupWizardProps
                                         <div
                                             className={clsx(
                                                 "flex-1 h-1 mx-2 rounded transition-all",
-                                                step > s ? "bg-blue-500" : "bg-gray-200"
+                                                step > s ? "bg-amber-600" : "bg-gray-200"
                                             )}
                                         />
                                     )}
@@ -362,7 +483,7 @@ export function SetupWizard({ onComplete, isDemoMode = false }: SetupWizardProps
                                             className={clsx(
                                                 "w-full p-4 rounded-xl border-2 text-left transition-all",
                                                 selectedLocation === 'onedrive'
-                                                    ? "border-blue-500 bg-blue-50"
+                                                    ? "border-amber-600 bg-amber-50"
                                                     : "border-gray-200 hover:border-gray-300"
                                             )}
                                         >
@@ -379,7 +500,7 @@ export function SetupWizard({ onComplete, isDemoMode = false }: SetupWizardProps
                                             className={clsx(
                                                 "w-full p-4 rounded-xl border-2 text-left transition-all",
                                                 selectedLocation === 'local'
-                                                    ? "border-blue-500 bg-blue-50"
+                                                    ? "border-amber-600 bg-amber-50"
                                                     : "border-gray-200 hover:border-gray-300"
                                             )}
                                         >
@@ -396,7 +517,7 @@ export function SetupWizard({ onComplete, isDemoMode = false }: SetupWizardProps
                                             className={clsx(
                                                 "w-full p-4 rounded-xl border-2 text-left transition-all",
                                                 selectedLocation === 'custom'
-                                                    ? "border-blue-500 bg-blue-50"
+                                                    ? "border-amber-600 bg-amber-50"
                                                     : "border-gray-200 hover:border-gray-300"
                                             )}
                                         >
@@ -439,39 +560,72 @@ export function SetupWizard({ onComplete, isDemoMode = false }: SetupWizardProps
                                                 AI Configuration (Optional)
                                             </h2>
                                             <p className="text-sm text-gray-500">
-                                                Enable AI-powered quick notes with Gemini
+                                                Enable AI-powered features with Gemini or Perplexity
                                             </p>
                                         </div>
                                     </div>
 
-                                    <div className="mb-6">
-                                        <label className="text-sm font-medium text-gray-600 mb-2 block">
-                                            Google Gemini API Key
-                                        </label>
-                                        <input
-                                            type="password"
-                                            value={apiKey}
-                                            onChange={(e) => setApiKey(e.target.value)}
-                                            placeholder="Paste your API key here (optional)"
-                                            className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-blue-500/20 outline-none"
-                                        />
-                                        <a
-                                            href="#"
-                                            onClick={(e) => {
-                                                e.preventDefault();
-                                                // @ts-ignore
-                                                window.ipcRenderer.invoke('open-external', 'https://aistudio.google.com/app/apikey');
-                                            }}
-                                            className="text-xs text-blue-500 hover:underline mt-2 inline-block"
-                                        >
-                                            Get a free API key from Google AI Studio →
-                                        </a>
+                                    <div className="space-y-4 mb-6">
+                                        <div>
+                                            <label className="text-sm font-medium text-gray-600 mb-2 block">
+                                                Google Gemini API Key
+                                            </label>
+                                            <input
+                                                type="password"
+                                                value={apiKey}
+                                                onChange={(e) => setApiKey(e.target.value)}
+                                                placeholder="Paste your API key here (optional)"
+                                                className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-amber-500/20 outline-none"
+                                            />
+                                            <a
+                                                href="#"
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    // @ts-ignore
+                                                    window.ipcRenderer.invoke('open-external', 'https://aistudio.google.com/app/apikey');
+                                                }}
+                                                className="text-xs text-amber-600 hover:underline mt-2 inline-block"
+                                            >
+                                                Get a free API key from Google AI Studio →
+                                            </a>
+                                        </div>
+
+                                        <div>
+                                            <label className="text-sm font-medium text-gray-600 mb-2 block">
+                                                Perplexity API Key
+                                            </label>
+                                            <input
+                                                type="password"
+                                                value={perplexityApiKey}
+                                                onChange={(e) => setPerplexityApiKey(e.target.value)}
+                                                placeholder="Paste your Perplexity API key here (optional)"
+                                                className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-amber-500/20 outline-none"
+                                            />
+                                            <a
+                                                href="#"
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    // @ts-ignore
+                                                    window.ipcRenderer.invoke('open-external', 'https://www.perplexity.ai/settings/api');
+                                                }}
+                                                className="text-xs text-amber-600 hover:underline mt-2 inline-block"
+                                            >
+                                                Get your API key from Perplexity →
+                                            </a>
+                                        </div>
                                     </div>
 
                                     <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
                                         <p className="text-sm text-gray-600">
                                             <strong>Note:</strong> You can skip this step and add your API key later in Settings.
                                             AI features will be disabled until configured.
+                                        </p>
+                                    </div>
+
+                                    {/* AI Disclaimer - Bottom */}
+                                    <div className="mt-6 p-3 rounded-lg bg-gray-500/10 border border-gray-300/30">
+                                        <p className="text-xs text-gray-600">
+                                            AI features are optional and only speed up time-wasting tasks (e.g., generating note structures, NLP calendar entry).
                                         </p>
                                     </div>
                                 </motion.div>
@@ -508,7 +662,7 @@ export function SetupWizard({ onComplete, isDemoMode = false }: SetupWizardProps
                                                 value={githubUsername}
                                                 onChange={(e) => setGithubUsername(e.target.value)}
                                                 placeholder="yourusername (optional)"
-                                                className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-blue-500/20 outline-none"
+                                                className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-amber-500/20 outline-none"
                                             />
                                         </div>
                                     </div>
@@ -553,7 +707,7 @@ export function SetupWizard({ onComplete, isDemoMode = false }: SetupWizardProps
                                                     className={clsx(
                                                         "group relative p-3 rounded-xl border-2 transition-all text-left overflow-hidden",
                                                         isSelected
-                                                            ? "border-blue-500 bg-blue-50/50"
+                                                            ? "border-amber-600 bg-amber-50/50"
                                                             : "border-gray-200 hover:border-gray-300"
                                                     )}
                                                 >
@@ -569,7 +723,7 @@ export function SetupWizard({ onComplete, isDemoMode = false }: SetupWizardProps
                                                         <div>
                                                             <span className={clsx(
                                                                 "text-sm font-semibold block",
-                                                                isSelected ? "text-blue-700" : "text-gray-700"
+                                                                isSelected ? "text-amber-700" : "text-gray-700"
                                                             )}>
                                                                 {config.name}
                                                             </span>
@@ -577,7 +731,7 @@ export function SetupWizard({ onComplete, isDemoMode = false }: SetupWizardProps
                                                                 {config.description}
                                                             </span>
                                                         </div>
-                                                        {isSelected && <Check className="w-4 h-4 text-blue-500 flex-shrink-0" />}
+                                                        {isSelected && <Check className="w-4 h-4 text-amber-600 flex-shrink-0" />}
                                                     </div>
                                                     {config.forceIconOnlySidebar && (
                                                         <div className="mt-2 flex items-center gap-1.5 text-xs text-amber-600">
@@ -630,8 +784,8 @@ export function SetupWizard({ onComplete, isDemoMode = false }: SetupWizardProps
                                 onClick={handleNext}
                                 disabled={isValidating || (step === 1 && !dataPath)}
                                 className={clsx(
-                                    "px-6 py-3 rounded-xl font-medium transition-colors flex items-center gap-2",
-                                    "bg-blue-500 hover:bg-blue-600 text-white",
+                                    "px-6 py-3 rounded-xl font-medium transition-colors flex items-center gap-2 border-2",
+                                    "border-amber-600 text-amber-700 hover:bg-amber-50",
                                     "disabled:opacity-50 disabled:cursor-not-allowed"
                                 )}
                             >

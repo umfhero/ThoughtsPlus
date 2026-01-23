@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Folder, Palette, Sparkles, Check, ExternalLink, Clipboard, AlertCircle, LayoutDashboard, Github, NotebookPen, Calendar as CalendarIcon, RefreshCw, Bell, BellOff, Type, Upload, FileUp, Timer, Heart, Sidebar as SidebarIcon, Settings2, X, Trash2, Plus, ChevronDown, ChevronUp, History, Info, Save, Bug, TrendingUp } from 'lucide-react';
+import { Folder, Palette, Sparkles, Check, ExternalLink, Clipboard, AlertCircle, LayoutDashboard, Github, NotebookPen, Calendar as CalendarIcon, RefreshCw, Bell, BellOff, Type, Upload, FileUp, Timer, Heart, Sidebar as SidebarIcon, Settings2, X, Trash2, Plus, ChevronDown, ChevronUp, ChevronRight, History, Info, Save, Bug, TrendingUp, BookOpen } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import clsx from 'clsx';
 import { useTheme } from '../contexts/ThemeContext';
@@ -14,6 +14,8 @@ import { SavedThemesList } from '../components/SavedThemesList';
 import { ThemePreview } from '../components/ThemePreview';
 import { KeyboardShortcuts } from '../components/KeyboardShortcuts';
 import { getAppVersion } from '../utils/version';
+import { TutorialGallery } from '../components/TutorialGallery';
+import { TextGuide } from '../components/TextGuide';
 
 
 // Types for multi-provider configuration
@@ -98,6 +100,10 @@ export function SettingsPage() {
     // Custom Theme State
     const [customThemeName, setCustomThemeName] = useState('');
     const [activeCustomThemeId, setActiveCustomThemeId] = useState<string | null>(null);
+
+    // Tutorial State
+    const [showTutorialGallery, setShowTutorialGallery] = useState(false);
+    const [showTextGuide, setShowTextGuide] = useState(false);
 
     // Calendar Import State
     const [importedEvents, setImportedEvents] = useState<any[]>([]);
@@ -970,9 +976,7 @@ export function SettingsPage() {
                     </div>
                 </motion.div>
 
-
-
-                {/* Main Grid: AI, GitHub, Storage, Creator, Notifications, Import */}
+                {/* Main Grid: AI, GitHub, Storage, Tutorials, Notifications, Import */}
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-6">
                     {/* AI Configuration */}
                     <motion.div
@@ -1424,12 +1428,12 @@ export function SettingsPage() {
                         </div>
                     </motion.div>
 
-                    {/* GitHub Integration - moves below Keyboard Shortcuts on screens < xl */}
+                    {/* GitHub Integration */}
                     <motion.div
                         initial={{ y: -15, scale: 0.97 }}
                         animate={{ y: 0, scale: 1 }}
                         transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.12 }}
-                        className="p-6 rounded-3xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50 overflow-hidden order-last xl:order-none"
+                        className="p-6 rounded-3xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50 overflow-hidden"
                     >
                         <div className="flex items-center gap-3 mb-4 min-w-0">
                             <div className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-900/30 text-gray-600 dark:text-gray-400 shrink-0">
@@ -1494,6 +1498,71 @@ export function SettingsPage() {
                                     )}
                                 </button>
                             </div>
+                        </div>
+                    </motion.div>
+
+                    {/* Interactive Tutorials */}
+                    <motion.div
+                        initial={{ y: -15, scale: 0.97 }}
+                        animate={{ y: 0, scale: 1 }}
+                        transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.13 }}
+                        className="p-6 rounded-3xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50 overflow-hidden"
+                    >
+                        <div className="flex items-center gap-3 mb-4 min-w-0">
+                            <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 shrink-0">
+                                <BookOpen className="w-5 h-5" />
+                            </div>
+                            <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 truncate">Interactive Tutorials</h2>
+                        </div>
+
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 line-clamp-2">
+                            Learn features with visual guides or text instructions.
+                        </p>
+
+                        <div className="space-y-3">
+                            {/* Visual Guide Button */}
+                            <button
+                                onClick={() => setShowTutorialGallery(true)}
+                                className="w-full p-4 rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-200 dark:border-amber-800 hover:border-amber-300 dark:hover:border-amber-700 transition-all group"
+                            >
+                                <div className="flex items-center gap-3 mb-2">
+                                    <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 group-hover:scale-110 transition-transform">
+                                        <Sparkles className="w-5 h-5" />
+                                    </div>
+                                    <div className="flex-1 text-left">
+                                        <h3 className="font-bold text-gray-800 dark:text-gray-100">Visual Guide</h3>
+                                        <p className="text-xs text-gray-600 dark:text-gray-400">Interactive step-by-step tutorials</p>
+                                    </div>
+                                    <ChevronRight className="w-5 h-5 text-amber-600 dark:text-amber-400 group-hover:translate-x-1 transition-transform" />
+                                </div>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {['Quick Capture', 'Workspace', 'Nerdbooks', 'Calendar', 'Timer'].map((topic) => (
+                                        <span key={topic} className="text-[10px] px-2 py-0.5 bg-white/60 dark:bg-gray-800/60 rounded border border-amber-200 dark:border-amber-800 text-gray-600 dark:text-gray-400">
+                                            {topic}
+                                        </span>
+                                    ))}
+                                    <span className="text-[10px] px-2 py-0.5 bg-white/60 dark:bg-gray-800/60 rounded border border-amber-200 dark:border-amber-800 text-gray-600 dark:text-gray-400">
+                                        +3 more
+                                    </span>
+                                </div>
+                            </button>
+
+                            {/* Text Guide Button */}
+                            <button
+                                onClick={() => setShowTextGuide(true)}
+                                className="w-full p-4 rounded-xl bg-gray-50 dark:bg-gray-700/30 border border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 transition-all group"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 group-hover:scale-110 transition-transform">
+                                        <Type className="w-5 h-5" />
+                                    </div>
+                                    <div className="flex-1 text-left">
+                                        <h3 className="font-bold text-gray-800 dark:text-gray-100">Text Guide</h3>
+                                        <p className="text-xs text-gray-600 dark:text-gray-400">Quick reference documentation</p>
+                                    </div>
+                                    <ChevronRight className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:translate-x-1 transition-transform" />
+                                </div>
+                            </button>
                         </div>
                     </motion.div>
 
@@ -2440,6 +2509,27 @@ export function SettingsPage() {
                     }}
                     onConfirm={confirmImport}
                 />
+
+                {/* Tutorial Gallery Modal */}
+                <AnimatePresence>
+                    {showTutorialGallery && (
+                        <TutorialGallery
+                            onClose={() => setShowTutorialGallery(false)}
+                            onStartTutorial={(tutorialId) => {
+                                setShowTutorialGallery(false);
+                                // Dispatch event to App.tsx to handle tutorial
+                                window.dispatchEvent(new CustomEvent('start-tutorial', { detail: { tutorialId } }));
+                            }}
+                        />
+                    )}
+                </AnimatePresence>
+
+                {/* Text Guide Modal */}
+                <AnimatePresence>
+                    {showTextGuide && (
+                        <TextGuide onClose={() => setShowTextGuide(false)} />
+                    )}
+                </AnimatePresence>
             </div >
         </div >
     );
