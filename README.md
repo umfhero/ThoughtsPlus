@@ -94,7 +94,7 @@ Copyright (c) 2025 umf. All rights reserved.
 ### Dashboard
 
 <div align="center">
-  <img src="git/newpics/6.0.5 Dashboard.png" alt="Dashboard" width="100%" />
+<img src="git/newpics/V6%2B/6.0.5%20Dashboard.png" alt="Dashboard" width="100%" />
   <p><em>Central command centre featuring widget-based layout, AI briefings, and real-time data.</em></p>
 </div>
 
