@@ -729,6 +729,7 @@ function App() {
                     createdAt: nowISO,
                     updatedAt: nowISO,
                     contentId: note.id, // Link to the QuickNote
+                    filePath: undefined as string | undefined, // Will be set after saving
                 };
 
                 // Save the note content to disk as a .nt file in the Quick Notes subfolder

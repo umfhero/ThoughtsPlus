@@ -15,3 +15,4 @@ export { NodeMapEditor } from './NodeMapEditor';
 export { TableEditor } from './TableEditor';
 export { FlashcardsGallery } from './FlashcardsGallery';
 export { AiFlashcardGenerator } from './AiFlashcardGenerator';
+export { DocumentViewer } from './DocumentViewer';

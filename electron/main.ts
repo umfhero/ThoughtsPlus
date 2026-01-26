@@ -8,6 +8,7 @@ import { randomUUID } from 'node:crypto'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import OpenAI from 'openai'
 import dotenv from 'dotenv'
+import chokidar, { FSWatcher } from 'chokidar'
 
 // Windows Store auto-launch support (for APPX builds)
 let WindowsStoreAutoLaunch: any = null;
@@ -2033,12 +2034,26 @@ Format: [{"q":"question here","a":"answer here"}]`;
             const result = await dialog.showOpenDialog(win, {
                 title: 'Open Workspace File',
                 filters: [
-                    { name: 'All Supported Files', extensions: ['exec', 'brd', 'nt', 'nbm', 'md'] },
+                    {
+                        name: 'All Supported Files',
+                        extensions: [
+                            'exec', 'brd', 'nt', 'nbm', 'deck', 'md',
+                            'pdf', 'docx', 'doc', 'xlsx', 'xls', 'pptx', 'ppt',
+                            'txt', 'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp', 'svg'
+                        ]
+                    },
                     { name: 'Notebook Files', extensions: ['exec'] },
                     { name: 'Board Files', extensions: ['brd'] },
                     { name: 'Node Map Files', extensions: ['nbm'] },
                     { name: 'Note Files', extensions: ['nt'] },
+                    { name: 'Flashcard Decks', extensions: ['deck'] },
                     { name: 'Markdown Files', extensions: ['md'] },
+                    { name: 'PDF Documents', extensions: ['pdf'] },
+                    { name: 'Word Documents', extensions: ['docx', 'doc'] },
+                    { name: 'Excel Spreadsheets', extensions: ['xlsx', 'xls'] },
+                    { name: 'PowerPoint Presentations', extensions: ['pptx', 'ppt'] },
+                    { name: 'Text Files', extensions: ['txt'] },
+                    { name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp', 'svg'] },
                 ],
                 properties: ['openFile']
             });
@@ -2105,16 +2120,38 @@ Format: [{"q":"question here","a":"answer here"}]`;
             }
 
             // Determine file type from extension
-            let fileType: 'exec' | 'board' | 'note' | 'nbm' | null = null;
+            let fileType: 'exec' | 'board' | 'note' | 'nbm' | 'deck' | 'pdf' | 'docx' | 'xlsx' | 'pptx' | 'txt' | 'md' | 'image' | null = null;
+
             if (ext === '.exec') fileType = 'exec';
             else if (ext === '.brd') fileType = 'board';
             else if (ext === '.nbm') fileType = 'nbm';
             else if (ext === '.nt') fileType = 'note';
+            else if (ext === '.deck') fileType = 'deck';
+            else if (ext === '.pdf') fileType = 'pdf';
+            else if (ext === '.docx' || ext === '.doc') fileType = 'docx';
+            else if (ext === '.xlsx' || ext === '.xls') fileType = 'xlsx';
+            else if (ext === '.pptx' || ext === '.ppt') fileType = 'pptx';
+            else if (ext === '.txt') fileType = 'txt';
+            else if (['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.svg'].includes(ext)) fileType = 'image';
 
             if (!fileType) {
                 return { success: false, error: 'Unknown file type' };
             }
 
+            // For document types (not native workspace files), just return the file path
+            const documentTypes = ['pdf', 'docx', 'xlsx', 'pptx', 'txt', 'image'];
+            if (documentTypes.includes(fileType)) {
+                return {
+                    success: true,
+                    filePath,
+                    fileName: path.basename(fileName, ext),
+                    fileType,
+                    content: null, // Don't load content for documents
+                    isDocument: true
+                };
+            }
+
+            // For native workspace files, parse the content
             let parsedContent;
             try {
                 parsedContent = JSON.parse(content);
@@ -2224,14 +2261,42 @@ Format: [{"q":"question here","a":"answer here"}]`;
             if (!existsSync(filePath)) {
                 return { success: false, error: 'File not found', notFound: true };
             }
-            const content = await fs.readFile(filePath, 'utf-8');
 
-            // For .nt files, return as plain text, not JSON
-            if (filePath.endsWith('.nt')) {
+            // Detect file type from extension
+            const ext = path.extname(filePath).toLowerCase();
+
+            // Document types - return file path only, don't load content
+            const documentExtensions = ['.pdf', '.docx', '.doc', '.xlsx', '.xls', '.pptx', '.ppt'];
+            if (documentExtensions.includes(ext)) {
+                return {
+                    success: true,
+                    content: null,
+                    filePath,
+                    isDocument: true,
+                    message: 'Document file - content not loaded'
+                };
+            }
+
+            // Text files and markdown - return as plain text
+            if (['.txt', '.md', '.nt'].includes(ext)) {
+                const content = await fs.readFile(filePath, 'utf-8');
                 return { success: true, content: content, filePath };
             }
 
-            // For other files, parse as JSON
+            // Image files - return file path only
+            const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.svg'];
+            if (imageExtensions.includes(ext)) {
+                return {
+                    success: true,
+                    content: null,
+                    filePath,
+                    isImage: true,
+                    message: 'Image file - content not loaded'
+                };
+            }
+
+            // Native workspace files (.exec, .brd, .nbm, .deck) - parse as JSON
+            const content = await fs.readFile(filePath, 'utf-8');
             return { success: true, content: JSON.parse(content), filePath };
         } catch (e) {
             console.error('Failed to load workspace file:', e);
@@ -2278,551 +2343,936 @@ Format: [{"q":"question here","a":"answer here"}]`;
         return wsDir;
     });
 
-    // Save a pasted image to the workspace assets folder
-    ipcMain.handle('save-pasted-image', async (_, { imageData, fileName }) => {
+    // ============================================================================
+    // FILE SYSTEM WATCHER - Auto-detect new files in workspace
+    // ============================================================================
+    let fileWatcher: FSWatcher | null = null;
+
+    // Start watching workspace directory for new files
+    ipcMain.handle('start-workspace-watcher', async () => {
         try {
             const wsDir = await ensureWorkspaceDir();
-            const assetsDir = path.join(wsDir, 'assets');
 
-            // Ensure assets directory exists
-            if (!existsSync(assetsDir)) {
-                await fs.mkdir(assetsDir, { recursive: true });
+            // Stop existing watcher if any
+            if (fileWatcher) {
+                await fileWatcher.close();
             }
 
-            // Generate unique filename with timestamp
-            const timestamp = Date.now();
-            const safeName = fileName || `pasted-image-${timestamp}`;
-            const finalName = `${safeName}-${timestamp}.png`;
-            const imagePath = path.join(assetsDir, finalName);
+            // Watch for new files (not directories)
+            fileWatcher = chokidar.watch(wsDir, {
+                ignored: /(^|[\/\\])\../, // ignore dotfiles
+                persistent: true,
+                ignoreInitial: true, // Don't trigger for existing files
+                depth: 2, // Watch subdirectories up to 2 levels
+                awaitWriteFinish: {
+                    stabilityThreshold: 2000,
+                    pollInterval: 100
+                }
+            });
 
-            // imageData is base64 encoded PNG
-            const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
-            const buffer = Buffer.from(base64Data, 'base64');
+            fileWatcher.on('add', async (filePath: string) => {
+                console.log('[FileWatcher] New file detected:', filePath);
 
-            await fs.writeFile(imagePath, buffer);
+                // Detect file type from extension
+                const ext = path.extname(filePath).toLowerCase();
+                const supportedExtensions = [
+                    '.pdf', '.docx', '.doc', '.xlsx', '.xls', '.pptx', '.ppt',
+                    '.txt', '.md', '.markdown', '.png', '.jpg', '.jpeg', '.gif',
+                    '.bmp', '.webp', '.svg'
+                ];
 
-            return {
-                success: true,
-                filePath: imagePath,
-                relativePath: `assets/${finalName}`,
-                fileName: finalName
-            };
-        } catch (e) {
-            console.error('Failed to save pasted image:', e);
-            return { success: false, error: (e as Error).message };
-        }
-    });
-
-    // List all images in the workspace assets folder
-    ipcMain.handle('list-workspace-images', async () => {
-        try {
-            const wsDir = await ensureWorkspaceDir();
-            const assetsDir = path.join(wsDir, 'assets');
-
-            if (!existsSync(assetsDir)) {
-                return { success: true, images: [] };
-            }
-
-            const entries = await fs.readdir(assetsDir, { withFileTypes: true });
-            const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'];
-
-            const images = await Promise.all(
-                entries
-                    .filter(e => e.isFile() && imageExtensions.includes(path.extname(e.name).toLowerCase()))
-                    .map(async (e) => {
-                        const filePath = path.join(assetsDir, e.name);
-                        const stats = await fs.stat(filePath);
-                        const sizeInKB = stats.size / 1024;
-                        const sizeFormatted = sizeInKB < 1024
-                            ? `${sizeInKB.toFixed(1)} KB`
-                            : `${(sizeInKB / 1024).toFixed(1)} MB`;
-
-                        return {
-                            fileName: e.name,
+                if (supportedExtensions.includes(ext)) {
+                    // Notify renderer process about new file
+                    if (win?.webContents) {
+                        win.webContents.send('workspace-file-added', {
                             filePath,
-                            size: stats.size,
-                            sizeFormatted,
-                            createdAt: stats.birthtime.toISOString(),
-                        };
-                    })
-            );
+                            fileName: path.basename(filePath),
+                            extension: ext
+                        });
+                    }
+                }
+            });
 
-            // Sort by creation date (newest first)
-            images.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+            fileWatcher.on('unlink', async (filePath: string) => {
+                console.log('[FileWatcher] File deleted:', filePath);
+                if (win?.webContents) {
+                    win.webContents.send('workspace-file-deleted', {
+                        filePath
+                    });
+                }
+            });
 
-            return { success: true, images };
+            fileWatcher.on('error', (error: unknown) => {
+                console.error('[FileWatcher] Error:', error);
+            });
+
+            console.log('[FileWatcher] Started watching:', wsDir);
+            return { success: true, watchPath: wsDir };
         } catch (e) {
-            console.error('Failed to list workspace images:', e);
-            return { success: false, error: (e as Error).message, images: [] };
-        }
-    });
-
-    // Delete an image from the workspace assets folder
-    ipcMain.handle('delete-workspace-image', async (_, filePath) => {
-        try {
-            if (existsSync(filePath)) {
-                await fs.unlink(filePath);
-            }
-            return { success: true };
-        } catch (e) {
-            console.error('Failed to delete workspace image:', e);
+            console.error('Failed to start workspace watcher:', e);
             return { success: false, error: (e as Error).message };
         }
     });
 
-    // Show item in folder (for opening file location)
-    ipcMain.handle('show-item-in-folder', async (_, filePath) => {
+    // Stop watching workspace directory
+    ipcMain.handle('stop-workspace-watcher', async () => {
         try {
-            shell.showItemInFolder(filePath);
+            if (fileWatcher) {
+                await fileWatcher.close();
+                fileWatcher = null;
+                console.log('[FileWatcher] Stopped watching');
+            }
             return { success: true };
         } catch (e) {
-            console.error('Failed to show item in folder:', e);
+            console.error('Failed to stop workspace watcher:', e);
             return { success: false, error: (e as Error).message };
         }
     });
 
-    // List all workspace files in a directory
-    ipcMain.handle('list-workspace-files', async (_, dirPath?: string) => {
+    // Scan workspace directory for external files to import
+    ipcMain.handle('scan-workspace-for-documents', async () => {
         try {
-            const targetDir = dirPath || await ensureWorkspaceDir();
-            if (!existsSync(targetDir)) {
-                return { success: true, files: [] };
-            }
+            const wsDir = await ensureWorkspaceDir();
+            const supportedExtensions = [
+                '.pdf', '.docx', '.doc', '.xlsx', '.xls', '.pptx', '.ppt',
+                '.txt', '.md', '.markdown', '.png', '.jpg', '.jpeg', '.gif',
+                '.bmp', '.webp', '.svg'
+            ];
 
-            const entries = await fs.readdir(targetDir, { withFileTypes: true });
-            const files = entries
-                .filter(e => e.isFile() && ['.exec', '.brd', '.nt', '.nbm'].includes(path.extname(e.name).toLowerCase()))
-                .map(e => ({
-                    name: path.basename(e.name, path.extname(e.name)),
-                    fileName: e.name,
-                    filePath: path.join(targetDir, e.name),
-                    type: path.extname(e.name).toLowerCase() === '.exec' ? 'exec'
-                        : path.extname(e.name).toLowerCase() === '.brd' ? 'board'
-                            : path.extname(e.name).toLowerCase() === '.nbm' ? 'nbm'
-                                : 'note'
-                }));
+            const scanDirectory = async (dir: string, depth: number = 0): Promise<any[]> => {
+                if (depth > 2) return []; // Limit recursion depth
+
+                const entries = await fs.readdir(dir, { withFileTypes: true });
+                const files: any[] = [];
+
+                for (const entry of entries) {
+                    const fullPath = path.join(dir, entry.name);
+
+                    if (entry.isDirectory() && !entry.name.startsWith('.')) {
+                        // Recursively scan subdirectories
+                        const subFiles = await scanDirectory(fullPath, depth + 1);
+                        files.push(...subFiles);
+                    } else if (entry.isFile()) {
+                        const ext = path.extname(entry.name).toLowerCase();
+                        if (supportedExtensions.includes(ext)) {
+                            const stats = await fs.stat(fullPath);
+                            files.push({
+                                filePath: fullPath,
+                                fileName: entry.name,
+                                extension: ext,
+                                size: stats.size,
+                                createdAt: stats.birthtime.toISOString(),
+                                modifiedAt: stats.mtime.toISOString(),
+                                relativePath: path.relative(wsDir, fullPath)
+                            });
+                        }
+                    }
+                }
+
+                return files;
+            };
+
+            const files = await scanDirectory(wsDir);
+            console.log(`[FileWatcher] Scanned workspace, found ${files.length} documents`);
 
             return { success: true, files };
         } catch (e) {
-            console.error('Failed to list workspace files:', e);
+            console.error('Failed to scan workspace for documents:', e);
             return { success: false, error: (e as Error).message, files: [] };
         }
     });
 
-    // Migrate boards from calendar-data.json to individual files
-    ipcMain.handle('migrate-boards-to-files', async () => {
+    // Open external file in default application
+    ipcMain.handle('open-external-file', async (_, filePath) => {
         try {
-            const wsDir = await ensureWorkspaceDir();
-
-            // Load existing boards from calendar-data.json
-            if (!existsSync(currentDataPath)) {
-                return { success: true, migrated: 0, message: 'No data file found' };
-            }
-
-            const data = JSON.parse(await fs.readFile(currentDataPath, 'utf-8'));
-            const boards = data.boards?.boards || [];
-
-            if (boards.length === 0) {
-                return { success: true, migrated: 0, message: 'No boards to migrate' };
-            }
-
-            const migratedFiles: { id: string; filePath: string; name: string }[] = [];
-
-            for (const board of boards) {
-                const safeName = sanitizeFileName(board.name || 'Untitled Board');
-                const filePath = await getUniqueFilePath(wsDir, safeName, '.brd');
-
-                // Save board content to file
-                await atomicWriteFile(filePath, JSON.stringify(board, null, 2));
-
-                migratedFiles.push({
-                    id: board.id,
-                    filePath,
-                    name: board.name
-                });
-            }
-
-            console.log(`Migrated ${migratedFiles.length} boards to individual files`);
-            return {
-                success: true,
-                migrated: migratedFiles.length,
-                files: migratedFiles,
-                message: `Migrated ${migratedFiles.length} boards`
-            };
-        } catch (e) {
-            console.error('Failed to migrate boards:', e);
-            return { success: false, error: (e as Error).message, migrated: 0 };
-        }
-    });
-
-    // Migrate notebooks from calendar-data.json to individual files
-    ipcMain.handle('migrate-notebooks-to-files', async () => {
-        try {
-            const wsDir = await ensureWorkspaceDir();
-
-            // Load existing notebooks from calendar-data.json
-            if (!existsSync(currentDataPath)) {
-                return { success: true, migrated: 0, message: 'No data file found' };
-            }
-
-            const data = JSON.parse(await fs.readFile(currentDataPath, 'utf-8'));
-            const notebooks = data.nerdbooks?.notebooks || [];
-
-            if (notebooks.length === 0) {
-                return { success: true, migrated: 0, message: 'No notebooks to migrate' };
-            }
-
-            const migratedFiles: { id: string; filePath: string; name: string }[] = [];
-
-            for (const notebook of notebooks) {
-                const safeName = sanitizeFileName(notebook.title || 'Untitled Notebook');
-                const filePath = await getUniqueFilePath(wsDir, safeName, '.exec');
-
-                // Save notebook content to file
-                await atomicWriteFile(filePath, JSON.stringify(notebook, null, 2));
-
-                migratedFiles.push({
-                    id: notebook.id,
-                    filePath,
-                    name: notebook.title
-                });
-            }
-
-            console.log(`Migrated ${migratedFiles.length} notebooks to individual files`);
-            return {
-                success: true,
-                migrated: migratedFiles.length,
-                files: migratedFiles,
-                message: `Migrated ${migratedFiles.length} notebooks`
-            };
-        } catch (e) {
-            console.error('Failed to migrate notebooks:', e);
-            return { success: false, error: (e as Error).message, migrated: 0 };
-        }
-    });
-
-    // Migrate all workspace files (boards and notebooks) to individual files
-    // This is called to migrate existing files that don't have filePath set
-    ipcMain.handle('migrate-workspace-files-to-disk', async (_, workspaceFiles: Array<{ id: string; contentId: string; name: string; type: string; parentId?: string | null }>) => {
-        try {
-            const wsDir = await ensureWorkspaceDir();
-
-            if (!existsSync(currentDataPath)) {
-                return { success: false, error: 'No data file found', files: [] };
-            }
-
-            const data = JSON.parse(await fs.readFile(currentDataPath, 'utf-8'));
-            const boards = data.boards?.boards || [];
-            const notebooks = data.nerdbooks?.notebooks || [];
-            const quickNotes = data.notebookNotes || [];
-
-            const migratedFiles: { id: string; filePath: string; name: string; type: string }[] = [];
-
-            // Get workspace data to check for Quick Notes folder
-            const workspaceData = data.workspace || { files: [], folders: [] };
-            const quickNotesFolder = workspaceData.folders?.find(
-                (f: any) => f.isQuickNotesFolder === true || f.name === 'Quick Notes'
-            );
-
-            for (const wsFile of workspaceFiles) {
-                let content: any = null;
-                let ext = '';
-                let targetDir = wsDir;
-                let isPlainText = false;
-
-                if (wsFile.type === 'board') {
-                    content = boards.find((b: any) => b.id === wsFile.contentId);
-                    ext = '.brd';
-                } else if (wsFile.type === 'exec') {
-                    content = notebooks.find((n: any) => n.id === wsFile.contentId);
-                    ext = '.exec';
-                } else if (wsFile.type === 'note') {
-                    // Find the quick note by contentId
-                    const quickNote = quickNotes.find((n: any) => n.id === wsFile.contentId);
-                    if (quickNote) {
-                        content = quickNote.content || ''; // Plain text content
-                        isPlainText = true;
-                    }
-                    ext = '.nt';
-
-                    // If this note belongs to Quick Notes folder, save to subfolder
-                    if (quickNotesFolder && wsFile.parentId === quickNotesFolder.id) {
-                        targetDir = path.join(wsDir, 'Quick Notes');
-                        // Ensure Quick Notes subfolder exists
-                        if (!existsSync(targetDir)) {
-                            await fs.mkdir(targetDir, { recursive: true });
-                        }
-                    }
-                } else if (wsFile.type === 'nbm') {
-                    // Node maps might not be in legacy data, but supporting for consistency
-                    ext = '.nbm';
-                }
-
-                if (content !== null && content !== undefined) {
-                    const safeName = sanitizeFileName(wsFile.name || 'Untitled');
-
-                    // Check if file already exists at the expected path
-                    const expectedPath = path.join(targetDir, safeName + ext);
-                    let filePath: string;
-
-                    if (existsSync(expectedPath)) {
-                        // File already exists, use it (don't create duplicate)
-                        filePath = expectedPath;
-                        console.log(`File already exists, skipping migration: ${filePath}`);
-                    } else {
-                        // File doesn't exist, create it (use getUniqueFilePath in case of conflicts)
-                        filePath = await getUniqueFilePath(targetDir, safeName, ext);
-
-                        // Save content to file
-                        if (isPlainText) {
-                            // For .nt files, save as plain text
-                            await atomicWriteFile(filePath, typeof content === 'string' ? content : '', true);
-                        } else {
-                            // For other files, save as JSON
-                            await atomicWriteFile(filePath, JSON.stringify(content, null, 2));
-                        }
-
-                        console.log(`Migrated ${wsFile.type} "${wsFile.name}" to ${filePath}`);
-                    }
-
-                    migratedFiles.push({
-                        id: wsFile.id,
-                        filePath,
-                        name: wsFile.name,
-                        type: wsFile.type
-                    });
-
-                    console.log(`Migrated ${wsFile.type} "${wsFile.name}" to ${filePath}`);
-                }
-            }
-
-            return {
-                success: true,
-                migrated: migratedFiles.length,
-                files: migratedFiles,
-                message: `Migrated ${migratedFiles.length} files to individual storage`
-            };
-        } catch (e) {
-            console.error('Failed to migrate workspace files:', e);
-            return { success: false, error: (e as Error).message, files: [] };
-        }
-    });
-
-    // Fix old .nt files that contain JSON structure instead of plain text
-    ipcMain.handle('fix-nt-json-files', async (_, filePaths: string[]) => {
-        try {
-            const fixedFiles: string[] = [];
-
-            for (const filePath of filePaths) {
-                if (!existsSync(filePath) || !filePath.endsWith('.nt')) {
-                    continue;
-                }
-
-                try {
-                    const content = await fs.readFile(filePath, 'utf-8');
-
-                    // Try to parse as JSON
-                    const parsed = JSON.parse(content);
-
-                    // If it has the old structure with content field, extract it
-                    if (parsed && typeof parsed === 'object' && 'content' in parsed) {
-                        const plainText = parsed.content || '';
-
-                        // Rewrite as plain text
-                        await atomicWriteFile(filePath, plainText, true);
-                        fixedFiles.push(filePath);
-                        console.log(`Fixed .nt file: ${filePath}`);
-                    }
-                } catch (parseError) {
-                    // Not JSON or already plain text, skip
-                    continue;
-                }
-            }
-
-            return {
-                success: true,
-                fixed: fixedFiles.length,
-                files: fixedFiles,
-                message: `Fixed ${fixedFiles.length} .nt files`
-            };
-        } catch (e) {
-            console.error('Failed to fix .nt files:', e);
-            return { success: false, error: (e as Error).message, files: [] };
-        }
-    });
-
-    // Open file in system file explorer (reveal in folder)
-    ipcMain.handle('reveal-in-explorer', async (_, filePath) => {
-        try {
-            shell.showItemInFolder(filePath);
+            await shell.openPath(filePath);
             return { success: true };
         } catch (e) {
-            console.error('Failed to reveal in explorer:', e);
+            console.error('Failed to open external file:', e);
             return { success: false, error: (e as Error).message };
         }
     });
 
-    // ============================================================================
-    // ANKI PACKAGE PARSER - Parse .apkg files for flashcard import
-    // ============================================================================
-    // .apkg files are ZIP archives containing a SQLite database (collection.anki2)
-    // This handler extracts and parses the database to get flashcard data
-    // ============================================================================
-    ipcMain.handle('parse-anki-package', async (_, data) => {
-        let tempDir: string | null = null;
-        let tempFilePath: string | null = null;
-
+    // Convert DOCX to HTML for preview
+    ipcMain.handle('convert-docx-to-html', async (_, filePath) => {
         try {
-            // Handle both file path (old) and buffer (new) formats
-            const isBuffer = data && typeof data === 'object' && data.buffer;
+            const mammoth = require('mammoth');
 
-            if (isBuffer) {
-                console.log('[parse-anki-package] Parsing from buffer:', data.fileName);
+            // Enhanced conversion options for better formatting
+            const options = {
+                styleMap: [
+                    // Preserve bold
+                    "b => strong",
+                    "i => em",
+                    // Headings
+                    "p[style-name='Heading 1'] => h1:fresh",
+                    "p[style-name='Heading 2'] => h2:fresh",
+                    "p[style-name='Heading 3'] => h3:fresh",
+                    "p[style-name='Heading 4'] => h4:fresh",
+                    // Lists
+                    "p[style-name='List Paragraph'] => li:fresh",
+                ],
+                convertImage: mammoth.images.imgElement(async (image: any) => {
+                    // Convert images to base64 data URLs
+                    const buffer = await image.read();
+                    const base64 = buffer.toString('base64');
+                    const contentType = image.contentType || 'image/png';
+                    return {
+                        src: `data:${contentType};base64,${base64}`
+                    };
+                }),
+                includeDefaultStyleMap: true,
+                includeEmbeddedStyleMap: true,
+            };
 
-                // Create temp file from buffer
-                tempDir = path.join(os.tmpdir(), 'anki-import-' + Date.now());
-                await fs.mkdir(tempDir, { recursive: true });
-                tempFilePath = path.join(tempDir, data.fileName);
+            const result = await mammoth.convertToHtml({ path: filePath }, options);
 
-                // Write buffer to temp file
-                const buffer = Buffer.from(data.buffer);
-                await fs.writeFile(tempFilePath, buffer);
-                console.log('[parse-anki-package] Wrote buffer to temp file:', tempFilePath);
-            } else {
-                // Legacy: direct file path
-                tempFilePath = data;
-                console.log('[parse-anki-package] Parsing from path:', tempFilePath);
+            // Wrap in a container with table styling
+            const styledHtml = `
+                <style>
+                    table { 
+                        border-collapse: collapse; 
+                        width: 100%; 
+                        margin: 1em 0;
+                    }
+                    td, th { 
+                        border: 1px solid #ddd; 
+                        padding: 8px; 
+                        text-align: left;
+                    }
+                    th {
+                        background-color: #f2f2f2;
+                        font-weight: bold;
+                    }
+                    img {
+                        max-width: 100%;
+                        height: auto;
+                        margin: 1em 0;
+                    }
+                    strong {
+                        font-weight: bold;
+                    }
+                    em {
+                        font-style: italic;
+                    }
+                    h1, h2, h3, h4, h5, h6 {
+                        margin-top: 1em;
+                        margin-bottom: 0.5em;
+                    }
+                </style>
+                ${result.value}
+            `;
+
+            return { success: true, html: styledHtml, messages: result.messages };
+        } catch (e) {
+            console.error('Failed to convert DOCX:', e);
+            return { success: false, error: (e as Error).message };
+        }
+    });
+
+    // Read PDF file as buffer for react-pdf
+    ipcMain.handle('read-pdf-file', async (_, filePath) => {
+        try {
+            const buffer = await fs.readFile(filePath);
+            return { success: true, data: Array.from(buffer) };
+        } catch (e) {
+            console.error('Failed to read PDF:', e);
+            return { success: false, error: (e as Error).message };
+        }
+    });
+
+    // Convert XLSX to HTML table for preview with colors and styles
+    ipcMain.handle('convert-xlsx-to-html', async (_, filePath) => {
+        try {
+            const XLSX = require('xlsx');
+            const workbook = XLSX.readFile(filePath, { cellStyles: true });
+
+            let html = '<div class="xlsx-preview">';
+
+            // Helper function to convert Excel color to hex
+            const excelColorToHex = (color: any): string | null => {
+                if (!color) return null;
+
+                // RGB format
+                if (color.rgb) {
+                    const rgb = color.rgb;
+                    // Handle ARGB format (8 chars) or RGB format (6 chars)
+                    if (rgb.length === 8) {
+                        return '#' + rgb.substring(2); // Remove alpha channel
+                    }
+                    return '#' + rgb;
+                }
+
+                // Indexed color - use common Excel palette
+                if (color.indexed !== undefined) {
+                    const palette: { [key: number]: string } = {
+                        0: '#000000', 1: '#FFFFFF', 2: '#FF0000', 3: '#00FF00',
+                        4: '#0000FF', 5: '#FFFF00', 6: '#FF00FF', 7: '#00FFFF',
+                        8: '#000000', 9: '#FFFFFF', 10: '#FF0000', 11: '#00FF00',
+                        12: '#0000FF', 13: '#FFFF00', 14: '#FF00FF', 15: '#00FFFF',
+                        64: '#000000', 65: '#FFFFFF'
+                    };
+                    return palette[color.indexed] || null;
+                }
+
+                return null;
+            };
+
+            // Convert each sheet to HTML with styles
+            workbook.SheetNames.forEach((sheetName: string, index: number) => {
+                const worksheet = workbook.Sheets[sheetName];
+                const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
+
+                html += `
+                    <div class="sheet-container">
+                        <h3 class="sheet-title">${sheetName}</h3>
+                        <table>
+                `;
+
+                // Generate table rows
+                for (let R = range.s.r; R <= range.e.r; ++R) {
+                    html += '<tr>';
+                    for (let C = range.s.c; C <= range.e.c; ++C) {
+                        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+                        const cell = worksheet[cellAddress];
+
+                        let cellValue = '';
+                        let cellStyle = '';
+
+                        if (cell) {
+                            // Get cell value
+                            cellValue = cell.w || cell.v || '';
+
+                            // Build inline styles from cell formatting
+                            const styles: string[] = [];
+
+                            if (cell.s) {
+                                // Background color
+                                const bgColor = excelColorToHex(cell.s.fgColor || cell.s.bgColor);
+                                if (bgColor) {
+                                    styles.push(`background-color: ${bgColor}`);
+                                }
+
+                                // Font color
+                                if (cell.s.font) {
+                                    const fontColor = excelColorToHex(cell.s.font.color);
+                                    if (fontColor) {
+                                        styles.push(`color: ${fontColor}`);
+                                    }
+
+                                    // Bold
+                                    if (cell.s.font.bold) {
+                                        styles.push('font-weight: bold');
+                                    }
+
+                                    // Italic
+                                    if (cell.s.font.italic) {
+                                        styles.push('font-style: italic');
+                                    }
+
+                                    // Font size
+                                    if (cell.s.font.sz) {
+                                        styles.push(`font-size: ${cell.s.font.sz}pt`);
+                                    }
+                                }
+
+                                // Text alignment
+                                if (cell.s.alignment) {
+                                    if (cell.s.alignment.horizontal) {
+                                        styles.push(`text-align: ${cell.s.alignment.horizontal}`);
+                                    }
+                                    if (cell.s.alignment.vertical) {
+                                        styles.push(`vertical-align: ${cell.s.alignment.vertical}`);
+                                    }
+                                }
+                            }
+
+                            if (styles.length > 0) {
+                                cellStyle = ` style="${styles.join('; ')}"`;
+                            }
+                        }
+
+                        const tag = R === range.s.r ? 'th' : 'td';
+                        html += `<${tag}${cellStyle}>${cellValue}</${tag}>`;
+                    }
+                    html += '</tr>';
+                }
+
+                html += `
+                        </table>
+                    </div>
+                `;
+
+                if (index < workbook.SheetNames.length - 1) {
+                    html += '<hr class="sheet-divider" />';
+                }
+            });
+
+            html += '</div>';
+
+            return { success: true, html, sheetCount: workbook.SheetNames.length };
+        } catch (e) {
+            console.error('Failed to convert XLSX:', e);
+            return { success: false, error: (e as Error).message };
+        }
+    });
+
+    // Copy external file into workspace
+    ipcMain.handle('import-external-file', async (_, { sourcePath, targetName }) => {
+        try:
+        const wsDir = await ensureWorkspaceDir();
+        const ext = path.extname(sourcePath);
+        const baseName = targetName || path.basename(sourcePath, ext);
+        const targetPath = await getUniqueFilePath(wsDir, baseName, ext);
+
+        await fs.copyFile(sourcePath, targetPath);
+
+        const stats = await fs.stat(targetPath);
+        return {
+            success: true,
+            filePath: targetPath,
+            fileName: path.basename(targetPath),
+            size: stats.size
+        };
+    } catch (e) {
+        console.error('Failed to import external file:', e);
+        return { success: false, error: (e as Error).message };
+    }
+});
+
+// Save a pasted image to the workspace assets folder
+ipcMain.handle('save-pasted-image', async (_, { imageData, fileName }) => {
+    try {
+        const wsDir = await ensureWorkspaceDir();
+        const assetsDir = path.join(wsDir, 'assets');
+
+        // Ensure assets directory exists
+        if (!existsSync(assetsDir)) {
+            await fs.mkdir(assetsDir, { recursive: true });
+        }
+
+        // Generate unique filename with timestamp
+        const timestamp = Date.now();
+        const safeName = fileName || `pasted-image-${timestamp}`;
+        const finalName = `${safeName}-${timestamp}.png`;
+        const imagePath = path.join(assetsDir, finalName);
+
+        // imageData is base64 encoded PNG
+        const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
+        const buffer = Buffer.from(base64Data, 'base64');
+
+        await fs.writeFile(imagePath, buffer);
+
+        return {
+            success: true,
+            filePath: imagePath,
+            relativePath: `assets/${finalName}`,
+            fileName: finalName
+        };
+    } catch (e) {
+        console.error('Failed to save pasted image:', e);
+        return { success: false, error: (e as Error).message };
+    }
+});
+
+// List all images in the workspace assets folder
+ipcMain.handle('list-workspace-images', async () => {
+    try {
+        const wsDir = await ensureWorkspaceDir();
+        const assetsDir = path.join(wsDir, 'assets');
+
+        if (!existsSync(assetsDir)) {
+            return { success: true, images: [] };
+        }
+
+        const entries = await fs.readdir(assetsDir, { withFileTypes: true });
+        const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'];
+
+        const images = await Promise.all(
+            entries
+                .filter(e => e.isFile() && imageExtensions.includes(path.extname(e.name).toLowerCase()))
+                .map(async (e) => {
+                    const filePath = path.join(assetsDir, e.name);
+                    const stats = await fs.stat(filePath);
+                    const sizeInKB = stats.size / 1024;
+                    const sizeFormatted = sizeInKB < 1024
+                        ? `${sizeInKB.toFixed(1)} KB`
+                        : `${(sizeInKB / 1024).toFixed(1)} MB`;
+
+                    return {
+                        fileName: e.name,
+                        filePath,
+                        size: stats.size,
+                        sizeFormatted,
+                        createdAt: stats.birthtime.toISOString(),
+                    };
+                })
+        );
+
+        // Sort by creation date (newest first)
+        images.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+        return { success: true, images };
+    } catch (e) {
+        console.error('Failed to list workspace images:', e);
+        return { success: false, error: (e as Error).message, images: [] };
+    }
+});
+
+// Delete an image from the workspace assets folder
+ipcMain.handle('delete-workspace-image', async (_, filePath) => {
+    try {
+        if (existsSync(filePath)) {
+            await fs.unlink(filePath);
+        }
+        return { success: true };
+    } catch (e) {
+        console.error('Failed to delete workspace image:', e);
+        return { success: false, error: (e as Error).message };
+    }
+});
+
+// Show item in folder (for opening file location)
+ipcMain.handle('show-item-in-folder', async (_, filePath) => {
+    try {
+        shell.showItemInFolder(filePath);
+        return { success: true };
+    } catch (e) {
+        console.error('Failed to show item in folder:', e);
+        return { success: false, error: (e as Error).message };
+    }
+});
+
+// List all workspace files in a directory
+ipcMain.handle('list-workspace-files', async (_, dirPath?: string) => {
+    try {
+        const targetDir = dirPath || await ensureWorkspaceDir();
+        if (!existsSync(targetDir)) {
+            return { success: true, files: [] };
+        }
+
+        const entries = await fs.readdir(targetDir, { withFileTypes: true });
+        const files = entries
+            .filter(e => e.isFile() && ['.exec', '.brd', '.nt', '.nbm'].includes(path.extname(e.name).toLowerCase()))
+            .map(e => ({
+                name: path.basename(e.name, path.extname(e.name)),
+                fileName: e.name,
+                filePath: path.join(targetDir, e.name),
+                type: path.extname(e.name).toLowerCase() === '.exec' ? 'exec'
+                    : path.extname(e.name).toLowerCase() === '.brd' ? 'board'
+                        : path.extname(e.name).toLowerCase() === '.nbm' ? 'nbm'
+                            : 'note'
+            }));
+
+        return { success: true, files };
+    } catch (e) {
+        console.error('Failed to list workspace files:', e);
+        return { success: false, error: (e as Error).message, files: [] };
+    }
+});
+
+// Migrate boards from calendar-data.json to individual files
+ipcMain.handle('migrate-boards-to-files', async () => {
+    try {
+        const wsDir = await ensureWorkspaceDir();
+
+        // Load existing boards from calendar-data.json
+        if (!existsSync(currentDataPath)) {
+            return { success: true, migrated: 0, message: 'No data file found' };
+        }
+
+        const data = JSON.parse(await fs.readFile(currentDataPath, 'utf-8'));
+        const boards = data.boards?.boards || [];
+
+        if (boards.length === 0) {
+            return { success: true, migrated: 0, message: 'No boards to migrate' };
+        }
+
+        const migratedFiles: { id: string; filePath: string; name: string }[] = [];
+
+        for (const board of boards) {
+            const safeName = sanitizeFileName(board.name || 'Untitled Board');
+            const filePath = await getUniqueFilePath(wsDir, safeName, '.brd');
+
+            // Save board content to file
+            await atomicWriteFile(filePath, JSON.stringify(board, null, 2));
+
+            migratedFiles.push({
+                id: board.id,
+                filePath,
+                name: board.name
+            });
+        }
+
+        console.log(`Migrated ${migratedFiles.length} boards to individual files`);
+        return {
+            success: true,
+            migrated: migratedFiles.length,
+            files: migratedFiles,
+            message: `Migrated ${migratedFiles.length} boards`
+        };
+    } catch (e) {
+        console.error('Failed to migrate boards:', e);
+        return { success: false, error: (e as Error).message, migrated: 0 };
+    }
+});
+
+// Migrate notebooks from calendar-data.json to individual files
+ipcMain.handle('migrate-notebooks-to-files', async () => {
+    try {
+        const wsDir = await ensureWorkspaceDir();
+
+        // Load existing notebooks from calendar-data.json
+        if (!existsSync(currentDataPath)) {
+            return { success: true, migrated: 0, message: 'No data file found' };
+        }
+
+        const data = JSON.parse(await fs.readFile(currentDataPath, 'utf-8'));
+        const notebooks = data.nerdbooks?.notebooks || [];
+
+        if (notebooks.length === 0) {
+            return { success: true, migrated: 0, message: 'No notebooks to migrate' };
+        }
+
+        const migratedFiles: { id: string; filePath: string; name: string }[] = [];
+
+        for (const notebook of notebooks) {
+            const safeName = sanitizeFileName(notebook.title || 'Untitled Notebook');
+            const filePath = await getUniqueFilePath(wsDir, safeName, '.exec');
+
+            // Save notebook content to file
+            await atomicWriteFile(filePath, JSON.stringify(notebook, null, 2));
+
+            migratedFiles.push({
+                id: notebook.id,
+                filePath,
+                name: notebook.title
+            });
+        }
+
+        console.log(`Migrated ${migratedFiles.length} notebooks to individual files`);
+        return {
+            success: true,
+            migrated: migratedFiles.length,
+            files: migratedFiles,
+            message: `Migrated ${migratedFiles.length} notebooks`
+        };
+    } catch (e) {
+        console.error('Failed to migrate notebooks:', e);
+        return { success: false, error: (e as Error).message, migrated: 0 };
+    }
+});
+
+// Migrate all workspace files (boards and notebooks) to individual files
+// This is called to migrate existing files that don't have filePath set
+ipcMain.handle('migrate-workspace-files-to-disk', async (_, workspaceFiles: Array<{ id: string; contentId: string; name: string; type: string; parentId?: string | null }>) => {
+    try {
+        const wsDir = await ensureWorkspaceDir();
+
+        if (!existsSync(currentDataPath)) {
+            return { success: false, error: 'No data file found', files: [] };
+        }
+
+        const data = JSON.parse(await fs.readFile(currentDataPath, 'utf-8'));
+        const boards = data.boards?.boards || [];
+        const notebooks = data.nerdbooks?.notebooks || [];
+        const quickNotes = data.notebookNotes || [];
+
+        const migratedFiles: { id: string; filePath: string; name: string; type: string }[] = [];
+
+        // Get workspace data to check for Quick Notes folder
+        const workspaceData = data.workspace || { files: [], folders: [] };
+        const quickNotesFolder = workspaceData.folders?.find(
+            (f: any) => f.isQuickNotesFolder === true || f.name === 'Quick Notes'
+        );
+
+        for (const wsFile of workspaceFiles) {
+            let content: any = null;
+            let ext = '';
+            let targetDir = wsDir;
+            let isPlainText = false;
+
+            if (wsFile.type === 'board') {
+                content = boards.find((b: any) => b.id === wsFile.contentId);
+                ext = '.brd';
+            } else if (wsFile.type === 'exec') {
+                content = notebooks.find((n: any) => n.id === wsFile.contentId);
+                ext = '.exec';
+            } else if (wsFile.type === 'note') {
+                // Find the quick note by contentId
+                const quickNote = quickNotes.find((n: any) => n.id === wsFile.contentId);
+                if (quickNote) {
+                    content = quickNote.content || ''; // Plain text content
+                    isPlainText = true;
+                }
+                ext = '.nt';
+
+                // If this note belongs to Quick Notes folder, save to subfolder
+                if (quickNotesFolder && wsFile.parentId === quickNotesFolder.id) {
+                    targetDir = path.join(wsDir, 'Quick Notes');
+                    // Ensure Quick Notes subfolder exists
+                    if (!existsSync(targetDir)) {
+                        await fs.mkdir(targetDir, { recursive: true });
+                    }
+                }
+            } else if (wsFile.type === 'nbm') {
+                // Node maps might not be in legacy data, but supporting for consistency
+                ext = '.nbm';
             }
 
-            // Use require for native modules instead of dynamic import
-            // This avoids Rollup bundling issues with native bindings
-            const AdmZip = require('adm-zip');
-            const Database = require('better-sqlite3');
+            if (content !== null && content !== undefined) {
+                const safeName = sanitizeFileName(wsFile.name || 'Untitled');
 
-            // Create extraction directory
-            const extractDir = path.join(os.tmpdir(), 'anki-extract-' + Date.now());
+                // Check if file already exists at the expected path
+                const expectedPath = path.join(targetDir, safeName + ext);
+                let filePath: string;
+
+                if (existsSync(expectedPath)) {
+                    // File already exists, use it (don't create duplicate)
+                    filePath = expectedPath;
+                    console.log(`File already exists, skipping migration: ${filePath}`);
+                } else {
+                    // File doesn't exist, create it (use getUniqueFilePath in case of conflicts)
+                    filePath = await getUniqueFilePath(targetDir, safeName, ext);
+
+                    // Save content to file
+                    if (isPlainText) {
+                        // For .nt files, save as plain text
+                        await atomicWriteFile(filePath, typeof content === 'string' ? content : '', true);
+                    } else {
+                        // For other files, save as JSON
+                        await atomicWriteFile(filePath, JSON.stringify(content, null, 2));
+                    }
+
+                    console.log(`Migrated ${wsFile.type} "${wsFile.name}" to ${filePath}`);
+                }
+
+                migratedFiles.push({
+                    id: wsFile.id,
+                    filePath,
+                    name: wsFile.name,
+                    type: wsFile.type
+                });
+
+                console.log(`Migrated ${wsFile.type} "${wsFile.name}" to ${filePath}`);
+            }
+        }
+
+        return {
+            success: true,
+            migrated: migratedFiles.length,
+            files: migratedFiles,
+            message: `Migrated ${migratedFiles.length} files to individual storage`
+        };
+    } catch (e) {
+        console.error('Failed to migrate workspace files:', e);
+        return { success: false, error: (e as Error).message, files: [] };
+    }
+});
+
+// Fix old .nt files that contain JSON structure instead of plain text
+ipcMain.handle('fix-nt-json-files', async (_, filePaths: string[]) => {
+    try {
+        const fixedFiles: string[] = [];
+
+        for (const filePath of filePaths) {
+            if (!existsSync(filePath) || !filePath.endsWith('.nt')) {
+                continue;
+            }
 
             try {
-                // Extract .apkg file (it's a ZIP archive)
-                const zip = new AdmZip(tempFilePath);
-                zip.extractAllTo(extractDir, true);
-                console.log('[parse-anki-package] Extracted to:', extractDir);
+                const content = await fs.readFile(filePath, 'utf-8');
 
-                // List all extracted files to see what we have
-                const extractedFiles = await fs.readdir(extractDir);
-                console.log('[parse-anki-package] Extracted files:', extractedFiles.join(', '));
+                // Try to parse as JSON
+                const parsed = JSON.parse(content);
 
-                // Find the database file (usually collection.anki2 or collection.anki21)
-                // Prefer .anki21 (newer format) over .anki2 (older format)
-                const dbFiles = ['collection.anki21', 'collection.anki2'];
-                let dbPath: string | null = null;
+                // If it has the old structure with content field, extract it
+                if (parsed && typeof parsed === 'object' && 'content' in parsed) {
+                    const plainText = parsed.content || '';
 
-                for (const dbFile of dbFiles) {
-                    const testPath = path.join(extractDir, dbFile);
-                    if (existsSync(testPath)) {
-                        dbPath = testPath;
-                        console.log('[parse-anki-package] Found database:', dbFile);
-                        break;
+                    // Rewrite as plain text
+                    await atomicWriteFile(filePath, plainText, true);
+                    fixedFiles.push(filePath);
+                    console.log(`Fixed .nt file: ${filePath}`);
+                }
+            } catch (parseError) {
+                // Not JSON or already plain text, skip
+                continue;
+            }
+        }
+
+        return {
+            success: true,
+            fixed: fixedFiles.length,
+            files: fixedFiles,
+            message: `Fixed ${fixedFiles.length} .nt files`
+        };
+    } catch (e) {
+        console.error('Failed to fix .nt files:', e);
+        return { success: false, error: (e as Error).message, files: [] };
+    }
+});
+
+// Open file in system file explorer (reveal in folder)
+ipcMain.handle('reveal-in-explorer', async (_, filePath) => {
+    try {
+        shell.showItemInFolder(filePath);
+        return { success: true };
+    } catch (e) {
+        console.error('Failed to reveal in explorer:', e);
+        return { success: false, error: (e as Error).message };
+    }
+});
+
+// ============================================================================
+// ANKI PACKAGE PARSER - Parse .apkg files for flashcard import
+// ============================================================================
+// .apkg files are ZIP archives containing a SQLite database (collection.anki2)
+// This handler extracts and parses the database to get flashcard data
+// ============================================================================
+ipcMain.handle('parse-anki-package', async (_, data) => {
+    let tempDir: string | null = null;
+    let tempFilePath: string | null = null;
+
+    try {
+        // Handle both file path (old) and buffer (new) formats
+        const isBuffer = data && typeof data === 'object' && data.buffer;
+
+        if (isBuffer) {
+            console.log('[parse-anki-package] Parsing from buffer:', data.fileName);
+
+            // Create temp file from buffer
+            tempDir = path.join(os.tmpdir(), 'anki-import-' + Date.now());
+            await fs.mkdir(tempDir, { recursive: true });
+            tempFilePath = path.join(tempDir, data.fileName);
+
+            // Write buffer to temp file
+            const buffer = Buffer.from(data.buffer);
+            await fs.writeFile(tempFilePath, buffer);
+            console.log('[parse-anki-package] Wrote buffer to temp file:', tempFilePath);
+        } else {
+            // Legacy: direct file path
+            tempFilePath = data;
+            console.log('[parse-anki-package] Parsing from path:', tempFilePath);
+        }
+
+        // Use require for native modules instead of dynamic import
+        // This avoids Rollup bundling issues with native bindings
+        const AdmZip = require('adm-zip');
+        const Database = require('better-sqlite3');
+
+        // Create extraction directory
+        const extractDir = path.join(os.tmpdir(), 'anki-extract-' + Date.now());
+
+        try {
+            // Extract .apkg file (it's a ZIP archive)
+            const zip = new AdmZip(tempFilePath);
+            zip.extractAllTo(extractDir, true);
+            console.log('[parse-anki-package] Extracted to:', extractDir);
+
+            // List all extracted files to see what we have
+            const extractedFiles = await fs.readdir(extractDir);
+            console.log('[parse-anki-package] Extracted files:', extractedFiles.join(', '));
+
+            // Find the database file (usually collection.anki2 or collection.anki21)
+            // Prefer .anki21 (newer format) over .anki2 (older format)
+            const dbFiles = ['collection.anki21', 'collection.anki2'];
+            let dbPath: string | null = null;
+
+            for (const dbFile of dbFiles) {
+                const testPath = path.join(extractDir, dbFile);
+                if (existsSync(testPath)) {
+                    dbPath = testPath;
+                    console.log('[parse-anki-package] Found database:', dbFile);
+                    break;
+                }
+            }
+
+            if (!dbPath) {
+                throw new Error('No Anki database found in package. Expected collection.anki2 or collection.anki21');
+            }
+
+            console.log('[parse-anki-package] Opening database:', dbPath);
+
+            // Open the SQLite database
+            const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+
+            // First, let's inspect the database schema to understand the structure
+            console.log('[parse-anki-package] Inspecting database schema...');
+            try {
+                const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all();
+                console.log('[parse-anki-package] Available tables:', tables.map((t: any) => t.name).join(', '));
+
+                // Check if we have the cards table
+                const hasCards = tables.some((t: any) => t.name === 'cards');
+                const hasNotes = tables.some((t: any) => t.name === 'notes');
+
+                console.log('[parse-anki-package] Has cards table:', hasCards, 'Has notes table:', hasNotes);
+
+                if (hasNotes) {
+                    // Check notes table structure
+                    const notesInfo = db.prepare("PRAGMA table_info(notes)").all();
+                    console.log('[parse-anki-package] Notes table columns:', notesInfo.map((c: any) => c.name).join(', '));
+                }
+
+                if (hasCards) {
+                    // Check cards table structure
+                    const cardsInfo = db.prepare("PRAGMA table_info(cards)").all();
+                    console.log('[parse-anki-package] Cards table columns:', cardsInfo.map((c: any) => c.name).join(', '));
+                }
+            } catch (schemaError) {
+                console.error('[parse-anki-package] Schema inspection error:', schemaError);
+            }
+
+            // Get deck name from the decks table
+            let deckName = 'Imported Deck';
+            try {
+                const decksRow = db.prepare('SELECT decks FROM col').get() as { decks: string } | undefined;
+                if (decksRow?.decks) {
+                    const decksData = JSON.parse(decksRow.decks);
+                    // Get the first non-default deck name
+                    const deckNames = Object.values(decksData)
+                        .filter((d: any) => d.name && d.name !== 'Default')
+                        .map((d: any) => d.name);
+                    if (deckNames.length > 0) {
+                        deckName = deckNames[0] as string;
                     }
                 }
+            } catch (e) {
+                console.warn('[parse-anki-package] Could not extract deck name:', e);
+            }
 
-                if (!dbPath) {
-                    throw new Error('No Anki database found in package. Expected collection.anki2 or collection.anki21');
-                }
+            // Query notes from the database
+            // Anki stores notes with fields separated by \x1f (ASCII Unit Separator)
+            const notes = db.prepare('SELECT flds, tags FROM notes').all() as Array<{ flds: string; tags: string }>;
 
-                console.log('[parse-anki-package] Opening database:', dbPath);
+            console.log('[parse-anki-package] Found', notes.length, 'notes');
 
-                // Open the SQLite database
-                const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+            // Also check cards table to see if there's more data there
+            try {
+                const cardsCount = db.prepare('SELECT COUNT(*) as count FROM cards').get() as { count: number };
+                console.log('[parse-anki-package] Found', cardsCount.count, 'cards in cards table');
 
-                // First, let's inspect the database schema to understand the structure
-                console.log('[parse-anki-package] Inspecting database schema...');
+                // Sample a few cards to see their structure
+                const sampleCards = db.prepare('SELECT * FROM cards LIMIT 3').all();
+                console.log('[parse-anki-package] Sample cards:', JSON.stringify(sampleCards, null, 2));
+            } catch (cardsError) {
+                console.error('[parse-anki-package] Error checking cards table:', cardsError);
+            }
+
+            if (notes.length === 0) {
+                // Try alternative: query cards table with note join
+                console.log('[parse-anki-package] No notes found, trying cards table...');
                 try {
-                    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all();
-                    console.log('[parse-anki-package] Available tables:', tables.map((t: any) => t.name).join(', '));
-
-                    // Check if we have the cards table
-                    const hasCards = tables.some((t: any) => t.name === 'cards');
-                    const hasNotes = tables.some((t: any) => t.name === 'notes');
-
-                    console.log('[parse-anki-package] Has cards table:', hasCards, 'Has notes table:', hasNotes);
-
-                    if (hasNotes) {
-                        // Check notes table structure
-                        const notesInfo = db.prepare("PRAGMA table_info(notes)").all();
-                        console.log('[parse-anki-package] Notes table columns:', notesInfo.map((c: any) => c.name).join(', '));
-                    }
-
-                    if (hasCards) {
-                        // Check cards table structure
-                        const cardsInfo = db.prepare("PRAGMA table_info(cards)").all();
-                        console.log('[parse-anki-package] Cards table columns:', cardsInfo.map((c: any) => c.name).join(', '));
-                    }
-                } catch (schemaError) {
-                    console.error('[parse-anki-package] Schema inspection error:', schemaError);
-                }
-
-                // Get deck name from the decks table
-                let deckName = 'Imported Deck';
-                try {
-                    const decksRow = db.prepare('SELECT decks FROM col').get() as { decks: string } | undefined;
-                    if (decksRow?.decks) {
-                        const decksData = JSON.parse(decksRow.decks);
-                        // Get the first non-default deck name
-                        const deckNames = Object.values(decksData)
-                            .filter((d: any) => d.name && d.name !== 'Default')
-                            .map((d: any) => d.name);
-                        if (deckNames.length > 0) {
-                            deckName = deckNames[0] as string;
-                        }
-                    }
-                } catch (e) {
-                    console.warn('[parse-anki-package] Could not extract deck name:', e);
-                }
-
-                // Query notes from the database
-                // Anki stores notes with fields separated by \x1f (ASCII Unit Separator)
-                const notes = db.prepare('SELECT flds, tags FROM notes').all() as Array<{ flds: string; tags: string }>;
-
-                console.log('[parse-anki-package] Found', notes.length, 'notes');
-
-                // Also check cards table to see if there's more data there
-                try {
-                    const cardsCount = db.prepare('SELECT COUNT(*) as count FROM cards').get() as { count: number };
-                    console.log('[parse-anki-package] Found', cardsCount.count, 'cards in cards table');
-
-                    // Sample a few cards to see their structure
-                    const sampleCards = db.prepare('SELECT * FROM cards LIMIT 3').all();
-                    console.log('[parse-anki-package] Sample cards:', JSON.stringify(sampleCards, null, 2));
-                } catch (cardsError) {
-                    console.error('[parse-anki-package] Error checking cards table:', cardsError);
-                }
-
-                if (notes.length === 0) {
-                    // Try alternative: query cards table with note join
-                    console.log('[parse-anki-package] No notes found, trying cards table...');
-                    try {
-                        const cardsQuery = db.prepare(`
+                    const cardsQuery = db.prepare(`
                             SELECT n.flds, n.tags 
                             FROM cards c 
                             JOIN notes n ON c.nid = n.id
                         `).all() as Array<{ flds: string; tags: string }>;
 
-                        console.log('[parse-anki-package] Found', cardsQuery.length, 'cards via join');
+                    console.log('[parse-anki-package] Found', cardsQuery.length, 'cards via join');
 
-                        if (cardsQuery.length === 0) {
-                            db.close();
-                            if (tempDir && existsSync(tempDir)) {
-                                await fs.rm(tempDir, { recursive: true, force: true });
-                            }
-                            return {
-                                success: false,
-                                error: 'No cards found in the Anki package.'
-                            };
-                        }
-                        notes.push(...cardsQuery);
-                    } catch (joinError) {
-                        console.error('[parse-anki-package] Cards table query failed:', joinError);
+                    if (cardsQuery.length === 0) {
                         db.close();
                         if (tempDir && existsSync(tempDir)) {
                             await fs.rm(tempDir, { recursive: true, force: true });
@@ -2832,368 +3282,380 @@ Format: [{"q":"question here","a":"answer here"}]`;
                             error: 'No cards found in the Anki package.'
                         };
                     }
-                }
-
-                // Parse notes into flashcards
-                const cards = notes.map((note: { flds: string; tags: string }, index: number) => {
-                    // Split fields by \x1f separator
-                    const fields = note.flds.split('\x1f');
-
-                    // Log first few cards for debugging
-                    if (index < 3) {
-                        console.log('[parse-anki-package] Card', index, 'has', fields.length, 'fields:');
-                        fields.forEach((field, i) => {
-                            console.log(`  Field ${i}: "${field.substring(0, 100)}" (length: ${field.length})`);
-                        });
-                    }
-
-                    // Most Anki cards have at least 2 fields: front and back
-                    // But some note types have more fields or different order
-                    // Try to find the first two non-empty fields
-                    const nonEmptyFields = fields.filter(f => f.trim().length > 0);
-
-                    const front = nonEmptyFields[0] || '';
-                    const back = nonEmptyFields[1] || '';
-
-                    return {
-                        front: front.trim(),
-                        back: back.trim(),
-                        tags: note.tags || ''
-                    };
-                }).filter((card: { front: string; back: string }, index: number) => {
-                    const isValid = card.front && card.back;
-                    if (!isValid && index < 3) {
-                        console.log('[parse-anki-package] Card', index, 'filtered out - front:', card.front?.length || 0, 'back:', card.back?.length || 0);
-                    }
-                    return isValid;
-                }); // Filter out empty cards
-
-                db.close();
-
-                // Clean up temp directories
-                await fs.rm(extractDir, { recursive: true, force: true });
-                if (tempDir && existsSync(tempDir)) {
-                    await fs.rm(tempDir, { recursive: true, force: true });
-                }
-
-                console.log('[parse-anki-package] Successfully parsed', cards.length, 'cards from', notes.length, 'notes');
-
-                if (cards.length === 0) {
-                    return {
-                        success: false,
-                        error: 'No valid cards found after parsing. Cards may be empty or in an unsupported format.'
-                    };
-                }
-
-                return {
-                    success: true,
-                    deckName,
-                    cards
-                };
-
-            } catch (dbError) {
-                // Clean up temp directories on error
-                try {
-                    if (existsSync(extractDir)) {
-                        await fs.rm(extractDir, { recursive: true, force: true });
-                    }
+                    notes.push(...cardsQuery);
+                } catch (joinError) {
+                    console.error('[parse-anki-package] Cards table query failed:', joinError);
+                    db.close();
                     if (tempDir && existsSync(tempDir)) {
                         await fs.rm(tempDir, { recursive: true, force: true });
                     }
-                } catch { /* ignore cleanup errors */ }
-                throw dbError;
-            }
-
-        } catch (e) {
-            console.error('[parse-anki-package] Error:', e);
-            return {
-                success: false,
-                error: 'Failed to parse Anki package: ' + (e as Error).message
-            };
-        }
-    });
-
-    // ============================================================================
-    // @ CONNECTIONS - Add/Remove @mentions from file content
-    // ============================================================================
-
-    // Add a @connection (mention) to a file
-    ipcMain.handle('add-connection-to-file', async (_, { filePath, fileType, targetFileName }) => {
-        try {
-            if (!existsSync(filePath)) {
-                return { success: false, error: 'File not found' };
-            }
-
-            const content = await fs.readFile(filePath, 'utf-8');
-            let parsed;
-            try {
-                parsed = JSON.parse(content);
-            } catch {
-                // For plain text files (notes)
-                parsed = { content };
-            }
-
-            // Format mention - quote if contains spaces
-            const mention = targetFileName.includes(' ')
-                ? `@"${targetFileName}"`
-                : `@${targetFileName}`;
-
-            // Add mention based on file type
-            if (fileType === 'exec') {
-                // For notebooks, add to the first cell's content or create a connections note
-                if (parsed.cells && parsed.cells.length > 0) {
-                    // Add to first cell, prepending with newline if cell has content
-                    const firstCell = parsed.cells[0];
-                    if (firstCell.content && firstCell.content.trim()) {
-                        firstCell.content = firstCell.content + '\n' + mention;
-                    } else {
-                        firstCell.content = mention;
-                    }
-                } else {
-                    // Create first cell with mention
-                    parsed.cells = [{
-                        id: crypto.randomUUID(),
-                        type: 'code',
-                        content: mention,
-                        createdAt: new Date().toISOString(),
-                    }];
+                    return {
+                        success: false,
+                        error: 'No cards found in the Anki package.'
+                    };
                 }
-            } else if (fileType === 'board') {
-                // For boards, add a text note with the mention
-                if (!parsed.notes) parsed.notes = [];
+            }
 
-                // Check if there's already a "Connections" note
-                const connectionsNote = parsed.notes.find((n: any) =>
-                    n.type === 'text' && n.text && n.text.startsWith('📌 Connections:')
-                );
+            // Parse notes into flashcards
+            const cards = notes.map((note: { flds: string; tags: string }, index: number) => {
+                // Split fields by \x1f separator
+                const fields = note.flds.split('\x1f');
 
-                if (connectionsNote) {
-                    // Append to existing connections note
-                    connectionsNote.text = connectionsNote.text + '\n' + mention;
-                } else {
-                    // Create a new connections note in top-left corner
-                    parsed.notes.push({
-                        id: crypto.randomUUID(),
-                        type: 'text',
-                        text: '📌 Connections:\n' + mention,
-                        x: 50,
-                        y: 50,
-                        width: 200,
-                        height: 100,
-                        color: '#3b82f6',
-                        fontSize: 14,
+                // Log first few cards for debugging
+                if (index < 3) {
+                    console.log('[parse-anki-package] Card', index, 'has', fields.length, 'fields:');
+                    fields.forEach((field, i) => {
+                        console.log(`  Field ${i}: "${field.substring(0, 100)}" (length: ${field.length})`);
                     });
                 }
-            } else if (fileType === 'nbm') {
-                // For node maps, store connections in a dedicated array
-                if (!parsed.connections) parsed.connections = [];
 
-                // Check if this connection already exists
-                if (!parsed.connections.includes(mention)) {
-                    parsed.connections.push(mention);
+                // Most Anki cards have at least 2 fields: front and back
+                // But some note types have more fields or different order
+                // Try to find the first two non-empty fields
+                const nonEmptyFields = fields.filter(f => f.trim().length > 0);
+
+                const front = nonEmptyFields[0] || '';
+                const back = nonEmptyFields[1] || '';
+
+                return {
+                    front: front.trim(),
+                    back: back.trim(),
+                    tags: note.tags || ''
+                };
+            }).filter((card: { front: string; back: string }, index: number) => {
+                const isValid = card.front && card.back;
+                if (!isValid && index < 3) {
+                    console.log('[parse-anki-package] Card', index, 'filtered out - front:', card.front?.length || 0, 'back:', card.back?.length || 0);
+                }
+                return isValid;
+            }); // Filter out empty cards
+
+            db.close();
+
+            // Clean up temp directories
+            await fs.rm(extractDir, { recursive: true, force: true });
+            if (tempDir && existsSync(tempDir)) {
+                await fs.rm(tempDir, { recursive: true, force: true });
+            }
+
+            console.log('[parse-anki-package] Successfully parsed', cards.length, 'cards from', notes.length, 'notes');
+
+            if (cards.length === 0) {
+                return {
+                    success: false,
+                    error: 'No valid cards found after parsing. Cards may be empty or in an unsupported format.'
+                };
+            }
+
+            return {
+                success: true,
+                deckName,
+                cards
+            };
+
+        } catch (dbError) {
+            // Clean up temp directories on error
+            try {
+                if (existsSync(extractDir)) {
+                    await fs.rm(extractDir, { recursive: true, force: true });
+                }
+                if (tempDir && existsSync(tempDir)) {
+                    await fs.rm(tempDir, { recursive: true, force: true });
+                }
+            } catch { /* ignore cleanup errors */ }
+            throw dbError;
+        }
+
+    } catch (e) {
+        console.error('[parse-anki-package] Error:', e);
+        return {
+            success: false,
+            error: 'Failed to parse Anki package: ' + (e as Error).message
+        };
+    }
+});
+
+// ============================================================================
+// @ CONNECTIONS - Add/Remove @mentions from file content
+// ============================================================================
+
+// Add a @connection (mention) to a file
+ipcMain.handle('add-connection-to-file', async (_, { filePath, fileType, targetFileName }) => {
+    try {
+        if (!existsSync(filePath)) {
+            return { success: false, error: 'File not found' };
+        }
+
+        const content = await fs.readFile(filePath, 'utf-8');
+        let parsed;
+        try {
+            parsed = JSON.parse(content);
+        } catch {
+            // For plain text files (notes)
+            parsed = { content };
+        }
+
+        // Format mention - quote if contains spaces
+        const mention = targetFileName.includes(' ')
+            ? `@"${targetFileName}"`
+            : `@${targetFileName}`;
+
+        // Add mention based on file type
+        if (fileType === 'exec') {
+            // For notebooks, add to the first cell's content or create a connections note
+            if (parsed.cells && parsed.cells.length > 0) {
+                // Add to first cell, prepending with newline if cell has content
+                const firstCell = parsed.cells[0];
+                if (firstCell.content && firstCell.content.trim()) {
+                    firstCell.content = firstCell.content + '\n' + mention;
+                } else {
+                    firstCell.content = mention;
                 }
             } else {
-                // For plain notes, append to content
-                if (typeof parsed.content === 'string') {
-                    if (parsed.content.trim()) {
-                        parsed.content = parsed.content + '\n' + mention;
-                    } else {
-                        parsed.content = mention;
-                    }
+                // Create first cell with mention
+                parsed.cells = [{
+                    id: crypto.randomUUID(),
+                    type: 'code',
+                    content: mention,
+                    createdAt: new Date().toISOString(),
+                }];
+            }
+        } else if (fileType === 'board') {
+            // For boards, add a text note with the mention
+            if (!parsed.notes) parsed.notes = [];
+
+            // Check if there's already a "Connections" note
+            const connectionsNote = parsed.notes.find((n: any) =>
+                n.type === 'text' && n.text && n.text.startsWith('📌 Connections:')
+            );
+
+            if (connectionsNote) {
+                // Append to existing connections note
+                connectionsNote.text = connectionsNote.text + '\n' + mention;
+            } else {
+                // Create a new connections note in top-left corner
+                parsed.notes.push({
+                    id: crypto.randomUUID(),
+                    type: 'text',
+                    text: '📌 Connections:\n' + mention,
+                    x: 50,
+                    y: 50,
+                    width: 200,
+                    height: 100,
+                    color: '#3b82f6',
+                    fontSize: 14,
+                });
+            }
+        } else if (fileType === 'nbm') {
+            // For node maps, store connections in a dedicated array
+            if (!parsed.connections) parsed.connections = [];
+
+            // Check if this connection already exists
+            if (!parsed.connections.includes(mention)) {
+                parsed.connections.push(mention);
+            }
+        } else {
+            // For plain notes, append to content
+            if (typeof parsed.content === 'string') {
+                if (parsed.content.trim()) {
+                    parsed.content = parsed.content + '\n' + mention;
                 } else {
                     parsed.content = mention;
                 }
-            }
-
-            // Save the updated content
-            await atomicWriteFile(filePath, JSON.stringify(parsed, null, 2));
-            return { success: true, mention };
-
-        } catch (e) {
-            console.error('Failed to add connection to file:', e);
-            return { success: false, error: (e as Error).message };
-        }
-    });
-
-    // Remove a @connection (mention) from a file
-    ipcMain.handle('remove-connection-from-file', async (_, { filePath, fileType, mentionText }) => {
-        try {
-            if (!existsSync(filePath)) {
-                return { success: false, error: 'File not found' };
-            }
-
-            const content = await fs.readFile(filePath, 'utf-8');
-            let parsed;
-            try {
-                parsed = JSON.parse(content);
-            } catch {
-                parsed = { content };
-            }
-
-            // Helper to remove mention from text
-            const removeMention = (text: string): string => {
-                if (!text) return text;
-                // Remove the mention and any preceding/trailing newline
-                return text
-                    .split('\n')
-                    .filter(line => !line.includes(mentionText))
-                    .join('\n')
-                    .trim();
-            };
-
-            // Remove mention based on file type
-            if (fileType === 'exec') {
-                // For notebooks, search through all cells
-                if (parsed.cells) {
-                    for (const cell of parsed.cells) {
-                        if (cell.content && cell.content.includes(mentionText)) {
-                            cell.content = removeMention(cell.content);
-                        }
-                    }
-                }
-            } else if (fileType === 'board') {
-                // For boards, search through notes
-                if (parsed.notes) {
-                    for (const note of parsed.notes) {
-                        if (note.type === 'text' && note.text && note.text.includes(mentionText)) {
-                            note.text = removeMention(note.text);
-                            // Remove the whole note if it's now empty or just the header
-                            if (note.text === '📌 Connections:' || !note.text.trim()) {
-                                parsed.notes = parsed.notes.filter((n: any) => n.id !== note.id);
-                            }
-                        }
-                    }
-                }
-            } else if (fileType === 'nbm') {
-                // For node maps, remove from connections array
-                if (parsed.connections && Array.isArray(parsed.connections)) {
-                    parsed.connections = parsed.connections.filter((c: string) => c !== mentionText);
-                }
             } else {
-                // For plain notes
-                if (typeof parsed.content === 'string') {
-                    parsed.content = removeMention(parsed.content);
+                parsed.content = mention;
+            }
+        }
+
+        // Save the updated content
+        await atomicWriteFile(filePath, JSON.stringify(parsed, null, 2));
+        return { success: true, mention };
+
+    } catch (e) {
+        console.error('Failed to add connection to file:', e);
+        return { success: false, error: (e as Error).message };
+    }
+});
+
+// Remove a @connection (mention) from a file
+ipcMain.handle('remove-connection-from-file', async (_, { filePath, fileType, mentionText }) => {
+    try {
+        if (!existsSync(filePath)) {
+            return { success: false, error: 'File not found' };
+        }
+
+        const content = await fs.readFile(filePath, 'utf-8');
+        let parsed;
+        try {
+            parsed = JSON.parse(content);
+        } catch {
+            parsed = { content };
+        }
+
+        // Helper to remove mention from text
+        const removeMention = (text: string): string => {
+            if (!text) return text;
+            // Remove the mention and any preceding/trailing newline
+            return text
+                .split('\n')
+                .filter(line => !line.includes(mentionText))
+                .join('\n')
+                .trim();
+        };
+
+        // Remove mention based on file type
+        if (fileType === 'exec') {
+            // For notebooks, search through all cells
+            if (parsed.cells) {
+                for (const cell of parsed.cells) {
+                    if (cell.content && cell.content.includes(mentionText)) {
+                        cell.content = removeMention(cell.content);
+                    }
                 }
             }
-
-            // Save the updated content
-            await atomicWriteFile(filePath, JSON.stringify(parsed, null, 2));
-            return { success: true };
-
-        } catch (e) {
-            console.error('Failed to remove connection from file:', e);
-            return { success: false, error: (e as Error).message };
+        } else if (fileType === 'board') {
+            // For boards, search through notes
+            if (parsed.notes) {
+                for (const note of parsed.notes) {
+                    if (note.type === 'text' && note.text && note.text.includes(mentionText)) {
+                        note.text = removeMention(note.text);
+                        // Remove the whole note if it's now empty or just the header
+                        if (note.text === '📌 Connections:' || !note.text.trim()) {
+                            parsed.notes = parsed.notes.filter((n: any) => n.id !== note.id);
+                        }
+                    }
+                }
+            }
+        } else if (fileType === 'nbm') {
+            // For node maps, remove from connections array
+            if (parsed.connections && Array.isArray(parsed.connections)) {
+                parsed.connections = parsed.connections.filter((c: string) => c !== mentionText);
+            }
+        } else {
+            // For plain notes
+            if (typeof parsed.content === 'string') {
+                parsed.content = removeMention(parsed.content);
+            }
         }
-    });
 
-    // Fortnite Creator Codes Configuration
-    ipcMain.handle('get-creator-codes', () => deviceSettings.creatorCodes || []);
-    ipcMain.handle('set-creator-codes', async (_, codes) => {
-        deviceSettings.creatorCodes = codes;
-        await saveDeviceSettings();
+        // Save the updated content
+        await atomicWriteFile(filePath, JSON.stringify(parsed, null, 2));
         return { success: true };
-    });
 
-    // Version IPC Handler
-    ipcMain.handle('get-current-version', () => {
-        return app.getVersion();
-    });
+    } catch (e) {
+        console.error('Failed to remove connection from file:', e);
+        return { success: false, error: (e as Error).message };
+    }
+});
 
-    ipcMain.handle('open-devtools', () => {
-        if (win) {
-            if (win.webContents.isDevToolsOpened()) {
-                win.webContents.closeDevTools();
-            } else {
-                win.webContents.openDevTools();
-            }
+// Fortnite Creator Codes Configuration
+ipcMain.handle('get-creator-codes', () => deviceSettings.creatorCodes || []);
+ipcMain.handle('set-creator-codes', async (_, codes) => {
+    deviceSettings.creatorCodes = codes;
+    await saveDeviceSettings();
+    return { success: true };
+});
+
+// Version IPC Handler
+ipcMain.handle('get-current-version', () => {
+    return app.getVersion();
+});
+
+ipcMain.handle('open-devtools', () => {
+    if (win) {
+        if (win.webContents.isDevToolsOpened()) {
+            win.webContents.closeDevTools();
+        } else {
+            win.webContents.openDevTools();
         }
-    });
+    }
+});
 
-    ipcMain.handle('force-migration', async () => {
-        try {
-            const thoughtsPlusPath = path.join(oneDrivePath, 'ThoughtsPlus');
-            const calendarPlusPath = path.join(oneDrivePath, 'A - CalendarPlus');
+ipcMain.handle('force-migration', async () => {
+    try {
+        const thoughtsPlusPath = path.join(oneDrivePath, 'ThoughtsPlus');
+        const calendarPlusPath = path.join(oneDrivePath, 'A - CalendarPlus');
 
-            console.log('FORCE MIGRATION REQUESTED');
-            console.log(`  Source: ${calendarPlusPath}`);
-            console.log(`  Target: ${thoughtsPlusPath}`);
+        console.log('FORCE MIGRATION REQUESTED');
+        console.log(`  Source: ${calendarPlusPath}`);
+        console.log(`  Target: ${thoughtsPlusPath}`);
 
-            if (!existsSync(calendarPlusPath)) {
-                return { success: false, error: 'Legacy "A - CalendarPlus" folder not found.' };
-            }
+        if (!existsSync(calendarPlusPath)) {
+            return { success: false, error: 'Legacy "A - CalendarPlus" folder not found.' };
+        }
 
-            if (!existsSync(thoughtsPlusPath)) {
-                await fs.mkdir(thoughtsPlusPath, { recursive: true });
-            }
+        if (!existsSync(thoughtsPlusPath)) {
+            await fs.mkdir(thoughtsPlusPath, { recursive: true });
+        }
 
-            const files = await fs.readdir(calendarPlusPath);
-            let copyCount = 0;
+        const files = await fs.readdir(calendarPlusPath);
+        let copyCount = 0;
 
-            for (const file of files) {
-                const src = path.join(calendarPlusPath, file);
-                const dest = path.join(thoughtsPlusPath, file);
+        for (const file of files) {
+            const src = path.join(calendarPlusPath, file);
+            const dest = path.join(thoughtsPlusPath, file);
 
-                // Only copy files (json data), skip directories to be safe
-                const stat = await fs.stat(src);
-                if (stat.isFile()) {
-                    await fs.copyFile(src, dest);
-                    console.log(`  Copied legacy file: ${file}`);
+            // Only copy files (json data), skip directories to be safe
+            const stat = await fs.stat(src);
+            if (stat.isFile()) {
+                await fs.copyFile(src, dest);
+                console.log(`  Copied legacy file: ${file}`);
 
-                    // Special handling for device settings if they were stored differently in older versions
-                    if (file === 'device-settings.json' || file === 'settings.json') {
-                        console.log(`  Analyzing migrated ${file} for preferences...`);
-                        try {
-                            const migratedSettings = JSON.parse(await fs.readFile(dest, 'utf-8'));
-                            let updated = false;
+                // Special handling for device settings if they were stored differently in older versions
+                if (file === 'device-settings.json' || file === 'settings.json') {
+                    console.log(`  Analyzing migrated ${file} for preferences...`);
+                    try {
+                        const migratedSettings = JSON.parse(await fs.readFile(dest, 'utf-8'));
+                        let updated = false;
 
-                            // Migrate User Name
-                            if (migratedSettings.customUserName || migratedSettings.userName) {
-                                deviceSettings.customUserName = migratedSettings.customUserName || migratedSettings.userName;
-                                updated = true;
-                            }
-
-                            // Migrate API Key
-                            if (migratedSettings.apiKey) {
-                                deviceSettings.apiKey = migratedSettings.apiKey;
-                                updated = true;
-                            }
-
-                            // Migrate GitHub
-                            if (migratedSettings.githubUsername) {
-                                deviceSettings.githubUsername = migratedSettings.githubUsername;
-                                updated = true;
-                            }
-
-                            // Migrate Creator Codes
-                            if (migratedSettings.creatorCodes) {
-                                deviceSettings.creatorCodes = migratedSettings.creatorCodes;
-                                updated = true;
-                            }
-
-                            if (updated) {
-                                await saveDeviceSettings();
-                                console.log('  Applied migrated preferences to active device settings.');
-                            }
-
-                        } catch (parseErr) {
-                            console.warn('  Failed to parse migrated settings file:', parseErr);
+                        // Migrate User Name
+                        if (migratedSettings.customUserName || migratedSettings.userName) {
+                            deviceSettings.customUserName = migratedSettings.customUserName || migratedSettings.userName;
+                            updated = true;
                         }
+
+                        // Migrate API Key
+                        if (migratedSettings.apiKey) {
+                            deviceSettings.apiKey = migratedSettings.apiKey;
+                            updated = true;
+                        }
+
+                        // Migrate GitHub
+                        if (migratedSettings.githubUsername) {
+                            deviceSettings.githubUsername = migratedSettings.githubUsername;
+                            updated = true;
+                        }
+
+                        // Migrate Creator Codes
+                        if (migratedSettings.creatorCodes) {
+                            deviceSettings.creatorCodes = migratedSettings.creatorCodes;
+                            updated = true;
+                        }
+
+                        if (updated) {
+                            await saveDeviceSettings();
+                            console.log('  Applied migrated preferences to active device settings.');
+                        }
+
+                    } catch (parseErr) {
+                        console.warn('  Failed to parse migrated settings file:', parseErr);
                     }
-
-                    copyCount++;
                 }
+
+                copyCount++;
             }
-
-            // Force reload of settings to pick up new paths
-            currentDataPath = path.join(thoughtsPlusPath, 'calendar-data.json');
-            globalSettingsPath = path.join(thoughtsPlusPath, 'settings.json');
-
-            return { success: true, count: copyCount };
-        } catch (e: any) {
-            console.error('Force migration failed:', e);
-            return { success: false, error: e.message };
         }
-    });
+
+        // Force reload of settings to pick up new paths
+        currentDataPath = path.join(thoughtsPlusPath, 'calendar-data.json');
+        globalSettingsPath = path.join(thoughtsPlusPath, 'settings.json');
+
+        return { success: true, count: copyCount };
+    } catch (e: any) {
+        console.error('Force migration failed:', e);
+        return { success: false, error: e.message };
+    }
+});
 }
 
 // User-friendly error message mapping

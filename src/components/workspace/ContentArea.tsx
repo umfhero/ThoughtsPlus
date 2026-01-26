@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { WelcomeView } from './WelcomeView';
 import { TextNoteEditor } from './TextNoteEditor';
+import { DocumentViewer } from './DocumentViewer';
 import {
     WorkspaceFile,
     RecentFile,
@@ -113,6 +114,29 @@ export function ContentArea({
                 return (
                     <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
                         <p>Flashcards editor not available</p>
+                    </div>
+                );
+
+            case 'pdf':
+            case 'docx':
+            case 'xlsx':
+            case 'pptx':
+            case 'txt':
+            case 'md':
+            case 'image':
+                // Render DocumentViewer for external document types
+                if (selectedFile.filePath) {
+                    return (
+                        <DocumentViewer
+                            filePath={selectedFile.filePath}
+                            fileType={selectedFile.type}
+                            fileName={selectedFile.name + (selectedFile.type === 'image' ? '' : `.${selectedFile.type}`)}
+                        />
+                    );
+                }
+                return (
+                    <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
+                        <p>Document file path not available</p>
                     </div>
                 );
 

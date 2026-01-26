@@ -5,6 +5,464 @@
 @tailwind components;
 @tailwind utilities;
 
+/* PDF Viewer Theming */
+.pdf-light .react-pdf__Page__canvas {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.pdf-dark .react-pdf__Page__canvas {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  filter: brightness(0.9);
+}
+
+.pdf-dark .react-pdf__Page__textContent {
+  color: #e5e7eb;
+}
+
+.pdf-dark .react-pdf__Page__annotations {
+  filter: invert(0.9);
+}
+
+/* Excel (XLSX) Preview Styling */
+.xlsx-preview {
+  padding: 1rem;
+}
+
+.sheet-container {
+  margin-bottom: 2rem;
+}
+
+.sheet-title {
+  font-size: 1.25rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.sheet-divider {
+  margin: 2rem 0;
+  border: none;
+  border-top: 2px solid #e5e7eb;
+}
+
+.xlsx-preview table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1rem 0;
+  font-size: 0.875rem;
+}
+
+.xlsx-preview td,
+.xlsx-preview th {
+  border: 1px solid #d1d5db;
+  padding: 0.5rem;
+  text-align: left;
+}
+
+.xlsx-preview th {
+  background-color: #f3f4f6;
+  font-weight: 600;
+}
+
+/* Dark mode for XLSX */
+.dark-mode .sheet-title {
+  color: #f3f4f6;
+  border-bottom-color: #4b5563;
+}
+
+.dark-mode .sheet-divider {
+  border-top-color: #4b5563;
+}
+
+.dark-mode .xlsx-preview td,
+.dark-mode .xlsx-preview th {
+  border-color: #4b5563;
+  background-color: #1f2937;
+  color: #e5e7eb;
+}
+
+.dark-mode .xlsx-preview th {
+  background-color: #374151;
+  color: #f3f4f6;
+}
+
+/* PowerPoint (PPTX) Preview Styling */
+.pptx-preview {
+  padding: 1rem;
+}
+
+.pptx-preview-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1rem;
+}
+
+/* Full slide image rendering */
+.slide-image-card {
+  border: 2px solid #e5e7eb;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  background-color: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.slide-image-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.slide-image-card.dark {
+  background-color: #1f2937;
+  border-color: #4b5563;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.slide-image-card.dark:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.slide-image-container {
+  width: 100%;
+  background-color: #000000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.full-slide-image {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Enhanced slide rendering with backgrounds */
+.slide-card-enhanced {
+  border: 2px solid #e5e7eb;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  background-color: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.slide-card-enhanced:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.slide-card-enhanced.dark {
+  background-color: #1f2937;
+  border-color: #4b5563;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.slide-card-enhanced.dark:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.slide-body-enhanced {
+  position: relative;
+  min-height: 400px;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: #f9fafb;
+}
+
+.slide-images-overlay {
+  position: relative;
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  z-index: 2;
+}
+
+.slide-image-overlay {
+  width: 100%;
+  height: auto;
+  max-height: 500px;
+  object-fit: contain;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.slide-text-overlay {
+  position: relative;
+  font-size: 1.125rem;
+  line-height: 1.8;
+  color: #1f2937;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  text-align: center;
+  max-width: 90%;
+  padding: 1.5rem;
+  background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  z-index: 2;
+}
+
+.slide-card-enhanced.dark .slide-body-enhanced {
+  background-color: #111827;
+}
+
+.slide-card-enhanced.dark .slide-text-overlay {
+  color: #f3f4f6;
+  background-color: rgba(31, 41, 55, 0.9);
+}
+
+/* Basic text + images rendering */
+.slide-card {
+  border: 2px solid #e5e7eb;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  background-color: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.slide-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.slide-card.dark {
+  background-color: #1f2937;
+  border-color: #4b5563;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.slide-card.dark:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.slide-header {
+  padding: 0.75rem 1rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.slide-number-badge {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #ffffff;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.slide-body {
+  padding: 1.5rem;
+}
+
+.slide-images {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.slide-image {
+  width: 100%;
+  height: auto;
+  max-height: 400px;
+  object-fit: contain;
+  border-radius: 0.5rem;
+  background-color: #f9fafb;
+  padding: 0.5rem;
+}
+
+.slide-card.dark .slide-image {
+  background-color: #111827;
+}
+
+.slide-text {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #1f2937;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.slide-card.dark .slide-text {
+  color: #e5e7eb;
+}
+
+/* Legacy PPTX styles (for backward compatibility) */
+.slide-container {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 0.5rem;
+  background-color: #ffffff;
+}
+
+.slide-number {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #6b7280;
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.slide-content {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #1f2937;
+  white-space: pre-wrap;
+}
+
+/* Dark mode for PPTX */
+.dark-mode .slide-container {
+  background-color: #1f2937;
+  border-color: #4b5563;
+}
+
+.dark-mode .slide-number {
+  color: #9ca3af;
+}
+
+.dark-mode .slide-content {
+  color: #e5e7eb;
+}
+
+/* Prose styling for DOCX preview */
+.prose {
+  max-width: 65ch;
+  line-height: 1.6;
+}
+
+.prose p {
+  margin-bottom: 1em;
+}
+
+.prose h1 {
+  font-size: 2em;
+  font-weight: bold;
+  margin-top: 0.67em;
+  margin-bottom: 0.67em;
+}
+
+.prose h2 {
+  font-size: 1.5em;
+  font-weight: bold;
+  margin-top: 0.83em;
+  margin-bottom: 0.83em;
+}
+
+.prose h3 {
+  font-size: 1.17em;
+  font-weight: bold;
+  margin-top: 1em;
+  margin-bottom: 1em;
+}
+
+.prose strong {
+  font-weight: bold;
+}
+
+.prose em {
+  font-style: italic;
+}
+
+.prose table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1em 0;
+}
+
+.prose td,
+.prose th {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+}
+
+.prose th {
+  background-color: #f2f2f2;
+  font-weight: bold;
+}
+
+.prose img {
+  max-width: 100%;
+  height: auto;
+  margin: 1em 0;
+}
+
+.prose ul,
+.prose ol {
+  margin: 1em 0;
+  padding-left: 2em;
+}
+
+.prose li {
+  margin: 0.5em 0;
+}
+
+/* Dark mode overrides for DOCX */
+.prose-invert {
+  color: #e5e7eb;
+}
+
+.prose-invert h1,
+.prose-invert h2,
+.prose-invert h3,
+.prose-invert h4,
+.prose-invert h5,
+.prose-invert h6 {
+  color: #f3f4f6;
+}
+
+.prose-invert a {
+  color: #60a5fa;
+}
+
+.prose-invert strong {
+  color: #f3f4f6;
+  font-weight: bold;
+}
+
+.prose-invert em {
+  color: #e5e7eb;
+  font-style: italic;
+}
+
+.prose-invert code {
+  color: #f3f4f6;
+  background-color: #374151;
+}
+
+.prose-invert pre {
+  background-color: #1f2937;
+  color: #e5e7eb;
+}
+
+.prose-invert table {
+  border-color: #4b5563;
+}
+
+.prose-invert td,
+.prose-invert th {
+  border-color: #4b5563;
+}
+
+.prose-invert th {
+  background-color: #374151;
+  color: #f3f4f6;
+}
+
+.prose-invert td {
+  background-color: #1f2937;
+}
+
+
 html,
 body,
 #root {

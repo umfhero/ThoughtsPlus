@@ -98,6 +98,7 @@ export function WelcomeView({
                                 <button
                                     onClick={onOpenExternalFile}
                                     className="flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:underline text-sm py-1"
+                                    title="Open workspace files, documents (PDF, Word, Excel, etc.), and images"
                                 >
                                     <FileUp className="w-4 h-4" />
                                     Open File...

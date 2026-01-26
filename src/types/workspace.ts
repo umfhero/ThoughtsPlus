@@ -1,7 +1,7 @@
-import { FileCode, PenTool, FileText, LucideIcon, GitPullRequest, Brain } from 'lucide-react';
+import { FileCode, PenTool, FileText, LucideIcon, GitPullRequest, Brain, FileType as LucideFileType, FileSpreadsheet, Image } from 'lucide-react';
 
 // File extension types
-export type FileType = 'exec' | 'board' | 'note' | 'nbm' | 'flashcards';
+export type FileType = 'exec' | 'board' | 'note' | 'nbm' | 'flashcards' | 'pdf' | 'docx' | 'xlsx' | 'txt' | 'md' | 'image';
 
 // File extension mapping
 export const FILE_EXTENSIONS: Record<FileType, string> = {
@@ -10,6 +10,12 @@ export const FILE_EXTENSIONS: Record<FileType, string> = {
     note: '.nt',
     nbm: '.nbm',
     flashcards: '.deck',
+    pdf: '.pdf',
+    docx: '.docx',
+    xlsx: '.xlsx',
+    txt: '.txt',
+    md: '.md',
+    image: '', // Images have various extensions (.png, .jpg, etc.)
 };
 
 // Icon mapping for file types
@@ -19,10 +25,60 @@ export const FILE_ICONS: Record<FileType, LucideIcon> = {
     note: FileText,
     nbm: GitPullRequest,
     flashcards: Brain,
+    pdf: LucideFileType,
+    docx: LucideFileType,
+    xlsx: FileSpreadsheet,
+    txt: FileText,
+    md: FileText,
+    image: Image,
 };
 
 // File name validation - cannot contain: / \ : * ? " < > |
 export const INVALID_FILENAME_CHARS_REGEX = /[\/\\:*?"<>|]/;
+
+// Extension to FileType mapping for external files
+export const EXTENSION_TO_FILETYPE: Record<string, FileType> = {
+    '.pdf': 'pdf',
+    '.docx': 'docx',
+    '.doc': 'docx', // Treat .doc as docx
+    '.xlsx': 'xlsx',
+    '.xls': 'xlsx', // Treat .xls as xlsx
+    '.txt': 'txt',
+    '.md': 'md',
+    '.markdown': 'md',
+    '.png': 'image',
+    '.jpg': 'image',
+    '.jpeg': 'image',
+    '.gif': 'image',
+    '.bmp': 'image',
+    '.webp': 'image',
+    '.svg': 'image',
+    // Native types
+    '.exec': 'exec',
+    '.brd': 'board',
+    '.nt': 'note',
+    '.nbm': 'nbm',
+    '.deck': 'flashcards',
+};
+
+/**
+ * Detects file type from file extension
+ * @param filename - The filename with extension
+ * @returns FileType or null if not recognized
+ */
+export function detectFileType(filename: string): FileType | null {
+    const ext = filename.substring(filename.lastIndexOf('.')).toLowerCase();
+    return EXTENSION_TO_FILETYPE[ext] || null;
+}
+
+/**
+ * Checks if a file type is a document type (external file)
+ * @param type - The file type
+ * @returns true if it's a document type
+ */
+export function isDocumentType(type: FileType): boolean {
+    return ['pdf', 'docx', 'xlsx', 'txt', 'md', 'image'].includes(type);
+}
 
 // Workspace file representation
 export interface WorkspaceFile {

@@ -8,6 +8,8 @@ import {
     FileType,
     RecentFile,
     FILE_EXTENSIONS,
+    detectFileType,
+    isDocumentType,
 } from '../types/workspace';
 import {
     validateFileName,
@@ -425,6 +427,135 @@ export function WorkspacePage({
         await debouncedSave(data);
     }, [debouncedSave]);
 
+    // Initialize file system watcher for auto-importing external files
+    useEffect(() => {
+        // Only start watcher after initial load is complete
+        if (isLoading) return;
+
+        let mounted = true;
+
+        const initFileWatcher = async () => {
+            try {
+                // @ts-ignore - Electron API
+                const result = await window.ipcRenderer?.invoke('start-workspace-watcher');
+                if (result?.success && mounted) {
+                    console.log('[Workspace] File watcher started:', result.watchPath);
+                }
+
+                // Don't auto-scan on startup - let user manually import if needed
+                // This prevents accidentally importing files that were already tracked
+            } catch (error) {
+                console.error('[Workspace] Failed to initialize file watcher:', error);
+            }
+        };
+
+        initFileWatcher();
+
+        // Listen for new files detected by watcher
+        const handleFileAdded = async (event: Event) => {
+            if (!mounted) return;
+
+            const customEvent = event as CustomEvent;
+            const { filePath, fileName, extension } = customEvent.detail;
+            console.log('[Workspace] New file detected:', fileName);
+
+            // Detect file type from extension
+            const fileType = detectFileType(fileName);
+            if (!fileType) {
+                console.log('[Workspace] Unsupported file type:', extension);
+                return;
+            }
+
+            // Check if file already exists in workspace
+            const existingFile = workspaceData.files.find(f => f.filePath === filePath);
+            if (existingFile) {
+                console.log('[Workspace] File already in workspace:', fileName);
+                return;
+            }
+
+            // Auto-import the file
+            try {
+                const now = new Date().toISOString();
+                const baseName = fileName.substring(0, fileName.lastIndexOf('.')) || fileName;
+                const newFile: WorkspaceFile = {
+                    id: crypto.randomUUID(),
+                    name: baseName,
+                    type: fileType,
+                    parentId: null, // Add to root
+                    createdAt: now,
+                    updatedAt: now,
+                    contentId: crypto.randomUUID(),
+                    filePath: filePath,
+                };
+
+                const updatedData = {
+                    ...workspaceData,
+                    files: [...workspaceData.files, newFile],
+                };
+
+                await saveWorkspaceData(updatedData);
+                console.log('[Workspace] Auto-imported file:', fileName);
+            } catch (error) {
+                console.error('[Workspace] Failed to auto-import file:', error);
+            }
+        };
+
+        const handleFileDeleted = async (event: Event) => {
+            if (!mounted) return;
+
+            const customEvent = event as CustomEvent;
+            const { filePath } = customEvent.detail;
+            console.log('[Workspace] File deleted:', filePath);
+
+            // Remove from workspace if it exists
+            const fileToRemove = workspaceData.files.find(f => f.filePath === filePath);
+            if (fileToRemove) {
+                const updatedData = {
+                    ...workspaceData,
+                    files: workspaceData.files.filter(f => f.id !== fileToRemove.id),
+                    openTabs: workspaceData.openTabs.filter(id => id !== fileToRemove.id),
+                    activeTabId: workspaceData.activeTabId === fileToRemove.id ? null : workspaceData.activeTabId,
+                };
+                await saveWorkspaceData(updatedData);
+                console.log('[Workspace] Removed deleted file from workspace');
+            }
+        };
+
+        // IPC event handlers that forward to custom events
+        const ipcFileAddedHandler = (_: any, data: any) => {
+            window.dispatchEvent(new CustomEvent('workspace-file-added', { detail: data }));
+        };
+
+        const ipcFileDeletedHandler = (_: any, data: any) => {
+            window.dispatchEvent(new CustomEvent('workspace-file-deleted', { detail: data }));
+        };
+
+        // @ts-ignore - Electron IPC events
+        window.ipcRenderer?.on('workspace-file-added', ipcFileAddedHandler);
+
+        // @ts-ignore - Electron IPC events
+        window.ipcRenderer?.on('workspace-file-deleted', ipcFileDeletedHandler);
+
+        window.addEventListener('workspace-file-added', handleFileAdded);
+        window.addEventListener('workspace-file-deleted', handleFileDeleted);
+
+        return () => {
+            mounted = false;
+            // @ts-ignore - Electron API
+            window.ipcRenderer?.invoke('stop-workspace-watcher').catch(console.error);
+
+            // Remove IPC listeners using 'off' method
+            // @ts-ignore - Electron IPC events
+            window.ipcRenderer?.off('workspace-file-added', ipcFileAddedHandler);
+            // @ts-ignore - Electron IPC events
+            window.ipcRenderer?.off('workspace-file-deleted', ipcFileDeletedHandler);
+
+            // Remove custom event listeners
+            window.removeEventListener('workspace-file-added', handleFileAdded);
+            window.removeEventListener('workspace-file-deleted', handleFileDeleted);
+        };
+    }, [isLoading, workspaceData, saveWorkspaceData]);
+
     // Get file content for linked notes graph
     const getFileContent = useCallback(async (fileId: string): Promise<string> => {
         const file = workspaceData.files.find(f => f.id === fileId);
@@ -818,10 +949,11 @@ export function WorkspacePage({
         if (isFolder) {
             const { fileIds, folderIds } = getDescendants(id, workspaceData.files, workspaceData.folders);
 
-            // Delete all files in the folder from disk
+            // Delete workspace files from disk (but not external document files)
             for (const fileId of fileIds) {
                 const file = workspaceData.files.find(f => f.id === fileId);
-                if (file?.filePath) {
+                if (file?.filePath && !isDocumentType(file.type)) {
+                    // Only delete actual workspace files, not external documents
                     // @ts-ignore
                     await window.ipcRenderer?.invoke('delete-workspace-file', file.filePath);
                 }
@@ -853,11 +985,17 @@ export function WorkspacePage({
                 expandedFolders: Array.from(expandedFolders).filter(fId => fId !== id && !folderIds.includes(fId)),
             });
         } else {
-            // Delete file from disk
+            // Delete file
             const file = workspaceData.files.find(f => f.id === id);
             if (file?.filePath) {
-                // @ts-ignore
-                await window.ipcRenderer?.invoke('delete-workspace-file', file.filePath);
+                if (isDocumentType(file.type)) {
+                    // External document file - only remove from workspace, don't delete actual file
+                    console.log('[Workspace] Removing external file from workspace (not deleting):', file.name);
+                } else {
+                    // Workspace file - delete from disk
+                    // @ts-ignore
+                    await window.ipcRenderer?.invoke('delete-workspace-file', file.filePath);
+                }
             }
 
             const updatedFiles = workspaceData.files.filter(f => f.id !== id);

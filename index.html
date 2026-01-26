@@ -9,7 +9,7 @@
   <!-- Fonts are now bundled locally for APPX/Store compatibility -->
   <!-- CSP allows local resources and APIs needed by the app -->
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://cdn.jsdelivr.net; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: file:; media-src 'self' https: data: blob:; font-src 'self' data:; connect-src 'self' https://*.googleapis.com https://*.openai.com https://api.perplexity.ai https://openrouter.ai https://api.github.com https://*.githubusercontent.com https://github-contributions-api.jogruber.de https://api.dictionaryapi.dev https://cdn.jsdelivr.net https://files.pythonhosted.org; frame-src 'self';">
+    content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://cdn.jsdelivr.net https://unpkg.com; worker-src 'self' blob: https://unpkg.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: file:; media-src 'self' https: data: blob:; font-src 'self' data:; connect-src 'self' https://*.googleapis.com https://*.openai.com https://api.perplexity.ai https://openrouter.ai https://api.github.com https://*.githubusercontent.com https://github-contributions-api.jogruber.de https://api.dictionaryapi.dev https://cdn.jsdelivr.net https://unpkg.com https://files.pythonhosted.org; frame-src 'self';">
   <!-- Pyodide loaded dynamically in Nerdbook.tsx -->
 </head>
 
