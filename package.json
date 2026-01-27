@@ -87,12 +87,16 @@
     "removePackageScripts": true,
     "extraResources": [
       {
-        "from": "public/Thoughts+.png",
-        "to": "Thoughts+.png"
+        "from": "public/ThoughtsPlus.png",
+        "to": "ThoughtsPlus.png"
       },
       {
         "from": "public/ThoughtsPlus.ico",
         "to": "ThoughtsPlus.ico"
+      },
+      {
+        "from": "public/app-icons",
+        "to": "app-icons"
       },
       "preload-config.json",
       ".env"

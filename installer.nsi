@@ -10,8 +10,8 @@ RequestExecutionLevel user
 
 ; Modern UI Configuration
 !define MUI_ABORTWARNING
-!define MUI_ICON "src\assets\Thoughts+.png"
-!define MUI_UNICON "src\assets\Thoughts+.png"
+!define MUI_ICON "src\assets\ThoughtsPlus.png"
+!define MUI_UNICON "src\assets\ThoughtsPlus.png"
 
 ; Pages
 !insertmacro MUI_PAGE_WELCOME

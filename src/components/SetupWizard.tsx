@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Folder, Sparkles, Github, Check, ChevronRight, ChevronLeft, BookOpen, Target, Sidebar as SidebarIcon, Heart } from 'lucide-react';
-import logoPng from '../assets/Thoughts+.png';
+import logoPng from '../assets/ThoughtsPlus.png';
 import clsx from 'clsx';
 import { useDashboardLayout, DashboardLayoutType } from '../contexts/DashboardLayoutContext';
 import { LayoutPreview } from './LayoutPreview';

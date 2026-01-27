@@ -606,15 +606,50 @@ async function tryMigrateLegacyData() {
 }
 
 function createWindow() {
-    // Use the icon from the app resources
+    // Use the icon from the app resources or user selection
     // Windows uses .ico for proper taskbar transparency, other platforms use .png
     let iconPath: string;
+    let iconName = 'ThoughtsPlus'; // Default
+
+    // Check device settings for custom icon (remove .ico extension if present)
+    if (deviceSettings.appIcon) {
+        iconName = deviceSettings.appIcon.replace('.ico', '').replace('.png', '');
+    }
+
     if (process.platform === 'win32') {
-        iconPath = app.isPackaged
+        // For packaged builds, check resources folder first, then fall back to VITE_PUBLIC
+        const customIconPathPackaged = app.isPackaged
+            ? path.join(process.resourcesPath, 'app-icons', `${iconName}.ico`)
+            : '';
+        const customIconPathDev = path.join(process.env.VITE_PUBLIC || '', 'app-icons', `${iconName}.ico`);
+        const defaultIconPath = app.isPackaged
             ? path.join(process.resourcesPath, 'ThoughtsPlus.ico')
             : path.join(process.env.VITE_PUBLIC || '', 'ThoughtsPlus.ico');
+
+        // Try packaged path first, then dev path, then default
+        if (iconName !== 'ThoughtsPlus' && app.isPackaged && existsSync(customIconPathPackaged)) {
+            iconPath = customIconPathPackaged;
+        } else if (iconName !== 'ThoughtsPlus' && existsSync(customIconPathDev)) {
+            iconPath = customIconPathDev;
+        } else {
+            iconPath = defaultIconPath;
+        }
     } else {
-        iconPath = path.join(process.env.VITE_PUBLIC || '', 'Thoughts+.png');
+        const customIconPathPackaged = app.isPackaged
+            ? path.join(process.resourcesPath, 'app-icons', `${iconName}.png`)
+            : '';
+        const customIconPathDev = path.join(process.env.VITE_PUBLIC || '', 'app-icons', `${iconName}.png`);
+        const defaultIconPath = app.isPackaged
+            ? path.join(process.resourcesPath, 'ThoughtsPlus.png')
+            : path.join(process.env.VITE_PUBLIC || '', 'ThoughtsPlus.png');
+
+        if (iconName !== 'ThoughtsPlus' && app.isPackaged && existsSync(customIconPathPackaged)) {
+            iconPath = customIconPathPackaged;
+        } else if (iconName !== 'ThoughtsPlus' && existsSync(customIconPathDev)) {
+            iconPath = customIconPathDev;
+        } else {
+            iconPath = defaultIconPath;
+        }
     }
 
     win = new BrowserWindow({
@@ -798,7 +833,73 @@ function setupIpcHandlers() {
     ipcMain.handle('set-setup-complete', async (_, complete) => {
         deviceSettings.setupComplete = complete;
         await saveDeviceSettings();
-        return true;
+    });
+
+    // App Icon Handler
+    ipcMain.handle('set-app-icon', async (_, iconName) => {
+        try {
+            deviceSettings.appIcon = iconName;
+            await saveDeviceSettings();
+
+            if (win) {
+                // Update the window icon immediately
+                const name = iconName.replace('.ico', '').replace('.png', '');
+                let iconPath: string;
+
+                if (process.platform === 'win32') {
+                    // For packaged builds, check resources folder first, then fall back to VITE_PUBLIC
+                    const customIconPathPackaged = app.isPackaged
+                        ? path.join(process.resourcesPath, 'app-icons', `${name}.ico`)
+                        : '';
+                    const customIconPathDev = path.join(process.env.VITE_PUBLIC || '', 'app-icons', `${name}.ico`);
+                    const defaultIconPath = app.isPackaged
+                        ? path.join(process.resourcesPath, 'ThoughtsPlus.ico')
+                        : path.join(process.env.VITE_PUBLIC || '', 'ThoughtsPlus.ico');
+
+                    // Try packaged path first, then dev path, then default
+                    if (name !== 'ThoughtsPlus' && app.isPackaged && existsSync(customIconPathPackaged)) {
+                        iconPath = customIconPathPackaged;
+                    } else if (name !== 'ThoughtsPlus' && existsSync(customIconPathDev)) {
+                        iconPath = customIconPathDev;
+                    } else {
+                        iconPath = defaultIconPath;
+                    }
+                } else {
+                    const customIconPathPackaged = app.isPackaged
+                        ? path.join(process.resourcesPath, 'app-icons', `${name}.png`)
+                        : '';
+                    const customIconPathDev = path.join(process.env.VITE_PUBLIC || '', 'app-icons', `${name}.png`);
+                    const defaultIconPath = app.isPackaged
+                        ? path.join(process.resourcesPath, 'ThoughtsPlus.png')
+                        : path.join(process.env.VITE_PUBLIC || '', 'ThoughtsPlus.png');
+
+                    if (name !== 'ThoughtsPlus' && app.isPackaged && existsSync(customIconPathPackaged)) {
+                        iconPath = customIconPathPackaged;
+                    } else if (name !== 'ThoughtsPlus' && existsSync(customIconPathDev)) {
+                        iconPath = customIconPathDev;
+                    } else {
+                        iconPath = defaultIconPath;
+                    }
+                }
+
+                const icon = nativeImage.createFromPath(iconPath);
+                if (!icon.isEmpty()) {
+                    win.setIcon(icon);
+                    console.log('Updated app icon to:', iconPath);
+                } else {
+                    console.error('Failed to load icon from path:', iconPath);
+                    return false;
+                }
+            }
+            return true;
+        } catch (e) {
+            console.error('Failed to set app icon:', e);
+            return false;
+        }
+    });
+
+    ipcMain.handle('get-app-icon', () => {
+        return deviceSettings.appIcon || 'ThoughtsPlus';
     });
 
     ipcMain.handle('get-onedrive-path', () => {

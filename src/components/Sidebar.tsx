@@ -4,8 +4,9 @@ import clsx from 'clsx';
 import { useState, useEffect } from 'react';
 import { Page, NotesData } from '../types';
 import { DEFAULT_SHORTCUTS, ShortcutConfig } from './KeyboardShortcuts';
-import logoPng from '../assets/Thoughts+.png';
+import logoPng from '../assets/ThoughtsPlus.png';
 import { useDashboardLayout } from '../contexts/DashboardLayoutContext';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface SidebarProps {
     currentPage: Page;
@@ -91,6 +92,7 @@ const months = [
 
 export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMonth, isCollapsed, toggleSidebar, showDev, isEditMode, isIconOnly = false }: SidebarProps) {
     const { layoutType } = useDashboardLayout();
+    const { appIcon } = useTheme();
     const [isCalendarOpen, setIsCalendarOpen] = useState(true);
     const [showShortcuts, setShowShortcuts] = useState(false);
     const [enabledFeatures, setEnabledFeatures] = useState({
@@ -526,7 +528,11 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                                 {/* Logo Area */}
                                 <div className={clsx("flex items-center shrink-0", isIconOnly ? "p-3 justify-center" : "p-6 gap-3")}>
                                     <div className={clsx("flex items-center justify-center shrink-0", isIconOnly ? "w-8 h-8" : "w-10 h-10")}>
-                                        <img src={logoPng} alt="Logo" className={isIconOnly ? "w-8 h-8" : "w-10 h-10"} />
+                                        <img
+                                            src={appIcon === 'ThoughtsPlus' ? logoPng : `/app-icons/${appIcon}.png`}
+                                            alt="Logo"
+                                            className={isIconOnly ? "w-8 h-8" : "w-10 h-10"}
+                                        />
                                     </div>
                                     {!isIconOnly && (
                                         <div className="flex flex-col">

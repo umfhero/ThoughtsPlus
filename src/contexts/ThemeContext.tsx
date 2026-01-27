@@ -27,6 +27,8 @@ interface ThemeContextType {
     accentColor: string;
     setTheme: (theme: ThemeType) => void;
     setAccentColor: (color: string) => void;
+    appIcon: string;
+    setAppIcon: (icon: string) => void;
     // Custom theme state
     customThemeColors: CustomThemeColors;
     setCustomThemeColors: (colors: Partial<CustomThemeColors>) => void;
@@ -214,6 +216,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const [savedThemes, setSavedThemes] = useState<SavedTheme[]>([]);
     const [activeThemeId, setActiveThemeId] = useState<string | null>(null);
     const [currentFont, setCurrentFont] = useState<string>('Inter');
+    const [appIcon, setAppIconState] = useState<string>('ThoughtsPlus');
 
     useEffect(() => {
         // Load theme from settings
@@ -222,6 +225,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
                 const savedTheme = await window.ipcRenderer?.invoke('get-global-setting', 'theme');
                 const savedAccent = await window.ipcRenderer?.invoke('get-global-setting', 'accentColor');
                 const savedFont = await window.ipcRenderer?.invoke('get-global-setting', 'font');
+                const savedIcon = await window.ipcRenderer?.invoke('get-app-icon');
 
                 // Load custom themes from storage
                 const savedCustomThemes = await window.ipcRenderer?.invoke('get-global-setting', CUSTOM_THEMES_STORAGE_KEY);
@@ -252,6 +256,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
                 }
                 if (savedAccent) setAccentColorState(savedAccent);
                 if (savedFont) setCurrentFont(savedFont);
+                if (savedIcon) setAppIconState(savedIcon);
             } catch (e) {
                 console.log('Using default light theme');
             } finally {
@@ -316,6 +321,15 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
             await window.ipcRenderer?.invoke('save-global-setting', 'accentColor', color);
         } catch (e) {
             console.error('Failed to save accent color', e);
+        }
+    };
+
+    const setAppIcon = async (icon: string) => {
+        setAppIconState(icon);
+        try {
+            await window.ipcRenderer?.invoke('set-app-icon', icon);
+        } catch (e) {
+            console.error('Failed to save app icon', e);
         }
     };
 
@@ -429,6 +443,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
             accentColor,
             setTheme,
             setAccentColor,
+            appIcon,
+            setAppIcon,
             customThemeColors,
             setCustomThemeColors,
             savedThemes,

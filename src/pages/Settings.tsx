@@ -16,6 +16,7 @@ import { KeyboardShortcuts } from '../components/KeyboardShortcuts';
 import { getAppVersion } from '../utils/version';
 import { TutorialGallery } from '../components/TutorialGallery';
 import { TextGuide } from '../components/TextGuide';
+import logoPng from '../assets/ThoughtsPlus.png';
 
 
 // Types for multi-provider configuration
@@ -115,7 +116,11 @@ export function SettingsPage() {
     const [notificationSound, setNotificationSound] = useState(true);
     const [quietMode, setQuietMode] = useState(false);
 
-    const { theme, accentColor, setTheme, setAccentColor, customThemeColors, setCustomThemeColors, savedThemes, saveCurrentTheme, loadTheme, deleteTheme, updateTheme } = useTheme();
+    // App Icon change tracking
+    const [iconJustChanged, setIconJustChanged] = useState(false);
+    const [initialAppIcon, setInitialAppIcon] = useState<string>('');
+
+    const { theme, accentColor, setTheme, setAccentColor, appIcon, setAppIcon, customThemeColors, setCustomThemeColors, savedThemes, saveCurrentTheme, loadTheme, deleteTheme, updateTheme } = useTheme();
     const { addNotification, isSuppressed, toggleSuppression } = useNotification();
     const { layoutType, setLayoutType, sidebarIconOnly, setSidebarIconOnly, effectiveSidebarIconOnly, focusCentricFont, setFocusCentricFont } = useDashboardLayout();
 
@@ -129,6 +134,9 @@ export function SettingsPage() {
         loadCurrentVersion();
         loadContributors();
         loadMultiProviderConfig();
+
+        // Store initial app icon
+        setInitialAppIcon(appIcon);
 
         // Listen for feature toggle changes from other components (e.g., Quick Note modal)
         const handleFeatureToggleChange = (event: CustomEvent) => {
@@ -428,6 +436,14 @@ export function SettingsPage() {
         setGithubSaved(true);
         setTimeout(() => setGithubSaved(false), 2000);
         addNotification({ title: 'Settings Saved', message: 'GitHub configuration updated.', type: 'success' });
+    };
+
+    const handleAppIconChange = async (iconName: string) => {
+        await setAppIcon(iconName);
+        // Only show the restart note if the icon actually changed
+        if (iconName !== initialAppIcon) {
+            setIconJustChanged(true);
+        }
     };
 
     // const saveCreatorCodes = async () => {
@@ -1341,8 +1357,12 @@ export function SettingsPage() {
                                             "px-4 py-2.5 rounded-xl font-medium text-sm transition-all flex items-center gap-2 shadow-md shrink-0",
                                             userNameSaved
                                                 ? "bg-green-500 text-white shadow-green-500/20"
-                                                : "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                : "text-white disabled:opacity-50 disabled:cursor-not-allowed"
                                         )}
+                                        style={{
+                                            backgroundColor: !userNameSaved ? accentColor : undefined,
+                                            boxShadow: !userNameSaved ? `0 4px 6px -1px ${accentColor}20` : undefined
+                                        }}
                                     >
                                         {userNameSaved ? (
                                             <>Saved <Check className="w-4 h-4" /></>
@@ -1395,7 +1415,11 @@ export function SettingsPage() {
                                     <div className="flex gap-2">
                                         <button
                                             onClick={handleSelectFolder}
-                                            className="px-4 py-2 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-semibold text-sm hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors shrink-0"
+                                            style={{
+                                                backgroundColor: `${accentColor}10`,
+                                                color: accentColor
+                                            }}
+                                            className="px-4 py-2 rounded-xl font-semibold text-sm transition-all shrink-0 hover:opacity-80"
                                         >
                                             Change Folder
                                         </button>
@@ -1861,8 +1885,11 @@ export function SettingsPage() {
                                             <button
                                                 key={color}
                                                 onClick={() => setAccentColor(color)}
-                                                className="w-full aspect-square rounded-full transition-all hover:scale-110 hover:shadow-md relative border border-transparent hover:border-gray-300 dark:hover:border-gray-500 shrink-0"
-                                                style={{ backgroundColor: color }}
+                                                className="w-full aspect-square rounded-full transition-all hover:scale-110 hover:shadow-md relative border border-transparent shrink-0"
+                                                style={{
+                                                    backgroundColor: color,
+                                                    borderColor: accentColor === color ? accentColor : 'transparent'
+                                                }}
                                                 title={color}
                                             >
                                                 {accentColor === color && (
@@ -1890,11 +1917,15 @@ export function SettingsPage() {
                                         <button
                                             key={font.name}
                                             onClick={() => handleFontChange(font.name)}
+                                            style={{
+                                                borderColor: currentFont === font.name ? accentColor : undefined,
+                                                backgroundColor: currentFont === font.name ? `${accentColor}10` : undefined
+                                            }}
                                             className={clsx(
                                                 "shrink-0 px-5 py-3 rounded-lg border text-left transition-all min-w-[120px]",
                                                 currentFont === font.name
-                                                    ? "bg-blue-50 dark:bg-blue-900/20 border-blue-500"
-                                                    : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-blue-300"
+                                                    ? ""
+                                                    : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
                                             )}
                                         >
                                             <div className="flex flex-col items-center gap-1">
@@ -1903,24 +1934,32 @@ export function SettingsPage() {
                                             </div>
                                             {currentFont === font.name && (
                                                 <div className="flex justify-center mt-1">
-                                                    <Check className="w-3 h-3 text-blue-500" />
+                                                    <Check className="w-3 h-3" style={{ color: accentColor }} />
                                                 </div>
                                             )}
                                         </button>
                                     ))}
                                     <label className={clsx(
-                                        "shrink-0 px-4 py-2 rounded-lg border text-left transition-all cursor-pointer bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-blue-300 min-w-[100px] flex flex-col items-center justify-center gap-1",
-                                        currentFont === 'CustomFont' && "border-blue-500"
-                                    )}>
+                                        "shrink-0 px-4 py-2 rounded-lg border text-left transition-all cursor-pointer bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 min-w-[100px] flex flex-col items-center justify-center gap-1",
+                                        currentFont === 'CustomFont' && ""
+                                    )}
+                                        style={{
+                                            borderColor: currentFont === 'CustomFont' ? accentColor : undefined,
+                                            backgroundColor: currentFont === 'CustomFont' ? `${accentColor}10` : undefined
+                                        }}
+                                    >
                                         <Type className="w-5 h-5 text-gray-500" />
                                         <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Custom</span>
                                         <input type="file" className="hidden" accept=".ttf,.otf,.woff,.woff2" onChange={(e) => {
                                             if (e.target.files?.[0]) handleFontChange('CustomFont', 'custom', e.target.files[0]);
                                         }} />
-                                        {currentFont === 'CustomFont' && <Check className="w-3 h-3 text-blue-500 mt-1" />}
+                                        {currentFont === 'CustomFont' && <Check className="w-3 h-3 mt-1" style={{ color: accentColor }} />}
                                     </label>
                                 </div>
                             </div>
+
+
+
                         </div>
 
                         {/* Right Column: Theme Mode with Custom Option */}
@@ -1932,20 +1971,23 @@ export function SettingsPage() {
                                     onClick={() => setTheme('light')}
                                     className="group flex flex-col gap-2 cursor-pointer"
                                 >
-                                    <div className={clsx(
-                                        "relative w-full aspect-[4/3] rounded-xl border-2 transition-all overflow-hidden",
-                                        theme === 'light'
-                                            ? "border-blue-500 ring-2 ring-blue-500/20"
-                                            : "border-gray-200 dark:border-gray-700 group-hover:border-gray-300 dark:group-hover:border-gray-600"
-                                    )}>
-                                        <ThemePreview mode="light" accent={accentColor} font={currentFont} sidebarIconOnly={sidebarIconOnly} />
-                                        {theme === 'light' && (
-                                            <div className="absolute inset-0 ring-1 ring-inset ring-blue-500/10 rounded-xl" />
+                                    <div
+                                        className={clsx(
+                                            "relative w-full aspect-[4/3] rounded-xl border-2 transition-all overflow-hidden",
+                                            theme === 'light'
+                                                ? ""
+                                                : "border-gray-200 dark:border-gray-700 group-hover:border-gray-300 dark:group-hover:border-gray-600"
                                         )}
+                                        style={{
+                                            borderColor: theme === 'light' ? accentColor : undefined,
+                                            boxShadow: theme === 'light' ? `0 0 0 2px ${accentColor}20` : undefined
+                                        }}
+                                    >
+                                        <ThemePreview mode="light" accent={accentColor} font={currentFont} sidebarIconOnly={sidebarIconOnly} />
                                     </div>
                                     <div className="flex items-center justify-center gap-1.5">
-                                        <span className={clsx("text-xs font-semibold", theme === 'light' ? "text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-400")}>Light</span>
-                                        {theme === 'light' && <Check className="w-3 h-3 text-blue-500" />}
+                                        <span className={clsx("text-xs font-semibold", theme === 'light' ? "" : "text-gray-600 dark:text-gray-400")} style={{ color: theme === 'light' ? accentColor : undefined }}>Light</span>
+                                        {theme === 'light' && <Check className="w-3 h-3" style={{ color: accentColor }} />}
                                     </div>
                                 </button>
 
@@ -1954,17 +1996,23 @@ export function SettingsPage() {
                                     onClick={() => setTheme('dark')}
                                     className="group flex flex-col gap-2 cursor-pointer"
                                 >
-                                    <div className={clsx(
-                                        "relative w-full aspect-[4/3] rounded-xl border-2 transition-all overflow-hidden",
-                                        theme === 'dark'
-                                            ? "border-purple-500 ring-2 ring-purple-500/20"
-                                            : "border-gray-200 dark:border-gray-700 group-hover:border-gray-300 dark:group-hover:border-gray-600"
-                                    )}>
+                                    <div
+                                        className={clsx(
+                                            "relative w-full aspect-[4/3] rounded-xl border-2 transition-all overflow-hidden",
+                                            theme === 'dark'
+                                                ? ""
+                                                : "border-gray-200 dark:border-gray-700 group-hover:border-gray-300 dark:group-hover:border-gray-600"
+                                        )}
+                                        style={{
+                                            borderColor: theme === 'dark' ? accentColor : undefined,
+                                            boxShadow: theme === 'dark' ? `0 0 0 2px ${accentColor}20` : undefined
+                                        }}
+                                    >
                                         <ThemePreview mode="dark" accent={accentColor} font={currentFont} sidebarIconOnly={sidebarIconOnly} />
                                     </div>
                                     <div className="flex items-center justify-center gap-1.5">
-                                        <span className={clsx("text-xs font-semibold", theme === 'dark' ? "text-purple-500" : "text-gray-600 dark:text-gray-400")}>Dark</span>
-                                        {theme === 'dark' && <Check className="w-3 h-3 text-purple-500" />}
+                                        <span className={clsx("text-xs font-semibold", theme === 'dark' ? "" : "text-gray-600 dark:text-gray-400")} style={{ color: theme === 'dark' ? accentColor : undefined }}>Dark</span>
+                                        {theme === 'dark' && <Check className="w-3 h-3" style={{ color: accentColor }} />}
                                     </div>
                                 </button>
 
@@ -1973,17 +2021,23 @@ export function SettingsPage() {
                                     onClick={() => setTheme('custom')}
                                     className="group flex flex-col gap-2 cursor-pointer"
                                 >
-                                    <div className={clsx(
-                                        "relative w-full aspect-[4/3] rounded-xl border-2 transition-all overflow-hidden",
-                                        theme === 'custom'
-                                            ? "border-pink-500 ring-2 ring-pink-500/20"
-                                            : "border-gray-200 dark:border-gray-700 group-hover:border-gray-300 dark:group-hover:border-gray-600"
-                                    )}>
+                                    <div
+                                        className={clsx(
+                                            "relative w-full aspect-[4/3] rounded-xl border-2 transition-all overflow-hidden",
+                                            theme === 'custom'
+                                                ? ""
+                                                : "border-gray-200 dark:border-gray-700 group-hover:border-gray-300 dark:group-hover:border-gray-600"
+                                        )}
+                                        style={{
+                                            borderColor: theme === 'custom' ? accentColor : undefined,
+                                            boxShadow: theme === 'custom' ? `0 0 0 2px ${accentColor}20` : undefined
+                                        }}
+                                    >
                                         <ThemePreview mode="custom" accent={accentColor} colors={customThemeColors} font={currentFont} sidebarIconOnly={sidebarIconOnly} />
                                     </div>
                                     <div className="flex items-center justify-center gap-1.5">
-                                        <span className={clsx("text-xs font-semibold", theme === 'custom' ? "text-pink-500" : "text-gray-600 dark:text-gray-400")}>Custom</span>
-                                        {theme === 'custom' && <Check className="w-3 h-3 text-pink-500" />}
+                                        <span className={clsx("text-xs font-semibold", theme === 'custom' ? "" : "text-gray-600 dark:text-gray-400")} style={{ color: theme === 'custom' ? accentColor : undefined }}>Custom</span>
+                                        {theme === 'custom' && <Check className="w-3 h-3" style={{ color: accentColor }} />}
                                     </div>
                                 </button>
                             </div>
@@ -1993,24 +2047,31 @@ export function SettingsPage() {
                                 <button
                                     onClick={() => setSidebarIconOnly(!sidebarIconOnly)}
                                     disabled={LAYOUT_CONFIGS[layoutType]?.forceIconOnlySidebar}
+                                    style={{
+                                        borderColor: effectiveSidebarIconOnly ? accentColor : undefined,
+                                        backgroundColor: effectiveSidebarIconOnly ? `${accentColor}10` : undefined
+                                    }}
                                     className={clsx(
                                         "w-full p-2 rounded-xl border-2 transition-all text-left flex items-center justify-between",
                                         effectiveSidebarIconOnly
-                                            ? "border-blue-500 bg-blue-50/50 dark:bg-blue-900/10"
+                                            ? ""
                                             : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600",
                                         LAYOUT_CONFIGS[layoutType]?.forceIconOnlySidebar && "opacity-50 cursor-not-allowed"
                                     )}
                                 >
                                     <div className="flex items-center gap-2">
-                                        <SidebarIcon className={clsx("w-4 h-4", effectiveSidebarIconOnly ? "text-blue-500" : "text-gray-500")} />
+                                        <SidebarIcon className={clsx("w-4 h-4")} style={{ color: effectiveSidebarIconOnly ? accentColor : undefined }} />
                                         <div className="flex flex-col">
-                                            <span className={clsx("text-xs font-semibold", effectiveSidebarIconOnly ? "text-blue-700 dark:text-blue-300" : "text-gray-600 dark:text-gray-400")}>Icon-Only Sidebar</span>
+                                            <span className={clsx("text-xs font-semibold")} style={{ color: effectiveSidebarIconOnly ? accentColor : undefined }}>Icon-Only Sidebar</span>
                                         </div>
                                     </div>
-                                    <div className={clsx(
-                                        "w-8 h-4 rounded-full p-0.5 transition-colors duration-300",
-                                        effectiveSidebarIconOnly ? "bg-blue-500" : "bg-gray-300 dark:bg-gray-600"
-                                    )}>
+                                    <div
+                                        className={clsx(
+                                            "w-8 h-4 rounded-full p-0.5 transition-colors duration-300",
+                                            effectiveSidebarIconOnly ? "" : "bg-gray-300 dark:bg-gray-600"
+                                        )}
+                                        style={{ backgroundColor: effectiveSidebarIconOnly ? accentColor : undefined }}
+                                    >
                                         <div className={clsx("w-3 h-3 rounded-full bg-white shadow-sm transition-transform duration-300", effectiveSidebarIconOnly ? "translate-x-4" : "translate-x-0")} />
                                     </div>
                                 </button>
@@ -2086,6 +2147,75 @@ export function SettingsPage() {
                         </div>
                     </div>
 
+                    {/* App Icon Selection */}
+                    <div className="mt-6">
+                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 truncate">App Icon</p>
+                        <div className="flex flex-wrap gap-3 w-full">
+                            {[
+                                { name: 'ThoughtsPlus', display: 'Default' },
+                                { name: 'Blue', display: 'Ocean' },
+                                { name: 'Emerald', display: 'Emerald' },
+                                { name: 'Grey', display: 'Slate' },
+                                { name: 'Pink', display: 'Rose' },
+                                { name: 'Violet', display: 'Violet' },
+                                { name: 'Yellow', display: 'Amber' },
+                            ].map(icon => (
+                                <button
+                                    key={icon.name}
+                                    onClick={() => handleAppIconChange(icon.name)}
+                                    style={{
+                                        borderColor: appIcon === icon.name ? accentColor : 'transparent',
+                                        backgroundColor: appIcon === icon.name ? `${accentColor}10` : undefined
+                                    }}
+                                    className={clsx(
+                                        "group flex flex-col items-center gap-1.5 p-2 rounded-xl transition-all border-2 flex-1 min-w-[80px] max-w-[100px]",
+                                        appIcon === icon.name
+                                            ? ""
+                                            : "border-transparent hover:bg-gray-100 dark:hover:bg-gray-700/50"
+                                    )}
+                                    title={`Set icon to ${icon.display}`}
+                                >
+                                    <div className={clsx(
+                                        "w-10 h-10 rounded-lg flex items-center justify-center transition-transform group-hover:scale-110",
+                                        appIcon === icon.name ? "drop-shadow-md" : "opacity-80 group-hover:opacity-100"
+                                    )}>
+                                        <img
+                                            src={icon.name === 'ThoughtsPlus' ? logoPng : `/app-icons/${icon.name}.png`}
+                                            alt={icon.display}
+                                            className="w-full h-full object-contain"
+                                        />
+                                    </div>
+                                    <span
+                                        className={clsx(
+                                            "text-[10px] font-medium truncate w-full text-center",
+                                            appIcon === icon.name ? "" : "text-gray-600 dark:text-gray-400"
+                                        )}
+                                        style={{ color: appIcon === icon.name ? accentColor : undefined }}
+                                    >
+                                        {icon.display}
+                                    </span>
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Show restart note only if icon was changed */}
+                        <AnimatePresence>
+                            {iconJustChanged && (
+                                <motion.div
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: 'auto' }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    className="mt-3 flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg"
+                                >
+                                    <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                                    <p className="text-xs text-blue-700 dark:text-blue-300">
+                                        Note: Taskbar icon will update after restarting the app.
+                                    </p>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+
                     {/* Dashboard Layouts - Horizontal Scroll */}
                     <div className="mt-6">
                         <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 truncate">Dashboard Layout</p>
@@ -2097,10 +2227,14 @@ export function SettingsPage() {
                                     <button
                                         key={type}
                                         onClick={() => setLayoutType(type)}
+                                        style={{
+                                            borderColor: isSelected ? accentColor : undefined,
+                                            backgroundColor: isSelected ? `${accentColor}10` : undefined
+                                        }}
                                         className={clsx(
                                             "group relative p-2 rounded-xl border-2 transition-all text-left overflow-hidden min-w-[200px] flex-shrink-0",
                                             isSelected
-                                                ? "border-blue-500 bg-blue-50/50 dark:bg-blue-900/20"
+                                                ? ""
                                                 : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
                                         )}
                                     >
@@ -2114,14 +2248,17 @@ export function SettingsPage() {
                                         </div>
                                         <div className="flex items-center justify-between min-w-0">
                                             <div className="min-w-0 flex-1">
-                                                <span className={clsx(
-                                                    "text-sm font-semibold block truncate",
-                                                    isSelected ? "text-blue-700 dark:text-blue-300" : "text-gray-700 dark:text-gray-300"
-                                                )}>
+                                                <span
+                                                    className={clsx(
+                                                        "text-sm font-semibold block truncate",
+                                                        isSelected ? "" : "text-gray-700 dark:text-gray-300"
+                                                    )}
+                                                    style={{ color: isSelected ? accentColor : undefined }}
+                                                >
                                                     {config.name}
                                                 </span>
                                             </div>
-                                            {isSelected && <Check className="w-4 h-4 text-blue-500 flex-shrink-0 ml-2" />}
+                                            {isSelected && <Check className="w-4 h-4 flex-shrink-0 ml-2" style={{ color: accentColor }} />}
                                         </div>
                                     </button>
                                 );

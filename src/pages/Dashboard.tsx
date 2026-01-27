@@ -17,7 +17,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { fetchGithubContributions } from '../utils/github';
 import confetti from 'canvas-confetti';
 import { useDashboardLayout } from '../contexts/DashboardLayoutContext';
-import logoPng from '../assets/Thoughts+.png';
+import logoPng from '../assets/ThoughtsPlus.png';
 
 interface DashboardProps {
     notes: NotesData;

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Download, X } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { getAppVersion } from '../utils/version';
-import logoPng from '../assets/Thoughts+.png';
+import logoPng from '../assets/ThoughtsPlus.png';
 
 interface UpdateInfo {
     available: boolean;
