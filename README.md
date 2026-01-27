@@ -1,7 +1,6 @@
 <div align="center">
   <img src="git/newpics/thoughtsplus/banner.png" alt="ThoughtsPlus Banner" width="100%" style="border-radius: 15px; overflow: hidden;" />
 
-![Microsoft Store](https://img.shields.io/badge/dynamic/json?url=https://raw.githubusercontent.com/umfhero/ThoughtsPlus/HEAD/version.json&query=$.msstore_version&label=Microsoft%20Store&color=0078D4&logo=microsoft)
 ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/umfhero/ThoughtsPlus/total)
 ![GitHub last commit](https://img.shields.io/github/last-commit/umfhero/ThoughtsPlus)
 ![GitHub stars](https://img.shields.io/github/stars/umfhero/ThoughtsPlus?style=social)
@@ -19,8 +18,8 @@
 | Platform | Formats | Architecture |
 |----------|---------|--------------|
 | **Windows** | Microsoft Store (APPX), Installer (EXE) | x64 |
-| **macOS** | DMG, ZIP | Intel (x64), Apple Silicon (arm64) |
-| **Linux** | AppImage, DEB, RPM | x64 |
+| **macOS** | DMG | Intel (x64), Apple Silicon (arm64) |
+| **Linux** | AppImage | x64 |
 
 > **Note:** macOS and Linux builds are available as community releases. For the best experience on Windows, use the Microsoft Store version for automatic updates.
 
@@ -233,14 +232,14 @@ ThoughtsPlus is primarily built and tested for **Windows**. However, since it's 
 
 **AppImage (Universal):**
 ```bash
-# Download
-wget https://github.com/umfhero/ThoughtsPlus/releases/latest/download/ThoughtsPlus-6.0.7-x86_64.AppImage
+# Download from GitHub Releases
+wget https://github.com/umfhero/ThoughtsPlus/releases/latest/download/ThoughtsPlus-6.0.8-x86_64.AppImage
 
 # Make executable
-chmod +x ThoughtsPlus-6.0.7-x86_64.AppImage
+chmod +x ThoughtsPlus-6.0.8-x86_64.AppImage
 
 # Run
-./ThoughtsPlus-6.0.7-x86_64.AppImage
+./ThoughtsPlus-6.0.8-x86_64.AppImage
 ```
 
 **Requirements:**
@@ -279,9 +278,9 @@ npm run build:all          # All platforms
 ```
 
 **Output Locations:**
-- Windows: `release/ThoughtsPlus-Setup-6.0.7.exe`
-- macOS: `release/ThoughtsPlus-6.0.7-x64.dmg` and `ThoughtsPlus-6.0.7-arm64.dmg`
-- Linux: `release/ThoughtsPlus-6.0.7-x86_64.AppImage`
+- Windows: `release/ThoughtsPlus-Setup-6.0.8.exe`
+- macOS: `release/ThoughtsPlus-6.0.8-x64.dmg` and `ThoughtsPlus-6.0.8-arm64.dmg`
+- Linux: `release/ThoughtsPlus-6.0.8-x86_64.AppImage`
 
 **Note:** Cross-platform builds work best on their native OS. For automated multi-platform builds, the repository includes GitHub Actions workflows.
 
