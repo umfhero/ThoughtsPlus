@@ -5,7 +5,7 @@
 
 // This should match the version in package.json
 // It's used as a fallback when IPC calls fail (e.g., in browser dev mode)
-export const APP_VERSION = '6.0.8';
+export const APP_VERSION = '6.0.6';
 
 /**
  * Fetches the current app version from the main process
