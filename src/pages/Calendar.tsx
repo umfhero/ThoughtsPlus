@@ -502,7 +502,7 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
                             <p className="text-sm md:text-base text-gray-500 dark:text-gray-400">Manage your events and notes</p>
                         </div>
 
-                        <div className="flex flex-col sm:flex-row items-center gap-3 bg-white dark:bg-gray-800 p-1.5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 w-full md:w-auto">
+                        <div className="flex flex-col sm:flex-row items-center gap-3 bg-white dark:bg-gray-800 p-1.5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 w-full md:w-auto" data-flat-toolbar>
                             <div className="relative w-full sm:w-auto">
                                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                                 <input
@@ -528,7 +528,7 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2 bg-white dark:bg-gray-800 p-1.5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 self-end xl:self-auto">
+                    <div className="flex items-center gap-2 bg-white dark:bg-gray-800 p-1.5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 self-end xl:self-auto" data-flat-toolbar>
                         <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={prevMonth} className="p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl transition-colors text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">
                             <ChevronLeft className="w-5 h-5" />
                         </motion.button>

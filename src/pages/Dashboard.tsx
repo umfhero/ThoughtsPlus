@@ -14,6 +14,7 @@ import { useNotification } from '../contexts/NotificationContext';
 import { ActivityCalendar, Activity } from 'react-activity-calendar';
 import { GithubActivity3D } from '../components/GithubActivity3D';
 import { useTheme } from '../contexts/ThemeContext';
+import { useFlatGridDividers } from '../hooks/useFlatGridDividers';
 import { fetchGithubContributions } from '../utils/github';
 import confetti from 'canvas-confetti';
 import { useDashboardLayout } from '../contexts/DashboardLayoutContext';
@@ -187,7 +188,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, isL
     const years = Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - i);
     const [githubUsername, setGithubUsername] = useState<string>('');
     const [creatorCodes, setCreatorCodes] = useState<string[]>([]);
-    const { accentColor, theme } = useTheme();
+    const { accentColor, theme, containersEnabled } = useTheme();
     const [enabledFeatures, setEnabledFeatures] = useState({
         calendar: true,
         notebook: true,
@@ -209,6 +210,8 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, isL
     const [blockSize, setBlockSize] = useState(12);
     const githubContributionsRef = useRef<HTMLDivElement>(null);
     const [calendarViewDate, setCalendarViewDate] = useState(new Date());
+
+    useFlatGridDividers(!containersEnabled, [layoutType, isEditMode]);
 
     // Board Preview State - Now stores up to 3 most recently accessed boards
     type BoardPreview = {
@@ -3023,7 +3026,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, isL
                     </p>
                 </motion.div>
 
-                <div className="flex gap-6 h-[calc(100%-80px)]">
+                <div className="flex gap-6 h-[calc(100%-80px)]" data-flat-grid>
                     {/* Left: Timeline */}
                     <motion.div
                         initial={{ opacity: 0, x: -20 }}
@@ -3190,7 +3193,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, isL
                     </p>
                 </motion.div>
 
-                <div className="flex gap-6 h-[calc(100%-80px)]">
+                <div className="flex gap-6 h-[calc(100%-80px)]" data-flat-grid>
                     {/* Left: Calendar */}
                     <motion.div
                         initial={{ opacity: 0, x: -20 }}
@@ -3357,6 +3360,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, isL
                 animate={{ y: 0, scale: 1 }}
                 transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0 }}
                 className="flex flex-col gap-1"
+                data-flat-bottom
             >
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
                     <h1 className="text-2xl md:text-4xl font-bold text-gray-800 dark:text-gray-100 tracking-tight">
@@ -3383,6 +3387,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, isL
                     setDashboardLayout(newLayout);
                 }}
                 className="space-y-6 md:space-y-8"
+                data-flat-grid
                 style={{
                     transform: isEditMode ? 'scale(0.95)' : 'none',
                     transformOrigin: 'top center',
@@ -3502,12 +3507,13 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, isL
                                     </div>
                                 ) : (
                                     // 2-Widget Row (Side by Side)
-                                    <div className="relative flex gap-4 h-[500px]" style={{ height: row.height ? `${row.height}px` : '500px' }}>
+                                    <div className="relative flex gap-4 h-[500px]" style={{ height: row.height ? `${row.height}px` : '500px' }} data-flat-grid>
                                         {isEditMode && (
                                             <>
                                                 <button
                                                     onClick={() => separateWidget(visibleWidgets[0], row.id)}
                                                     className="absolute -top-3 left-[48%] z-50 p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 rounded-full shadow-sm hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-200 dark:hover:border-blue-800 transition-all duration-200"
+                                                    data-flat-ignore
                                                     title="Separate widgets"
                                                 >
                                                     <X className="w-4 h-4" />
@@ -3515,6 +3521,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, isL
                                                 <button
                                                     onClick={() => toggleWidgetVisibility(visibleWidgets[1])}
                                                     className="absolute -top-3 -right-3 z-50 p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 rounded-full shadow-sm hover:text-red-600 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-800 transition-all duration-200"
+                                                    data-flat-ignore
                                                     title="Hide right widget"
                                                 >
                                                     <Trash2 className="w-4 h-4" />
@@ -3522,6 +3529,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, isL
                                                 <button
                                                     onClick={() => toggleWidgetVisibility(visibleWidgets[0])}
                                                     className="absolute -top-3 -left-3 z-50 p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 rounded-full shadow-sm hover:text-red-600 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-800 transition-all duration-200"
+                                                    data-flat-ignore
                                                     title="Hide left widget"
                                                 >
                                                     <Trash2 className="w-4 h-4" />
@@ -3537,6 +3545,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, isL
                                         {/* Width Resizer */}
                                         <div
                                             className="w-4 cursor-col-resize flex items-center justify-center hover:bg-blue-500/20 rounded z-40 transition-colors"
+                                            data-flat-ignore
                                             onMouseDown={(e) => {
                                                 e.preventDefault();
                                                 const startX = e.clientX;
@@ -3576,6 +3585,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, isL
                                         {/* Row Height Resize Handle */}
                                         <div
                                             className="absolute bottom-0 left-0 right-0 h-4 flex items-center justify-center cursor-row-resize hover:bg-gray-50/50 dark:hover:bg-gray-700/50 rounded-b-[2rem] transition-colors group/handle z-30"
+                                            data-flat-ignore
                                             onMouseDown={(e) => { handleLongPressEnd(); handleRowHeightMouseDown(e, row); }}
                                         >
                                             <div className="w-12 h-1 bg-gray-200 dark:bg-gray-600 rounded-full transition-colors shadow-sm" style={{ '--tw-bg-opacity': 1 } as any} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = accentColor} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ''} />

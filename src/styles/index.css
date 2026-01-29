@@ -957,7 +957,8 @@ body.is-scrolling ::-webkit-scrollbar-thumb {
 
 /* Only remove shadows on the outermost page container level */
 .flat-mode:not([data-page="workspace"]) [class*="shadow-xl"],
-.flat-mode:not([data-page="workspace"]) [class*="shadow-lg"] {
+.flat-mode:not([data-page="workspace"]) [class*="shadow-lg"],
+.flat-mode:not([data-page="workspace"]) [class*="shadow-2xl"] {
   box-shadow: none !important;
 }
 
@@ -973,143 +974,244 @@ body.is-scrolling ::-webkit-scrollbar-thumb {
   /* Allow pseudo-element lines to show */
 }
 
-/* ====== HORIZONTAL LINES BELOW STANDALONE CONTAINERS ====== */
-/* Full-width containers (with mb-6): straight horizontal line at bottom with edge fade */
-.flat-mode:not([data-page="workspace"]) [class*="mb-6"][class*="rounded-3xl"][class*="p-6"]:not(.grid *) {
-  position: relative;
+/* Dashboard + Progress: flatten rounded-2xl and rounded-[2rem] cards */
+.flat-mode[data-page="dashboard"] [class*="rounded-2xl"][class*="bg-white"],
+.flat-mode[data-page="dashboard"] [class*="rounded-[2rem]"][class*="bg-white"],
+.flat-mode[data-page="progress"] [class*="rounded-2xl"][class*="bg-white"],
+.flat-mode[data-page="progress"] [class*="rounded-[2rem]"][class*="bg-white"] {
+  background-color: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  overflow: visible !important;
 }
 
-.flat-mode:not([data-page="workspace"]) [class*="mb-6"][class*="rounded-3xl"][class*="p-6"]:not(.grid *)::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  height: 1px;
-  background: linear-gradient(to right,
-      transparent 0%,
-      rgba(156, 163, 175, 0.4) 5%,
-      rgba(156, 163, 175, 0.4) 95%,
-      transparent 100%);
-  z-index: 10;
+.flat-mode.dark[data-page="dashboard"] [class*="rounded-2xl"][class*="bg-gray-800"],
+.flat-mode.dark[data-page="dashboard"] [class*="rounded-[2rem]"][class*="bg-gray-800"],
+.flat-mode.dark[data-page="progress"] [class*="rounded-2xl"][class*="bg-gray-800"],
+.flat-mode.dark[data-page="progress"] [class*="rounded-[2rem]"][class*="bg-gray-800"] {
+  background-color: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  overflow: visible !important;
 }
 
-.flat-mode.dark:not([data-page="workspace"]) [class*="mb-6"][class*="rounded-3xl"][class*="p-6"]:not(.grid *)::after {
-  background: linear-gradient(to right,
-      transparent 0%,
-      rgba(107, 114, 128, 0.4) 5%,
-      rgba(107, 114, 128, 0.4) 95%,
-      transparent 100%);
+/* Calendar (light touch): flatten toolbar chrome only */
+.flat-mode[data-page="calendar"] [data-flat-toolbar] {
+  background-color: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
 }
 
-/* ====== GRID CONTAINER SETUP ====== */
-.flat-mode:not([data-page="workspace"]) .grid[class*="grid-cols"][class*="gap-"] {
-  position: relative;
-}
-
-/* Horizontal line ABOVE grid containers (for Feature Toggles, etc.) */
-.flat-mode:not([data-page="workspace"]) .grid[class*="grid-cols"][class*="gap-"][class*="mb-"]::before {
-  content: '';
-  position: absolute;
-  top: -0.75rem;
-  left: 0;
-  width: 100%;
-  height: 1px;
-  background: linear-gradient(to right,
-      transparent 0%,
-      rgba(156, 163, 175, 0.3) 5%,
-      rgba(156, 163, 175, 0.3) 95%,
-      transparent 100%);
-  z-index: 10;
-}
-
-.flat-mode.dark:not([data-page="workspace"]) .grid[class*="grid-cols"][class*="gap-"][class*="mb-"]::before {
-  background: linear-gradient(to right,
-      transparent 0%,
-      rgba(107, 114, 128, 0.3) 5%,
-      rgba(107, 114, 128, 0.3) 95%,
-      transparent 100%);
-}
-
-/* Cards inside grids need positioning and visible overflow for pseudo-elements */
-.flat-mode:not([data-page="workspace"]) .grid[class*="grid-cols"]>[class*="rounded-3xl"][class*="p-"] {
+/* ====== HORIZONTAL LINES BETWEEN SECTIONS ====== */
+/* Every major section child in the settings/main area should have a separating bottom line */
+.flat-mode:not([data-page="workspace"])>div>main>div>div>section,
+.flat-mode:not([data-page="workspace"])>div>main>div>div>div,
+.flat-mode:not([data-page="workspace"])>div>main>div>div>.grid,
+.flat-mode:not([data-page="workspace"])>div>main>div>div>[class*="rounded-3xl"] {
   position: relative;
   overflow: visible !important;
 }
 
-/* ====== VERTICAL LINES BETWEEN GRID COLUMNS ====== */
-/* For 2-column grids: vertical line after odd items - 70% height centered with fade */
-.flat-mode:not([data-page="workspace"]) .grid[class*="grid-cols-2"]>[class*="rounded-3xl"]:nth-child(odd)::after {
+/* Horizontal separators for main section blocks */
+.flat-mode:not([data-page="workspace"])>div>main>div>div>[class*="rounded-3xl"]::after,
+.flat-mode:not([data-page="workspace"])>div>main>div>div>.grid::after {
   content: '';
   position: absolute;
-  top: 15%;
-  right: -0.75rem;
-  width: 1px;
-  height: 70%;
-  background: linear-gradient(to bottom,
-      transparent 0%,
-      rgba(156, 163, 175, 0.4) 10%,
-      rgba(156, 163, 175, 0.4) 90%,
-      transparent 100%);
-  z-index: 10;
-}
-
-.flat-mode.dark:not([data-page="workspace"]) .grid[class*="grid-cols-2"]>[class*="rounded-3xl"]:nth-child(odd)::after {
-  background: linear-gradient(to bottom,
-      transparent 0%,
-      rgba(107, 114, 128, 0.4) 10%,
-      rgba(107, 114, 128, 0.4) 90%,
-      transparent 100%);
-}
-
-/* For 3-column grids: vertical line after 1st and 2nd in each row - 70% height centered with fade */
-.flat-mode:not([data-page="workspace"]) .grid[class*="grid-cols-3"]>[class*="rounded-3xl"]:not(:nth-child(3n))::after {
-  content: '';
-  position: absolute;
-  top: 15%;
-  right: -0.75rem;
-  width: 1px;
-  height: 70%;
-  background: linear-gradient(to bottom,
-      transparent 0%,
-      rgba(156, 163, 175, 0.4) 10%,
-      rgba(156, 163, 175, 0.4) 90%,
-      transparent 100%);
-  z-index: 10;
-}
-
-.flat-mode.dark:not([data-page="workspace"]) .grid[class*="grid-cols-3"]>[class*="rounded-3xl"]:not(:nth-child(3n))::after {
-  background: linear-gradient(to bottom,
-      transparent 0%,
-      rgba(107, 114, 128, 0.4) 10%,
-      rgba(107, 114, 128, 0.4) 90%,
-      transparent 100%);
-}
-
-/* ====== HORIZONTAL LINES BETWEEN GRID ROWS ====== */
-/* Continuous horizontal lines at bottom of grid items (only edge fade) */
-.flat-mode:not([data-page="workspace"]) .grid[class*="grid-cols"]>[class*="rounded-3xl"][class*="p-"]::before {
-  content: '';
-  position: absolute;
-  bottom: 0;
+  bottom: -0.75rem;
   left: 0;
   width: 100%;
   height: 1px;
   background: linear-gradient(to right,
       transparent 0%,
-      rgba(156, 163, 175, 0.35) 3%,
-      rgba(156, 163, 175, 0.35) 97%,
+      rgba(156, 163, 175, 0.45) 5%,
+      rgba(156, 163, 175, 0.45) 95%,
       transparent 100%);
   z-index: 10;
 }
 
-.flat-mode.dark:not([data-page="workspace"]) .grid[class*="grid-cols"]>[class*="rounded-3xl"][class*="p-"]::before {
+.flat-mode.dark:not([data-page="workspace"])>div>main>div>div>[class*="rounded-3xl"]::after,
+.flat-mode.dark:not([data-page="workspace"])>div>main>div>div>.grid::after {
   background: linear-gradient(to right,
       transparent 0%,
-      rgba(107, 114, 128, 0.35) 3%,
-      rgba(107, 114, 128, 0.35) 97%,
+      rgba(107, 114, 128, 0.45) 5%,
+      rgba(107, 114, 128, 0.45) 95%,
       transparent 100%);
 }
+
+/* Specific fix for ThoughtsPlus container (first section) */
+.flat-mode:not([data-page="workspace"]) .mb-8+[class*="rounded-3xl"]::after {
+  display: block !important;
+}
+
+/* Don't show the line on the very last section child */
+.flat-mode:not([data-page="workspace"])>div>main>div>div>*:last-child::after {
+  display: none !important;
+}
+
+/* Manual section lines for specific containers */
+.flat-mode:not([data-page="workspace"]) [data-flat-top],
+.flat-mode:not([data-page="workspace"]) [data-flat-bottom] {
+  position: relative;
+  overflow: visible !important;
+  --flat-divider-gap: var(--flat-divider-gap, 1.5rem);
+}
+
+.flat-mode:not([data-page="workspace"]) [data-flat-top]:not([data-flat-in-grid])::before {
+  content: '';
+  position: absolute;
+  left: 0 !important;
+  right: 0 !important;
+  width: auto !important;
+  height: 1px !important;
+  top: -0.75rem !important;
+  background: linear-gradient(to right,
+      transparent 0%,
+      rgba(156, 163, 175, 0.45) 5%,
+      rgba(156, 163, 175, 0.45) 95%,
+      transparent 100%) !important;
+  z-index: 10;
+  pointer-events: none;
+  display: block !important;
+}
+
+.flat-mode:not([data-page="workspace"]) [data-flat-bottom]::after {
+  content: '';
+  position: absolute;
+  left: 0 !important;
+  right: 0 !important;
+  width: auto !important;
+  height: 1px !important;
+  background: linear-gradient(to right,
+      transparent 0%,
+      rgba(156, 163, 175, 0.45) 5%,
+      rgba(156, 163, 175, 0.45) 95%,
+      transparent 100%) !important;
+  z-index: 10;
+  pointer-events: none;
+  display: block !important;
+}
+
+.flat-mode:not([data-page="workspace"]) [data-flat-bottom]::after {
+  bottom: -0.75rem !important;
+}
+
+.flat-mode.dark:not([data-page="workspace"]) [data-flat-bottom]::after {
+  background: linear-gradient(to right,
+      transparent 0%,
+      rgba(107, 114, 128, 0.45) 5%,
+      rgba(107, 114, 128, 0.45) 95%,
+      transparent 100%) !important;
+}
+
+.flat-mode.dark:not([data-page="workspace"]) [data-flat-top]:not([data-flat-in-grid])::before {
+  background: linear-gradient(to right,
+      transparent 0%,
+      rgba(107, 114, 128, 0.45) 5%,
+      rgba(107, 114, 128, 0.45) 95%,
+      transparent 100%) !important;
+}
+
+/* Full-width row dividers for top markers */
+.flat-mode:not([data-page="workspace"]) [data-flat-row-divider] {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(to right,
+      transparent 0%,
+      rgba(156, 163, 175, 0.45) 5%,
+      rgba(156, 163, 175, 0.45) 95%,
+      transparent 100%);
+  z-index: 10;
+  pointer-events: none;
+}
+
+.flat-mode.dark:not([data-page="workspace"]) [data-flat-row-divider] {
+  background: linear-gradient(to right,
+      transparent 0%,
+      rgba(107, 114, 128, 0.45) 5%,
+      rgba(107, 114, 128, 0.45) 95%,
+      transparent 100%);
+}
+
+/* ====== GRID INTERNAL LINES ====== */
+/* Opt-in grids for precise separators (e.g., Settings main grid) */
+.flat-mode:not([data-page="workspace"]) [data-flat-grid] {
+  --flat-divider-col-gap: 1.5rem;
+  --flat-divider-row-gap: 1.5rem;
+  position: relative;
+}
+
+.flat-mode:not([data-page="workspace"]) [data-flat-grid]:not([data-flat-scroll]) {
+  overflow: visible !important;
+}
+
+/* Cards inside opt-in grids need positioning and visible overflow for pseudo-elements */
+.flat-mode:not([data-page="workspace"]) [data-flat-grid]>[data-flat-in-grid] {
+  position: relative;
+  overflow: visible !important;
+}
+
+/* VERTICAL LINES: 70% height, centered, top/bottom fade */
+.flat-mode:not([data-page="workspace"]) [data-flat-grid]>[data-flat-in-grid]::before {
+  content: '';
+  position: absolute;
+  top: 15%;
+  right: calc(var(--flat-divider-col-gap) * -0.5);
+  width: 1px;
+  height: 70%;
+  background: linear-gradient(to bottom,
+      transparent 0%,
+      rgba(156, 163, 175, 0.4) 10%,
+      rgba(156, 163, 175, 0.4) 90%,
+      transparent 100%);
+  z-index: 10;
+  display: none;
+}
+
+.flat-mode.dark:not([data-page="workspace"]) [data-flat-grid]>[data-flat-in-grid]::before {
+  background: linear-gradient(to bottom,
+      transparent 0%,
+      rgba(107, 114, 128, 0.4) 10%,
+      rgba(107, 114, 128, 0.4) 90%,
+      transparent 100%);
+}
+
+/* Show vertical lines only between actual neighbors */
+.flat-mode:not([data-page="workspace"]) [data-flat-grid]>[data-flat-right]::before {
+  display: block;
+}
+
+/* HORIZONTAL LINES: only under full-width (long) items inside the grid */
+.flat-mode:not([data-page="workspace"]) [data-flat-grid]>[data-flat-long] {
+  position: relative;
+  overflow: visible !important;
+}
+
+.flat-mode:not([data-page="workspace"]) [data-flat-grid]>[data-flat-long]::after {
+  content: '';
+  position: absolute;
+  bottom: calc(var(--flat-divider-row-gap) * -0.5);
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(to right,
+      transparent 0%,
+      rgba(156, 163, 175, 0.45) 5%,
+      rgba(156, 163, 175, 0.45) 95%,
+      transparent 100%);
+  z-index: 10;
+}
+
+.flat-mode.dark:not([data-page="workspace"]) [data-flat-grid]>[data-flat-long]::after {
+  background: linear-gradient(to right,
+      transparent 0%,
+      rgba(107, 114, 128, 0.45) 5%,
+      rgba(107, 114, 128, 0.45) 95%,
+      transparent 100%);
+}
+
 
 /* ============================================
    Sharp Corners Mode - 90 degree angles

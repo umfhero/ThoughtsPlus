@@ -1126,13 +1126,9 @@ function AppContent(props: AppContentProps) {
     // Check if we're on workspace page - it needs full width layout
     const isWorkspacePage = currentPage === 'workspace';
 
-    // Set data-page attribute on documentElement for CSS styling exclusions
+    // Set data-page attribute on documentElement for page-specific styling
     useEffect(() => {
-        if (currentPage === 'workspace') {
-            document.documentElement.setAttribute('data-page', 'workspace');
-        } else {
-            document.documentElement.removeAttribute('data-page');
-        }
+        document.documentElement.setAttribute('data-page', currentPage);
     }, [currentPage]);
 
     return (

@@ -17,6 +17,7 @@ import { getAppVersion } from '../utils/version';
 import { TutorialGallery } from '../components/TutorialGallery';
 import { TextGuide } from '../components/TextGuide';
 import { getAppIcon } from '../assets/appIcons';
+import { useFlatGridDividers } from '../hooks/useFlatGridDividers';
 
 
 // Types for multi-provider configuration
@@ -169,6 +170,8 @@ export function SettingsPage() {
             window.ipcRenderer?.off('ai-fallback-event', handleFallbackEvent);
         };
     }, []);
+
+    useFlatGridDividers(!containersEnabled);
 
     useEffect(() => {
         // Load persist font with proper font stack
@@ -877,6 +880,7 @@ export function SettingsPage() {
                     animate={{ y: 0, scale: 1 }}
                     transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0 }}
                     className="mb-6 p-6 rounded-3xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50 overflow-hidden"
+                    data-flat-bottom
                 >
                     <div className="flex flex-col sm:flex-row items-start justify-between gap-6 sm:gap-4">
                         {/* Left side - Version and buttons */}
@@ -1002,7 +1006,7 @@ export function SettingsPage() {
                 </motion.div>
 
                 {/* Main Grid: AI, GitHub, Storage, Tutorials, Notifications, Import */}
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-6" data-flat-grid>
                     {/* AI Configuration */}
                     <motion.div
                         initial={{ y: -15, scale: 0.97 }}
@@ -1578,6 +1582,7 @@ export function SettingsPage() {
                         animate={{ y: 0, scale: 1 }}
                         transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.15 }}
                         className="md:col-span-2 xl:col-span-3 p-6 rounded-3xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50 overflow-hidden"
+                        data-flat-top
                     >
                         <KeyboardShortcuts />
                     </motion.div>
@@ -1822,6 +1827,8 @@ export function SettingsPage() {
                     animate={{ y: 0, scale: 1 }}
                     transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.35 }}
                     className="p-6 rounded-3xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50 overflow-hidden"
+                    data-flat-top
+                    data-flat-bottom
                 >
                     <div className="flex items-center gap-3 mb-4 min-w-0">
                         <div className="p-2.5 rounded-xl bg-gray-100 dark:bg-gray-700/50 text-pink-600 dark:text-pink-400 shrink-0">

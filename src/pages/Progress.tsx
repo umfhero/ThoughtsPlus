@@ -4,6 +4,7 @@ import { TrendingUp, TrendingDown, Calendar, Sparkles, AlertCircle, ThumbsUp, Ch
 import { NotesData, Note, MilestonesData, LifeChaptersData, SnapshotsData, Snapshot } from '../types';
 import TaskTrendChart from '../components/TaskTrendChart';
 import { useTheme } from '../contexts/ThemeContext';
+import { useFlatGridDividers } from '../hooks/useFlatGridDividers';
 import {
     BarChart,
     Bar,
@@ -75,7 +76,9 @@ export function ProgressPage({ notes, milestones = {}, lifeChapters: _lifeChapte
     const [eventTab, setEventTab] = useState<'upcoming' | 'completed' | 'missed'>('upcoming');
     const [searchQuery, setSearchQuery] = useState('');
     const [filterImportance, setFilterImportance] = useState<string>('all');
-    const { accentColor } = useTheme();
+    const { accentColor, containersEnabled } = useTheme();
+
+    useFlatGridDividers(!containersEnabled);
     
     // Snapshot modal state
     const [showSnapshotModal, setShowSnapshotModal] = useState(false);
@@ -786,10 +789,10 @@ export function ProgressPage({ notes, milestones = {}, lifeChapters: _lifeChapte
                 </div>
 
                 {/* Main content area - fills remaining space */}
-                <div className="flex-1 flex flex-col gap-4 min-h-0 overflow-auto">
+                <div className="flex-1 flex flex-col gap-4 min-h-0 overflow-auto" data-flat-grid data-flat-scroll>
 
                     {/* Calendar + Stats Row */}
-                    <div className="flex gap-4">
+                    <div className="flex gap-4" data-flat-grid>
                         {/* Monthly Calendar View */}
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
