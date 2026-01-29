@@ -29,6 +29,11 @@ interface ThemeContextType {
     setAccentColor: (color: string) => void;
     appIcon: string;
     setAppIcon: (icon: string) => void;
+    // Appearance settings
+    containersEnabled: boolean;
+    setContainersEnabled: (enabled: boolean) => void;
+    curvesEnabled: boolean;
+    setCurvesEnabled: (enabled: boolean) => void;
     // Custom theme state
     customThemeColors: CustomThemeColors;
     setCustomThemeColors: (colors: Partial<CustomThemeColors>) => void;
@@ -217,6 +222,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const [activeThemeId, setActiveThemeId] = useState<string | null>(null);
     const [currentFont, setCurrentFont] = useState<string>('Inter');
     const [appIcon, setAppIconState] = useState<string>('ThoughtsPlus');
+    // Appearance settings - default to true (current styling)
+    const [containersEnabled, setContainersEnabledState] = useState<boolean>(true);
+    const [curvesEnabled, setCurvesEnabledState] = useState<boolean>(true);
 
     useEffect(() => {
         // Load theme from settings
@@ -257,6 +265,17 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
                 if (savedAccent) setAccentColorState(savedAccent);
                 if (savedFont) setCurrentFont(savedFont);
                 if (savedIcon) setAppIconState(savedIcon);
+
+                // Load appearance settings
+                const savedContainers = await window.ipcRenderer?.invoke('get-global-setting', 'containersEnabled');
+                const savedCurves = await window.ipcRenderer?.invoke('get-global-setting', 'curvesEnabled');
+                // Default to true if not set
+                if (savedContainers !== undefined && savedContainers !== null) {
+                    setContainersEnabledState(savedContainers === true || savedContainers === 'true');
+                }
+                if (savedCurves !== undefined && savedCurves !== null) {
+                    setCurvesEnabledState(savedCurves === true || savedCurves === 'true');
+                }
             } catch (e) {
                 console.log('Using default light theme');
             } finally {
@@ -304,7 +323,21 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
             document.documentElement.style.removeProperty('--custom-border');
             document.documentElement.style.removeProperty('--custom-card');
         }
-    }, [theme, accentColor, customThemeColors, isInitialized]);
+
+        // Apply containers setting (flat mode)
+        if (containersEnabled) {
+            document.documentElement.classList.remove('flat-mode');
+        } else {
+            document.documentElement.classList.add('flat-mode');
+        }
+
+        // Apply curves setting (sharp corners)
+        if (curvesEnabled) {
+            document.documentElement.classList.remove('sharp-corners');
+        } else {
+            document.documentElement.classList.add('sharp-corners');
+        }
+    }, [theme, accentColor, customThemeColors, isInitialized, containersEnabled, curvesEnabled]);
 
     const setTheme = async (newTheme: ThemeType) => {
         setThemeState(newTheme);
@@ -330,6 +363,24 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
             await window.ipcRenderer?.invoke('set-app-icon', icon);
         } catch (e) {
             console.error('Failed to save app icon', e);
+        }
+    };
+
+    const setContainersEnabled = async (enabled: boolean) => {
+        setContainersEnabledState(enabled);
+        try {
+            await window.ipcRenderer?.invoke('save-global-setting', 'containersEnabled', enabled);
+        } catch (e) {
+            console.error('Failed to save containers setting', e);
+        }
+    };
+
+    const setCurvesEnabled = async (enabled: boolean) => {
+        setCurvesEnabledState(enabled);
+        try {
+            await window.ipcRenderer?.invoke('save-global-setting', 'curvesEnabled', enabled);
+        } catch (e) {
+            console.error('Failed to save curves setting', e);
         }
     };
 
@@ -445,6 +496,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
             setAccentColor,
             appIcon,
             setAppIcon,
+            containersEnabled,
+            setContainersEnabled,
+            curvesEnabled,
+            setCurvesEnabled,
             customThemeColors,
             setCustomThemeColors,
             savedThemes,

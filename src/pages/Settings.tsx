@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Folder, Palette, Sparkles, Check, ExternalLink, Clipboard, AlertCircle, LayoutDashboard, Github, NotebookPen, Calendar as CalendarIcon, RefreshCw, Bell, BellOff, Type, Upload, FileUp, Timer, Heart, Sidebar as SidebarIcon, Settings2, X, Trash2, Plus, ChevronDown, ChevronUp, History, Info, Save, Bug, TrendingUp, PlayCircle, Volume2, VolumeX, Moon, Download, AlertTriangle } from 'lucide-react';
+import { Folder, Palette, Sparkles, Check, ExternalLink, Clipboard, AlertCircle, LayoutDashboard, Github, NotebookPen, Calendar as CalendarIcon, RefreshCw, Bell, BellOff, Type, Upload, FileUp, Timer, Heart, Sidebar as SidebarIcon, Settings2, X, Trash2, Plus, ChevronDown, ChevronUp, History, Info, Save, Bug, TrendingUp, PlayCircle, Volume2, VolumeX, Moon, Download, AlertTriangle, Square, Layers } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import clsx from 'clsx';
 import { useTheme } from '../contexts/ThemeContext';
@@ -120,7 +120,7 @@ export function SettingsPage() {
     const [iconJustChanged, setIconJustChanged] = useState(false);
     const [initialAppIcon, setInitialAppIcon] = useState<string>('');
 
-    const { theme, accentColor, setTheme, setAccentColor, appIcon, setAppIcon, customThemeColors, setCustomThemeColors, savedThemes, saveCurrentTheme, loadTheme, deleteTheme, updateTheme } = useTheme();
+    const { theme, accentColor, setTheme, setAccentColor, appIcon, setAppIcon, containersEnabled, setContainersEnabled, curvesEnabled, setCurvesEnabled, customThemeColors, setCustomThemeColors, savedThemes, saveCurrentTheme, loadTheme, deleteTheme, updateTheme } = useTheme();
     const { addNotification, isSuppressed, toggleSuppression } = useNotification();
     const { layoutType, setLayoutType, sidebarIconOnly, setSidebarIconOnly, effectiveSidebarIconOnly, focusCentricFont, setFocusCentricFont } = useDashboardLayout();
 
@@ -2043,7 +2043,7 @@ export function SettingsPage() {
                             </div>
 
                             {/* Sidebar Icon Mode */}
-                            <div className="mb-4">
+                            <div className="mb-2">
                                 <button
                                     onClick={() => setSidebarIconOnly(!sidebarIconOnly)}
                                     disabled={LAYOUT_CONFIGS[layoutType]?.forceIconOnlySidebar}
@@ -2080,6 +2080,74 @@ export function SettingsPage() {
                                         Required by current layout
                                     </p>
                                 )}
+                            </div>
+
+                            {/* Containers Toggle - Flat Mode */}
+                            <div className="mb-2">
+                                <button
+                                    onClick={() => setContainersEnabled(!containersEnabled)}
+                                    style={{
+                                        borderColor: !containersEnabled ? accentColor : undefined,
+                                        backgroundColor: !containersEnabled ? `${accentColor}10` : undefined
+                                    }}
+                                    className={clsx(
+                                        "w-full p-2 rounded-xl border-2 transition-all text-left flex items-center justify-between",
+                                        !containersEnabled
+                                            ? ""
+                                            : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                                    )}
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <Layers className={clsx("w-4 h-4")} style={{ color: !containersEnabled ? accentColor : undefined }} />
+                                        <div className="flex flex-col">
+                                            <span className={clsx("text-xs font-semibold")} style={{ color: !containersEnabled ? accentColor : undefined }}>Flat Mode</span>
+                                            <span className="text-[10px] text-gray-500 dark:text-gray-400">Remove container backgrounds</span>
+                                        </div>
+                                    </div>
+                                    <div
+                                        className={clsx(
+                                            "w-8 h-4 rounded-full p-0.5 transition-colors duration-300",
+                                            !containersEnabled ? "" : "bg-gray-300 dark:bg-gray-600"
+                                        )}
+                                        style={{ backgroundColor: !containersEnabled ? accentColor : undefined }}
+                                    >
+                                        <div className={clsx("w-3 h-3 rounded-full bg-white shadow-sm transition-transform duration-300", !containersEnabled ? "translate-x-4" : "translate-x-0")} />
+                                    </div>
+                                </button>
+                            </div>
+
+                            {/* Curves Toggle - Sharp Corners */}
+                            <div className="mb-4">
+                                <button
+                                    onClick={() => setCurvesEnabled(!curvesEnabled)}
+                                    style={{
+                                        borderColor: !curvesEnabled ? accentColor : undefined,
+                                        backgroundColor: !curvesEnabled ? `${accentColor}10` : undefined
+                                    }}
+                                    className={clsx(
+                                        "w-full p-2 rounded-xl border-2 transition-all text-left flex items-center justify-between",
+                                        !curvesEnabled
+                                            ? ""
+                                            : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                                    )}
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <Square className={clsx("w-4 h-4")} style={{ color: !curvesEnabled ? accentColor : undefined }} />
+                                        <div className="flex flex-col">
+                                            <span className={clsx("text-xs font-semibold")} style={{ color: !curvesEnabled ? accentColor : undefined }}>Sharp Corners</span>
+                                            <span className="text-[10px] text-gray-500 dark:text-gray-400">Use 90° angles instead of curves</span>
+                                        </div>
+                                    </div>
+                                    <div
+                                        className={clsx(
+                                            "w-8 h-4 rounded-full p-0.5 transition-colors duration-300",
+                                            !curvesEnabled ? "" : "bg-gray-300 dark:bg-gray-600"
+                                        )}
+                                        style={{ backgroundColor: !curvesEnabled ? accentColor : undefined }}
+                                    >
+                                        <div className={clsx("w-3 h-3 rounded-full bg-white shadow-sm transition-transform duration-300", !curvesEnabled ? "translate-x-4" : "translate-x-0")} />
+                                    </div>
+                                </button>
                             </div>
 
                             {/* Custom Theme Editor - Only shown when Custom is selected */}

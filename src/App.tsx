@@ -1126,6 +1126,15 @@ function AppContent(props: AppContentProps) {
     // Check if we're on workspace page - it needs full width layout
     const isWorkspacePage = currentPage === 'workspace';
 
+    // Set data-page attribute on documentElement for CSS styling exclusions
+    useEffect(() => {
+        if (currentPage === 'workspace') {
+            document.documentElement.setAttribute('data-page', 'workspace');
+        } else {
+            document.documentElement.removeAttribute('data-page');
+        }
+    }, [currentPage]);
+
     return (
         <div className="flex h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 overflow-hidden selection:bg-blue-500/30 font-sans transition-colors">
             {/* Custom Title Bar Drag Region */}
@@ -1142,6 +1151,7 @@ function AppContent(props: AppContentProps) {
                             exit={{ width: 0, opacity: 0 }}
                             transition={{ duration: 0.2 }}
                             style={{ overflow: 'hidden' }}
+                            className="sidebar-wrapper"
                         >
                             <Sidebar
                                 currentPage={currentPage}
