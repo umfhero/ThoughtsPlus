@@ -4,7 +4,7 @@
 // import { getWidgetConfigs, deleteWidgetConfig } from '../utils/customWidgetManager';
 // import { CustomWidgetConfig } from '../types';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
-import { ArrowUpRight, Loader, Circle, Search, Filter, Activity as ActivityIcon, CheckCircle2, Sparkles, X, Plus, MousePointerClick, Merge, Trash2, Repeat, Folder, Clock, XCircle, ChevronLeft, ChevronRight, Box, LayoutGrid, RotateCcw } from 'lucide-react';
+import { ArrowUpRight, Loader, Circle, Activity as ActivityIcon, CheckCircle2, X, Plus, MousePointerClick, Merge, Trash2, Repeat, Folder, Clock, XCircle, ChevronLeft, ChevronRight, Box, LayoutGrid, RotateCcw, Tag } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, addMonths, subMonths } from 'date-fns';
 import { NotesData, Note } from '../types';
@@ -41,7 +41,7 @@ function hexToRgb(hex: string) {
     } : null;
 }
 
-export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onOpenAiModal, isLoading = false, isSidebarCollapsed = false, isEditMode, setIsEditMode }: DashboardProps) {
+export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, isLoading = false, isSidebarCollapsed = false, isEditMode, setIsEditMode }: DashboardProps) {
     const { layoutType, focusCentricFont } = useDashboardLayout();
     const [time, setTime] = useState(new Date());
     // @ts-ignore
@@ -49,9 +49,139 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
     const [aiSummary, setAiSummary] = useState<string | null>(() => localStorage.getItem('dashboard_ai_summary'));
     const [isBriefingLoading, setIsBriefingLoading] = useState(false);
     const [loadingMessage, setLoadingMessage] = useState("Analyzing your schedule...");
-    const [eventTab, setEventTab] = useState<'upcoming' | 'completed' | 'notCompleted'>('upcoming');
-    const [searchQuery, setSearchQuery] = useState('');
-    const [filterImportance, setFilterImportance] = useState<string>('all');
+    const [eventTab, setEventTab] = useState<'upcoming' | 'completed' | 'notCompleted' | 'todos'>('upcoming');
+
+    // To-Do state
+    const [todos, setTodos] = useState<Array<{
+        id: string;
+        title: string;
+        description?: string;
+        tags?: string[];
+        completed: boolean;
+        createdAt: string;
+        completedAt?: string;
+        order: number;
+        isEditing?: boolean;
+        color?: string;
+    }>>([]);
+    const [editingTodoId, setEditingTodoId] = useState<string | null>(null);
+    const [tagInput, setTagInput] = useState('');
+    const [showTagSuggestions, setShowTagSuggestions] = useState(false);
+    const [tagHistory, setTagHistory] = useState<string[]>([]);
+    const editingTodoRef = useRef<HTMLDivElement>(null);
+    const [todosLoaded, setTodosLoaded] = useState(false);
+    const isLoadingTodos = useRef(false);
+    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Load todos from backend on mount
+    useEffect(() => {
+        const loadTodos = async () => {
+            if (isLoadingTodos.current) return;
+
+            isLoadingTodos.current = true;
+            try {
+                // @ts-ignore
+                const data = await window.ipcRenderer.invoke('get-todos');
+                console.log('[Dashboard] Loaded todos:', data);
+                if (data && data.todos && Array.isArray(data.todos)) {
+                    setTodos(data.todos);
+                } else {
+                    console.warn('[Dashboard] Invalid todos data, using empty array');
+                    setTodos([]);
+                }
+                setTodosLoaded(true);
+            } catch (err) {
+                console.error('[Dashboard] Failed to load todos:', err);
+                setTodos([]);
+                setTodosLoaded(true);
+            } finally {
+                isLoadingTodos.current = false;
+            }
+        };
+        loadTodos();
+
+        // Listen for todos-changed event from Quick To-Do modal
+        const handleTodosChanged = () => {
+            console.log('[Dashboard] Todos changed event received, reloading...');
+            loadTodos();
+        };
+        window.addEventListener('todos-changed', handleTodosChanged);
+
+        return () => {
+            window.removeEventListener('todos-changed', handleTodosChanged);
+            if (saveTimeoutRef.current) {
+                clearTimeout(saveTimeoutRef.current);
+            }
+        };
+    }, []);
+
+    // Save todos to backend with debouncing
+    const saveTodosToBackend = async (newTodos: typeof todos) => {
+        if (isLoadingTodos.current) {
+            console.log('[Dashboard] Skipping save - currently loading');
+            return;
+        }
+
+        try {
+            console.log('[Dashboard] Saving todos:', newTodos.length, 'items');
+            // @ts-ignore
+            await window.ipcRenderer.invoke('save-todos', newTodos);
+            console.log('[Dashboard] Todos saved successfully');
+        } catch (err) {
+            console.error('[Dashboard] Failed to save todos:', err);
+        }
+    };
+
+    // Save todos whenever they change (but only after initial load, with debouncing)
+    useEffect(() => {
+        if (!todosLoaded) return;
+
+        // Clear existing timeout
+        if (saveTimeoutRef.current) {
+            clearTimeout(saveTimeoutRef.current);
+        }
+
+        // Debounce save by 500ms to avoid excessive writes
+        saveTimeoutRef.current = setTimeout(() => {
+            saveTodosToBackend(todos);
+        }, 500);
+
+        return () => {
+            if (saveTimeoutRef.current) {
+                clearTimeout(saveTimeoutRef.current);
+            }
+        };
+    }, [todos, todosLoaded]);
+
+    // Load tag history from all existing to-dos
+    useEffect(() => {
+        const allTags = new Set<string>();
+        todos.forEach((todo) => {
+            if (todo.tags && Array.isArray(todo.tags)) {
+                todo.tags.forEach((tag: string) => allTags.add(tag));
+            }
+        });
+        setTagHistory(Array.from(allTags).sort());
+    }, [todos]);
+
+    // Click-outside detection for editing to-do
+    useEffect(() => {
+        if (!editingTodoId) return;
+
+        const handleClickOutside = (e: MouseEvent) => {
+            if (editingTodoRef.current && !editingTodoRef.current.contains(e.target as Node)) {
+                const todo = todos.find(t => t.id === editingTodoId);
+                if (todo && !todo.title.trim()) {
+                    deleteTodo(editingTodoId);
+                } else {
+                    setEditingTodoId(null);
+                }
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [editingTodoId, todos]);
     const [contributions, setContributions] = useState<Activity[]>([]);
     const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
     const years = Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - i);
@@ -1095,32 +1225,131 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
         setCompletionModal(prev => ({ ...prev, isOpen: false }));
     };
 
-    // Filter events based on tab
-    const getFilteredEvents = () => {
-        let filtered = allUpcomingEvents.filter(event => {
-            const matchesSearch = event.note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                event.note.description.toLowerCase().includes(searchQuery.toLowerCase());
-            const matchesFilter = filterImportance === 'all' || event.note.importance === filterImportance;
-            return matchesSearch && matchesFilter;
-        });
+    // To-Do Management Functions
+    const addTodo = () => {
+        const newTodo = {
+            id: `todo-${Date.now()}`,
+            title: '',
+            completed: false,
+            createdAt: new Date().toISOString(),
+            order: 0,
+            isEditing: true
+        };
+        // Add new todo at the top and reorder existing ones
+        const reorderedTodos = todos.map(todo => ({ ...todo, order: todo.order + 1 }));
+        setTodos([newTodo, ...reorderedTodos]);
+        setEditingTodoId(newTodo.id);
+    };
 
-        if (eventTab === 'upcoming') {
-            // Tasks tab: all incomplete, non-missed tasks (including overdue)
-            return filtered.filter(e => !e.note.completed && !e.note.missed);
-        } else if (eventTab === 'completed') {
-            return filtered.filter(e => e.note.completed === true);
-        } else {
-            // Missed tab: explicitly marked as missed
-            return filtered.filter(e => e.note.missed === true);
+    const updateTodo = (id: string, updates: Partial<typeof todos[0]>) => {
+        setTodos(prev => prev.map(todo =>
+            todo.id === id ? { ...todo, ...updates } : todo
+        ));
+    };
+
+    const deleteTodo = (id: string) => {
+        setTodos(prev => prev.filter(todo => todo.id !== id));
+        if (editingTodoId === id) {
+            setEditingTodoId(null);
         }
     };
 
-    const upcomingEvents = allUpcomingEvents.filter(event => {
-        const matchesSearch = event.note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            event.note.description.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesFilter = filterImportance === 'all' || event.note.importance === filterImportance;
-        return matchesSearch && matchesFilter;
+    const toggleTodoComplete = (id: string) => {
+        setTodos(prev => prev.map(todo => {
+            if (todo.id === id) {
+                const newCompleted = !todo.completed;
+                return {
+                    ...todo,
+                    completed: newCompleted,
+                    completedAt: newCompleted ? new Date().toISOString() : undefined
+                };
+            }
+            return todo;
+        }));
+
+        // Trigger confetti for completion
+        const todo = todos.find(t => t.id === id);
+        if (todo && !todo.completed) {
+            const duration = 2000;
+            const animationEnd = Date.now() + duration;
+            const colors = ['#10b981', '#34d399', '#6ee7b7', '#a7f3d0'];
+
+            const frame = () => {
+                confetti({
+                    particleCount: 2,
+                    angle: 60,
+                    spread: 55,
+                    origin: { x: 0, y: 0.8 },
+                    colors: colors,
+                    scalar: 0.7
+                });
+                confetti({
+                    particleCount: 2,
+                    angle: 120,
+                    spread: 55,
+                    origin: { x: 1, y: 0.8 },
+                    colors: colors,
+                    scalar: 0.7
+                });
+
+                if (Date.now() < animationEnd) {
+                    requestAnimationFrame(frame);
+                }
+            };
+            frame();
+        }
+    };
+
+    const addTagToTodo = (todoId: string, tag: string) => {
+        if (!tag.trim()) return;
+        setTodos(prev => prev.map(todo => {
+            if (todo.id === todoId) {
+                const tags = todo.tags || [];
+                if (!tags.includes(tag.trim())) {
+                    return { ...todo, tags: [...tags, tag.trim()] };
+                }
+            }
+            return todo;
+        }));
+    };
+
+    const removeTagFromTodo = (todoId: string, tag: string) => {
+        setTodos(prev => prev.map(todo => {
+            if (todo.id === todoId) {
+                return { ...todo, tags: (todo.tags || []).filter(t => t !== tag) };
+            }
+            return todo;
+        }));
+    };
+
+    // Separate completed and incomplete todos
+    const incompleteTodos = todos.filter(t => !t.completed).sort((a, b) => a.order - b.order);
+    const completedTodos = todos.filter(t => t.completed).sort((a, b) => {
+        const aTime = a.completedAt ? new Date(a.completedAt).getTime() : 0;
+        const bTime = b.completedAt ? new Date(b.completedAt).getTime() : 0;
+        return bTime - aTime; // Most recent first
     });
+
+    // Filter events based on tab
+    const getFilteredEvents = () => {
+        let filtered = allUpcomingEvents;
+
+        if (eventTab === 'upcoming') {
+            // Events tab: all incomplete, non-missed tasks (including overdue)
+            return filtered.filter(e => !e.note.completed && !e.note.missed);
+        } else if (eventTab === 'completed') {
+            return filtered.filter(e => e.note.completed === true);
+        } else if (eventTab === 'notCompleted') {
+            // Missed tab: explicitly marked as missed
+            return filtered.filter(e => e.note.missed === true);
+        } else if (eventTab === 'todos') {
+            // To-Dos tab: return empty for now (will be populated with actual to-do items)
+            return [];
+        }
+        return filtered;
+    };
+
+    const upcomingEvents = allUpcomingEvents;
 
     const filteredEventsForTab = getFilteredEvents();
 
@@ -1403,13 +1632,18 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                                             })()}
                                         </p>
                                     </div>
-                                    <button
-                                        onClick={onOpenAiModal}
-                                        className="p-3 rounded-xl bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 transition-colors group/btn"
-                                        title="AI Quick Note"
-                                    >
-                                        <Sparkles className="w-5 h-5 group-hover/btn:scale-110 transition-transform" />
-                                    </button>
+                                    {/* Add To-Do Button - Only show on To-Dos tab */}
+                                    {eventTab === 'todos' && (
+                                        <button
+                                            onClick={addTodo}
+                                            className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                                            style={{ color: accentColor }}
+                                            title="Add To-Do"
+                                        >
+                                            <Plus className="w-5 h-5" />
+                                            <span className="text-sm font-medium">Add to-do task</span>
+                                        </button>
+                                    )}
                                 </div>
 
                                 <div className="flex flex-wrap gap-2 mb-4">
@@ -1423,7 +1657,19 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                                         )}
                                         style={eventTab === 'upcoming' ? { color: 'var(--accent-primary)' } : undefined}
                                     >
-                                        {upcomingEvents.filter(e => !e.note.completed && !e.note.missed).length} Tasks
+                                        {upcomingEvents.filter(e => !e.note.completed && !e.note.missed).length} Events
+                                    </button>
+                                    <button
+                                        onClick={() => setEventTab('todos')}
+                                        className={clsx(
+                                            "flex-1 min-w-[80px] px-3 py-2 rounded-lg text-xs font-medium transition-all",
+                                            eventTab === 'todos'
+                                                ? "bg-white dark:bg-gray-700 shadow-md"
+                                                : "bg-gray-50 dark:bg-gray-800 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                        )}
+                                        style={eventTab === 'todos' ? { color: 'var(--accent-primary)' } : undefined}
+                                    >
+                                        {incompleteTodos.length} To-Dos
                                     </button>
                                     <button
                                         onClick={() => setEventTab('completed')}
@@ -1451,196 +1697,518 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                                     </button>
                                 </div>
 
-                                <div className="flex flex-col sm:flex-row gap-2 mb-4">
-                                    <div className="relative flex-1">
-                                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                        <input
-                                            type="text"
-                                            placeholder="Search events..."
-                                            value={searchQuery}
-                                            onChange={(e) => setSearchQuery(e.target.value)}
-                                            className="w-full pl-9 pr-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-gray-800 dark:text-gray-200"
-                                        />
-                                    </div>
-                                    <div className="relative">
-                                        <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                        <select
-                                            value={filterImportance}
-                                            onChange={(e) => setFilterImportance(e.target.value)}
-                                            className="w-full sm:w-auto pl-9 pr-8 py-2 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 appearance-none cursor-pointer text-gray-800 dark:text-gray-200"
-                                        >
-                                            <option value="all">All</option>
-                                            <option value="high">High</option>
-                                            <option value="medium">Medium</option>
-                                            <option value="low">Low</option>
-                                            <option value="misc">Misc</option>
-                                        </select>
-                                    </div>
-                                </div>
-
                                 <div className="space-y-4 flex-1 overflow-y-auto px-2 pb-2 thin-scrollbar [&::-webkit-scrollbar-button]:hidden">
-                                    {filteredEventsForTab.length === 0 ? (
-                                        <p className="text-gray-400 dark:text-gray-500 text-sm">
-                                            {eventTab === 'upcoming' ? 'No tasks.' : eventTab === 'completed' ? 'No completed events.' : 'No missed events.'}
-                                        </p>
-                                    ) : (
-                                        <AnimatePresence mode="popLayout">
-                                            {filteredEventsForTab.slice(0, 10).map((event) => {
-                                                const { date, note, dateKey } = event;
-                                                return (
-                                                    <motion.div
-                                                        key={note.id}
-                                                        layout
-                                                        initial={{ opacity: 0, scale: 0.8, y: -10 }}
-                                                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                                                        exit={{ opacity: 0, scale: 0.8, x: 50 }}
-                                                        transition={{
-                                                            duration: 0.2,
-                                                            layout: { duration: 0.2 }
-                                                        }}
-                                                        whileHover={{
-                                                            scale: 1.02,
-                                                            zIndex: 10,
-                                                            transition: { duration: 0.1, ease: "easeOut" }
-                                                        }}
-                                                        className={clsx(
-                                                            "p-3 rounded-xl border transition-all relative overflow-hidden",
-                                                            note.completed
-                                                                ? note.completedLate
-                                                                    ? "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-900/50"
-                                                                    : "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-900/50"
-                                                                : note.missed
-                                                                    ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-900/50"
-                                                                    : event.isOverdue
-                                                                        ? "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm"
-                                                                        : importanceColors[note.importance as keyof typeof importanceColors]
-                                                        )}
-                                                    >
-                                                        {/* Overdue Alert Banner */}
-                                                        {event.isOverdue && !note.completed && !note.missed && (
-                                                            <div className="absolute top-0 left-0 right-0 h-9 bg-red-500 text-white text-sm font-bold px-3 flex items-center justify-between z-10">
-                                                                <span>OVERDUE</span>
-                                                                <span>{getOverdueTime(date)}</span>
-                                                            </div>
-                                                        )}
+                                    {eventTab === 'todos' ? (
+                                        /* To-Dos Tab */
+                                        <>
 
-                                                        <div className={clsx("flex items-start gap-3", event.isOverdue && !note.completed && !note.missed && "pt-9")}>
-                                                            {/* Checkboxes Container */}
-                                                            <div className="flex flex-col gap-1 mt-0.5 flex-shrink-0">
-                                                                {/* Completion Checkbox */}
-                                                                <motion.button
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        if (event.isOverdue && !note.completed) {
-                                                                            // Overdue task - complete as late
-                                                                            handleCompleteLate(note.id, dateKey);
-                                                                        } else {
-                                                                            handleToggleComplete(note.id, dateKey, note.completed || false, event);
-                                                                        }
-                                                                    }}
-                                                                    whileTap={{ scale: 0.8 }}
-                                                                    className={clsx(
-                                                                        "transition-all",
-                                                                        note.completed
-                                                                            ? note.completedLate
-                                                                                ? "text-amber-500 hover:text-amber-600"
-                                                                                : "text-green-500 hover:text-green-600"
-                                                                            : "text-gray-300 hover:text-gray-400 dark:text-gray-600 dark:hover:text-gray-500"
-                                                                    )}
-                                                                    title={event.isOverdue && !note.completed ? "Mark as completed (late)" : "Mark as completed"}
-                                                                >
-                                                                    <motion.div
-                                                                        initial={false}
-                                                                        animate={note.completed ? { scale: [1, 1.3, 1], rotate: [0, 10, 0] } : { scale: 1 }}
-                                                                        transition={{ duration: 0.3 }}
+                                            {/* Incomplete To-Dos */}
+                                            {incompleteTodos.length > 0 && (
+                                                <Reorder.Group
+                                                    axis="y"
+                                                    values={incompleteTodos}
+                                                    onReorder={(newOrder) => {
+                                                        const reordered = newOrder.map((todo, index) => ({ ...todo, order: index }));
+                                                        setTodos([...reordered, ...completedTodos]);
+                                                    }}
+                                                    className="space-y-2"
+                                                >
+                                                    {incompleteTodos.map((todo) => (
+                                                        <Reorder.Item key={todo.id} value={todo}>
+                                                            <motion.div
+                                                                ref={editingTodoId === todo.id ? editingTodoRef : null}
+                                                                layout
+                                                                transition={{ duration: 0.2, ease: "easeInOut" }}
+                                                                className="p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 cursor-move"
+                                                            >
+                                                                <div className="flex items-start gap-3">
+                                                                    <button
+                                                                        onClick={() => toggleTodoComplete(todo.id)}
+                                                                        className="mt-0.5 text-gray-300 hover:text-gray-400 dark:text-gray-600 dark:hover:text-gray-500 transition-colors"
                                                                     >
-                                                                        {note.completed ? (
-                                                                            <CheckCircle2 className="w-5 h-5" />
-                                                                        ) : (
-                                                                            <Circle className="w-5 h-5" />
-                                                                        )}
-                                                                    </motion.div>
-                                                                </motion.button>
+                                                                        <Circle className="w-5 h-5" />
+                                                                    </button>
 
-                                                                {/* Missed Checkbox - only show for overdue, non-completed tasks */}
-                                                                {event.isOverdue && !note.completed && (
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <AnimatePresence mode="wait">
+                                                                            {editingTodoId === todo.id ? (
+                                                                                <motion.div
+                                                                                    key="editing"
+                                                                                    initial={{ opacity: 0 }}
+                                                                                    animate={{ opacity: 1 }}
+                                                                                    exit={{ opacity: 0 }}
+                                                                                    transition={{ duration: 0.15 }}
+                                                                                    className="space-y-2"
+                                                                                >
+                                                                                    <input
+                                                                                        type="text"
+                                                                                        value={todo.title}
+                                                                                        onChange={(e) => updateTodo(todo.id, { title: e.target.value })}
+                                                                                        onKeyDown={(e) => {
+                                                                                            if (e.key === 'Enter') {
+                                                                                                if (!todo.title.trim()) {
+                                                                                                    deleteTodo(todo.id);
+                                                                                                } else {
+                                                                                                    setEditingTodoId(null);
+                                                                                                }
+                                                                                            } else if (e.key === 'Escape') {
+                                                                                                if (!todo.title.trim()) {
+                                                                                                    deleteTodo(todo.id);
+                                                                                                } else {
+                                                                                                    setEditingTodoId(null);
+                                                                                                }
+                                                                                            }
+                                                                                        }}
+                                                                                        placeholder="What needs to be done?"
+                                                                                        className="w-full px-2 py-1 text-sm font-medium bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded focus:outline-none focus:ring-2 text-gray-900 dark:text-white"
+                                                                                        style={{ '--tw-ring-color': `${accentColor}50` } as React.CSSProperties}
+                                                                                        autoFocus
+                                                                                    />
+                                                                                    <textarea
+                                                                                        value={todo.description || ''}
+                                                                                        onChange={(e) => updateTodo(todo.id, { description: e.target.value })}
+                                                                                        placeholder="Add description..."
+                                                                                        rows={2}
+                                                                                        className="w-full px-2 py-1 text-xs bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded focus:outline-none focus:ring-2 text-gray-700 dark:text-gray-300 resize-none"
+                                                                                        style={{ '--tw-ring-color': `${accentColor}50` } as React.CSSProperties}
+                                                                                    />
+
+                                                                                    {/* Color Picker */}
+                                                                                    <div>
+                                                                                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Color:</p>
+                                                                                        <div className="flex items-center gap-2">
+                                                                                            {/* 5 Preset Colors */}
+                                                                                            <div className="flex gap-1.5">
+                                                                                                {['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'].map((colorOption) => (
+                                                                                                    <button
+                                                                                                        key={colorOption}
+                                                                                                        onClick={() => updateTodo(todo.id, { color: todo.color === colorOption ? undefined : colorOption })}
+                                                                                                        className="w-6 h-6 rounded-full border-2 transition-all hover:scale-110"
+                                                                                                        style={{
+                                                                                                            backgroundColor: colorOption,
+                                                                                                            borderColor: 'transparent',
+                                                                                                            boxShadow: todo.color === colorOption ? '0 0 0 2px ' + colorOption : 'none'
+                                                                                                        }}
+                                                                                                        title={colorOption}
+                                                                                                    />
+                                                                                                ))}
+                                                                                            </div>
+
+                                                                                            {/* Custom Color Picker */}
+                                                                                            <div className="relative w-6 h-6">
+                                                                                                <input
+                                                                                                    type="color"
+                                                                                                    value={todo.color || '#3b82f6'}
+                                                                                                    onChange={(e) => {
+                                                                                                        const newColor = e.target.value;
+                                                                                                        // Update immediately for visual feedback
+                                                                                                        updateTodo(todo.id, { color: newColor });
+                                                                                                    }}
+                                                                                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                                                                                    title="Custom color"
+                                                                                                />
+                                                                                                <div
+                                                                                                    className="w-6 h-6 rounded-full border-2 border-gray-300 dark:border-gray-600 pointer-events-none flex items-center justify-center overflow-hidden"
+                                                                                                    style={{
+                                                                                                        background: 'conic-gradient(from 0deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)'
+                                                                                                    }}
+                                                                                                />
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    </div>
+
+                                                                                    {/* Tags Section */}
+                                                                                    <div>
+                                                                                        {/* Display existing tags as chips */}
+                                                                                        {todo.tags && todo.tags.length > 0 && (
+                                                                                            <div className="flex flex-wrap gap-1 mb-2">
+                                                                                                {todo.tags.map((tag) => (
+                                                                                                    <span
+                                                                                                        key={tag}
+                                                                                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium text-white"
+                                                                                                        style={{ backgroundColor: accentColor }}
+                                                                                                    >
+                                                                                                        {tag}
+                                                                                                        <button
+                                                                                                            onClick={(e) => {
+                                                                                                                e.stopPropagation();
+                                                                                                                removeTagFromTodo(todo.id, tag);
+                                                                                                            }}
+                                                                                                            className="hover:bg-white/20 rounded-full p-0.5"
+                                                                                                        >
+                                                                                                            <X className="w-2.5 h-2.5" />
+                                                                                                        </button>
+                                                                                                    </span>
+                                                                                                ))}
+                                                                                            </div>
+                                                                                        )}
+
+                                                                                        <div className="relative">
+                                                                                            <input
+                                                                                                type="text"
+                                                                                                value={tagInput}
+                                                                                                onChange={(e) => {
+                                                                                                    setTagInput(e.target.value);
+                                                                                                    setShowTagSuggestions(e.target.value.length > 0 || tagHistory.length > 0);
+                                                                                                }}
+                                                                                                onKeyDown={(e) => {
+                                                                                                    if (e.key === 'Enter' && tagInput.trim()) {
+                                                                                                        addTagToTodo(todo.id, tagInput);
+                                                                                                        setTagInput('');
+                                                                                                        setShowTagSuggestions(false);
+                                                                                                    } else if (e.key === 'Escape') {
+                                                                                                        setShowTagSuggestions(false);
+                                                                                                    }
+                                                                                                }}
+                                                                                                onFocus={() => setShowTagSuggestions(tagInput.length > 0 || tagHistory.length > 0)}
+                                                                                                onBlur={() => setTimeout(() => setShowTagSuggestions(false), 200)}
+                                                                                                placeholder="Add tag..."
+                                                                                                className="flex-1 w-full px-2 py-1 text-xs bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded focus:outline-none focus:ring-2 text-gray-700 dark:text-gray-300"
+                                                                                                style={{ '--tw-ring-color': `${accentColor}50` } as React.CSSProperties}
+                                                                                            />
+
+                                                                                            {/* Tag Suggestions Dropdown */}
+                                                                                            {showTagSuggestions && (() => {
+                                                                                                const currentTodoTags = todo.tags || [];
+                                                                                                const filteredSuggestions = tagHistory.filter(tag =>
+                                                                                                    !currentTodoTags.includes(tag) &&
+                                                                                                    tag.toLowerCase().includes(tagInput.toLowerCase())
+                                                                                                );
+                                                                                                const tagsToShow = tagInput.length > 0 ? filteredSuggestions : tagHistory.filter(t => !currentTodoTags.includes(t));
+
+                                                                                                return tagsToShow.length > 0 ? (
+                                                                                                    <motion.div
+                                                                                                        initial={{ opacity: 0, y: -10 }}
+                                                                                                        animate={{ opacity: 1, y: 0 }}
+                                                                                                        className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-40 overflow-y-auto"
+                                                                                                    >
+                                                                                                        {tagsToShow.map((tag) => (
+                                                                                                            <button
+                                                                                                                key={tag}
+                                                                                                                onClick={() => {
+                                                                                                                    addTagToTodo(todo.id, tag);
+                                                                                                                    setTagInput('');
+                                                                                                                    setShowTagSuggestions(false);
+                                                                                                                }}
+                                                                                                                className="w-full px-3 py-1.5 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center gap-2"
+                                                                                                            >
+                                                                                                                <Tag className="w-3 h-3" style={{ color: accentColor }} />
+                                                                                                                <span className="text-gray-900 dark:text-white">{tag}</span>
+                                                                                                            </button>
+                                                                                                        ))}
+                                                                                                    </motion.div>
+                                                                                                ) : null;
+                                                                                            })()}
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </motion.div>
+                                                                            ) : (
+                                                                                <motion.div
+                                                                                    key="viewing"
+                                                                                    initial={{ opacity: 0 }}
+                                                                                    animate={{ opacity: 1 }}
+                                                                                    exit={{ opacity: 0 }}
+                                                                                    transition={{ duration: 0.15 }}
+                                                                                    onClick={() => setEditingTodoId(todo.id)}
+                                                                                    className="cursor-pointer"
+                                                                                >
+                                                                                    <div className="flex items-center gap-2">
+                                                                                        {todo.color && (
+                                                                                            <div
+                                                                                                className="w-3 h-3 rounded-full flex-shrink-0"
+                                                                                                style={{ backgroundColor: todo.color }}
+                                                                                            />
+                                                                                        )}
+                                                                                        <p className="text-sm font-medium text-gray-900 dark:text-white">{todo.title}</p>
+                                                                                    </div>
+                                                                                    {todo.description && (
+                                                                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{todo.description}</p>
+                                                                                    )}
+                                                                                    {todo.tags && todo.tags.length > 0 && (
+                                                                                        <div className="flex flex-wrap gap-1 mt-2">
+                                                                                            {todo.tags.map((tag) => (
+                                                                                                <span
+                                                                                                    key={tag}
+                                                                                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium text-white"
+                                                                                                    style={{ backgroundColor: accentColor }}
+                                                                                                >
+                                                                                                    {tag}
+                                                                                                    <button
+                                                                                                        onClick={(e) => {
+                                                                                                            e.stopPropagation();
+                                                                                                            removeTagFromTodo(todo.id, tag);
+                                                                                                        }}
+                                                                                                        className="hover:bg-white/20 rounded-full p-0.5"
+                                                                                                    >
+                                                                                                        <X className="w-2.5 h-2.5" />
+                                                                                                    </button>
+                                                                                                </span>
+                                                                                            ))}
+                                                                                        </div>
+                                                                                    )}
+                                                                                </motion.div>
+                                                                            )}
+                                                                        </AnimatePresence>
+                                                                    </div>
+
+                                                                    <div className="flex flex-col gap-1">
+                                                                        {editingTodoId === todo.id && (
+                                                                            <button
+                                                                                onClick={() => {
+                                                                                    if (!todo.title.trim()) {
+                                                                                        deleteTodo(todo.id);
+                                                                                    } else {
+                                                                                        setEditingTodoId(null);
+                                                                                    }
+                                                                                }}
+                                                                                className="text-green-500 hover:text-green-600 transition-colors"
+                                                                                title="Done editing"
+                                                                            >
+                                                                                <CheckCircle2 className="w-4 h-4" />
+                                                                            </button>
+                                                                        )}
+                                                                        <button
+                                                                            onClick={() => deleteTodo(todo.id)}
+                                                                            className="text-gray-400 hover:text-red-500 transition-colors"
+                                                                        >
+                                                                            <Trash2 className="w-4 h-4" />
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            </motion.div>
+                                                        </Reorder.Item>
+                                                    ))}
+                                                </Reorder.Group>
+                                            )}
+
+                                            {/* Divider */}
+                                            {incompleteTodos.length > 0 && completedTodos.length > 0 && (
+                                                <div className="flex items-center gap-3 py-2">
+                                                    <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700"></div>
+                                                    <span className="text-xs text-gray-400 dark:text-gray-500 font-medium">Completed</span>
+                                                    <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700"></div>
+                                                </div>
+                                            )}
+
+                                            {/* Completed To-Dos */}
+                                            {completedTodos.length > 0 && (
+                                                <div className="space-y-2 opacity-60">
+                                                    {completedTodos.map((todo) => (
+                                                        <motion.div
+                                                            key={todo.id}
+                                                            layout
+                                                            className="p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50"
+                                                        >
+                                                            <div className="flex items-start gap-3">
+                                                                <button
+                                                                    onClick={() => toggleTodoComplete(todo.id)}
+                                                                    className="mt-0.5 text-green-500 hover:text-green-600 transition-colors"
+                                                                >
+                                                                    <CheckCircle2 className="w-5 h-5" />
+                                                                </button>
+
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400 line-through">{todo.title}</p>
+                                                                    {todo.description && (
+                                                                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 line-through">{todo.description}</p>
+                                                                    )}
+                                                                    {todo.tags && todo.tags.length > 0 && (
+                                                                        <div className="flex flex-wrap gap-1 mt-2">
+                                                                            {todo.tags.map((tag) => (
+                                                                                <span
+                                                                                    key={tag}
+                                                                                    className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
+                                                                                >
+                                                                                    {tag}
+                                                                                </span>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+
+                                                                <button
+                                                                    onClick={() => deleteTodo(todo.id)}
+                                                                    className="text-gray-400 hover:text-red-500 transition-colors"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </button>
+                                                            </div>
+                                                        </motion.div>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {incompleteTodos.length === 0 && completedTodos.length === 0 && (
+                                                <p className="text-gray-400 dark:text-gray-500 text-sm text-center py-8">
+                                                    No to-dos yet. Click "Add To-Do" or press Ctrl+Shift+K!
+                                                </p>
+                                            )}
+                                        </>
+                                    ) : (
+                                        /* Events Tab */
+                                        filteredEventsForTab.length === 0 ? (
+                                            <p className="text-gray-400 dark:text-gray-500 text-sm">
+                                                {eventTab === 'upcoming' ? 'No events.' : eventTab === 'completed' ? 'No completed events.' : 'No missed events.'}
+                                            </p>
+                                        ) : (
+                                            <AnimatePresence mode="popLayout">
+                                                {filteredEventsForTab.slice(0, 10).map((event) => {
+                                                    const { date, note, dateKey } = event;
+                                                    return (
+                                                        <motion.div
+                                                            key={note.id}
+                                                            layout
+                                                            initial={{ opacity: 0, scale: 0.8, y: -10 }}
+                                                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                                                            exit={{ opacity: 0, scale: 0.8, x: 50 }}
+                                                            transition={{
+                                                                duration: 0.2,
+                                                                layout: { duration: 0.2 }
+                                                            }}
+                                                            whileHover={{
+                                                                scale: 1.02,
+                                                                zIndex: 10,
+                                                                transition: { duration: 0.1, ease: "easeOut" }
+                                                            }}
+                                                            className={clsx(
+                                                                "p-3 rounded-xl border transition-all relative overflow-hidden",
+                                                                note.completed
+                                                                    ? note.completedLate
+                                                                        ? "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-900/50"
+                                                                        : "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-900/50"
+                                                                    : note.missed
+                                                                        ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-900/50"
+                                                                        : event.isOverdue
+                                                                            ? "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm"
+                                                                            : importanceColors[note.importance as keyof typeof importanceColors]
+                                                            )}
+                                                        >
+                                                            {/* Overdue Alert Banner */}
+                                                            {event.isOverdue && !note.completed && !note.missed && (
+                                                                <div className="absolute top-0 left-0 right-0 h-9 bg-red-500 text-white text-sm font-bold px-3 flex items-center justify-between z-10">
+                                                                    <span>OVERDUE</span>
+                                                                    <span>{getOverdueTime(date)}</span>
+                                                                </div>
+                                                            )}
+
+                                                            <div className={clsx("flex items-start gap-3", event.isOverdue && !note.completed && !note.missed && "pt-9")}>
+                                                                {/* Checkboxes Container */}
+                                                                <div className="flex flex-col gap-1 mt-0.5 flex-shrink-0">
+                                                                    {/* Completion Checkbox */}
                                                                     <motion.button
                                                                         onClick={(e) => {
                                                                             e.stopPropagation();
-                                                                            handleMarkMissed(note.id, dateKey);
+                                                                            if (event.isOverdue && !note.completed) {
+                                                                                // Overdue task - complete as late
+                                                                                handleCompleteLate(note.id, dateKey);
+                                                                            } else {
+                                                                                handleToggleComplete(note.id, dateKey, note.completed || false, event);
+                                                                            }
                                                                         }}
                                                                         whileTap={{ scale: 0.8 }}
-                                                                        className="text-red-400 hover:text-red-500 transition-all"
-                                                                        title="Mark as missed"
-                                                                    >
-                                                                        <XCircle className="w-5 h-5" />
-                                                                    </motion.button>
-                                                                )}
-                                                            </div>
-
-                                                            <div
-                                                                className="flex-1 cursor-pointer"
-                                                                onClick={() => onNavigateToNote(date, note.id)}
-                                                            >
-                                                                <div className="flex justify-between items-start mb-1">
-                                                                    <div className="flex items-center gap-2">
-                                                                        <span className={clsx(
-                                                                            "font-bold text-sm",
-                                                                            note.completed && "line-through text-gray-500 dark:text-gray-400"
-                                                                        )}>
-                                                                            {note.title}
-                                                                        </span>
-                                                                        {/* @ts-ignore */}
-                                                                        {event.isRecurringSeries && (
-                                                                            <div className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-md bg-gray-100 dark:bg-gray-700" style={{ color: accentColor }}>
-                                                                                <Repeat className="w-3 h-3" />
-                                                                                {/* @ts-ignore */}
-                                                                                <span className="font-semibold">{event.completedCount}/{event.totalCount}</span>
-                                                                            </div>
+                                                                        className={clsx(
+                                                                            "transition-all",
+                                                                            note.completed
+                                                                                ? note.completedLate
+                                                                                    ? "text-amber-500 hover:text-amber-600"
+                                                                                    : "text-green-500 hover:text-green-600"
+                                                                                : "text-gray-300 hover:text-gray-400 dark:text-gray-600 dark:hover:text-gray-500"
                                                                         )}
-                                                                    </div>
-                                                                    <div className="text-right flex flex-col items-end gap-1">
-                                                                        <div className="text-xs opacity-70">{format(date, 'MMM d')} {convertTo12Hour(note.time)}</div>
+                                                                        title={event.isOverdue && !note.completed ? "Mark as completed (late)" : "Mark as completed"}
+                                                                    >
+                                                                        <motion.div
+                                                                            initial={false}
+                                                                            animate={note.completed ? { scale: [1, 1.3, 1], rotate: [0, 10, 0] } : { scale: 1 }}
+                                                                            transition={{ duration: 0.3 }}
+                                                                        >
+                                                                            {note.completed ? (
+                                                                                <CheckCircle2 className="w-5 h-5" />
+                                                                            ) : (
+                                                                                <Circle className="w-5 h-5" />
+                                                                            )}
+                                                                        </motion.div>
+                                                                    </motion.button>
 
-                                                                        {note.completed ? (
-                                                                            <button
-                                                                                onClick={(e) => {
-                                                                                    e.stopPropagation();
-                                                                                    handleToggleLate(note.id, dateKey, note.completedLate || false);
-                                                                                }}
-                                                                                className={clsx(
-                                                                                    "text-[10px] font-semibold px-2 py-0.5 rounded-full transition-colors",
-                                                                                    note.completedLate
-                                                                                        ? "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-900/50"
-                                                                                        : "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50"
-                                                                                )}
-                                                                            >
-                                                                                {note.completedLate ? 'Late' : 'On Time'}
-                                                                            </button>
-                                                                        ) : !event.isOverdue ? (
-                                                                            <div className="text-[10px] opacity-60 font-semibold">
-                                                                                {getCountdown(date, note.time)}
-                                                                            </div>
-                                                                        ) : null}
-                                                                    </div>
-                                                                </div>
-                                                                <div className="flex items-start gap-2 text-xs opacity-80">
-                                                                    {!note.completed && (
-                                                                        <Circle className={clsx("w-2 h-2 mt-[3px] flex-shrink-0 fill-current", importanceIconColors[note.importance as keyof typeof importanceIconColors])} />
+                                                                    {/* Missed Checkbox - only show for overdue, non-completed tasks */}
+                                                                    {event.isOverdue && !note.completed && (
+                                                                        <motion.button
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                handleMarkMissed(note.id, dateKey);
+                                                                            }}
+                                                                            whileTap={{ scale: 0.8 }}
+                                                                            className="text-red-400 hover:text-red-500 transition-all"
+                                                                            title="Mark as missed"
+                                                                        >
+                                                                            <XCircle className="w-5 h-5" />
+                                                                        </motion.button>
                                                                     )}
-                                                                    <span className={clsx(
-                                                                        "break-words",
-                                                                        note.completed && "text-gray-500 dark:text-gray-400"
-                                                                    )}>
-                                                                        {note.description || 'No description'}
-                                                                    </span>
+                                                                </div>
+
+                                                                <div
+                                                                    className="flex-1 cursor-pointer"
+                                                                    onClick={() => onNavigateToNote(date, note.id)}
+                                                                >
+                                                                    <div className="flex justify-between items-start mb-1">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className={clsx(
+                                                                                "font-bold text-sm",
+                                                                                note.completed && "line-through text-gray-500 dark:text-gray-400"
+                                                                            )}>
+                                                                                {note.title}
+                                                                            </span>
+                                                                            {/* @ts-ignore */}
+                                                                            {event.isRecurringSeries && (
+                                                                                <div className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-md bg-gray-100 dark:bg-gray-700" style={{ color: accentColor }}>
+                                                                                    <Repeat className="w-3 h-3" />
+                                                                                    {/* @ts-ignore */}
+                                                                                    <span className="font-semibold">{event.completedCount}/{event.totalCount}</span>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                        <div className="text-right flex flex-col items-end gap-1">
+                                                                            <div className="text-xs opacity-70">{format(date, 'MMM d')} {convertTo12Hour(note.time)}</div>
+
+                                                                            {note.completed ? (
+                                                                                <button
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        handleToggleLate(note.id, dateKey, note.completedLate || false);
+                                                                                    }}
+                                                                                    className={clsx(
+                                                                                        "text-[10px] font-semibold px-2 py-0.5 rounded-full transition-colors",
+                                                                                        note.completedLate
+                                                                                            ? "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-900/50"
+                                                                                            : "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50"
+                                                                                    )}
+                                                                                >
+                                                                                    {note.completedLate ? 'Late' : 'On Time'}
+                                                                                </button>
+                                                                            ) : !event.isOverdue ? (
+                                                                                <div className="text-[10px] opacity-60 font-semibold">
+                                                                                    {getCountdown(date, note.time)}
+                                                                                </div>
+                                                                            ) : null}
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex items-start gap-2 text-xs opacity-80">
+                                                                        {!note.completed && (
+                                                                            <Circle className={clsx("w-2 h-2 mt-[3px] flex-shrink-0 fill-current", importanceIconColors[note.importance as keyof typeof importanceIconColors])} />
+                                                                        )}
+                                                                        <span className={clsx(
+                                                                            "break-words",
+                                                                            note.completed && "text-gray-500 dark:text-gray-400"
+                                                                        )}>
+                                                                            {note.description || 'No description'}
+                                                                        </span>
+                                                                    </div>
                                                                 </div>
                                                             </div>
-                                                        </div>
-                                                    </motion.div>
-                                                );
-                                            })}
-                                        </AnimatePresence>
+                                                        </motion.div>
+                                                    );
+                                                })}
+                                            </AnimatePresence>
+                                        )
                                     )}
                                 </div>
 
@@ -1656,55 +2224,57 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                             </motion.div>
 
                             {/* Resizable Handle */}
-                            {!isMobile && (
-                                <div className="relative flex items-center" style={{ height: `${panelHeight}px` }}>
-                                    {/* WIDTH Slider (Vertical) */}
-                                    <div
-                                        className="hidden md:flex w-4 h-full items-center justify-center cursor-col-resize hover:bg-gray-50/50 dark:hover:bg-gray-700/50 rounded-full transition-colors group mx-1"
-                                        onMouseDown={(e) => { handleLongPressEnd(); handleMouseDown(e); }}
-                                    >
-                                        <div className="h-12 w-1 bg-gray-200 dark:bg-gray-600 rounded-full transition-colors shadow-sm" style={{ '--tw-bg-opacity': 1 } as any} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = accentColor} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ''} />
+                            {
+                                !isMobile && (
+                                    <div className="relative flex items-center" style={{ height: `${panelHeight}px` }}>
+                                        {/* WIDTH Slider (Vertical) */}
+                                        <div
+                                            className="hidden md:flex w-4 h-full items-center justify-center cursor-col-resize hover:bg-gray-50/50 dark:hover:bg-gray-700/50 rounded-full transition-colors group mx-1"
+                                            onMouseDown={(e) => { handleLongPressEnd(); handleMouseDown(e); }}
+                                        >
+                                            <div className="h-12 w-1 bg-gray-200 dark:bg-gray-600 rounded-full transition-colors shadow-sm" style={{ '--tw-bg-opacity': 1 } as any} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = accentColor} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ''} />
+                                        </div>
+
+                                        {/* HEIGHT Slider (Horizontal at bottom) */}
+                                        <div
+                                            className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-2 h-4 w-16 flex items-center justify-center cursor-row-resize hover:bg-gray-50/50 dark:hover:bg-gray-700/50 rounded-full transition-colors group/height z-30"
+                                            onMouseDown={(e) => {
+                                                handleLongPressEnd();
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                const startY = e.clientY;
+                                                const startHeight = panelHeight;
+                                                let currentHeight = startHeight;
+
+                                                const handleMouseMove = (moveEvent: MouseEvent) => {
+                                                    const deltaY = moveEvent.clientY - startY;
+                                                    currentHeight = Math.max(250, Math.min(800, startHeight + deltaY));
+                                                    setPanelHeight(currentHeight);
+                                                    setEventsHeight(currentHeight);
+                                                    setTrendsHeight(currentHeight);
+                                                    // Update the main_content row height in dashboard layout so other widgets move
+                                                    setDashboardLayout(prev => prev.map(r =>
+                                                        r.widgets.includes('main_content') ? { ...r, height: currentHeight } : r
+                                                    ));
+                                                };
+
+                                                const handleMouseUp = () => {
+                                                    document.removeEventListener('mousemove', handleMouseMove);
+                                                    document.removeEventListener('mouseup', handleMouseUp);
+                                                    // Save the height
+                                                    // @ts-ignore
+                                                    window.ipcRenderer.invoke('save-device-setting', 'dashboardPanelHeight', currentHeight.toString());
+                                                };
+
+                                                document.addEventListener('mousemove', handleMouseMove);
+                                                document.addEventListener('mouseup', handleMouseUp);
+                                            }}
+                                        >
+                                            <div className="w-8 h-1 bg-gray-200 dark:bg-gray-600 rounded-full transition-colors shadow-sm" style={{ '--tw-bg-opacity': 1 } as any} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = accentColor} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ''} />
+                                        </div>
                                     </div>
-
-                                    {/* HEIGHT Slider (Horizontal at bottom) */}
-                                    <div
-                                        className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-2 h-4 w-16 flex items-center justify-center cursor-row-resize hover:bg-gray-50/50 dark:hover:bg-gray-700/50 rounded-full transition-colors group/height z-30"
-                                        onMouseDown={(e) => {
-                                            handleLongPressEnd();
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            const startY = e.clientY;
-                                            const startHeight = panelHeight;
-                                            let currentHeight = startHeight;
-
-                                            const handleMouseMove = (moveEvent: MouseEvent) => {
-                                                const deltaY = moveEvent.clientY - startY;
-                                                currentHeight = Math.max(250, Math.min(800, startHeight + deltaY));
-                                                setPanelHeight(currentHeight);
-                                                setEventsHeight(currentHeight);
-                                                setTrendsHeight(currentHeight);
-                                                // Update the main_content row height in dashboard layout so other widgets move
-                                                setDashboardLayout(prev => prev.map(r =>
-                                                    r.widgets.includes('main_content') ? { ...r, height: currentHeight } : r
-                                                ));
-                                            };
-
-                                            const handleMouseUp = () => {
-                                                document.removeEventListener('mousemove', handleMouseMove);
-                                                document.removeEventListener('mouseup', handleMouseUp);
-                                                // Save the height
-                                                // @ts-ignore
-                                                window.ipcRenderer.invoke('save-device-setting', 'dashboardPanelHeight', currentHeight.toString());
-                                            };
-
-                                            document.addEventListener('mousemove', handleMouseMove);
-                                            document.addEventListener('mouseup', handleMouseUp);
-                                        }}
-                                    >
-                                        <div className="w-8 h-1 bg-gray-200 dark:bg-gray-600 rounded-full transition-colors shadow-sm" style={{ '--tw-bg-opacity': 1 } as any} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = accentColor} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ''} />
-                                    </div>
-                                </div>
-                            )}
+                                )
+                            }
 
                             {/* Weekly Trends Graph - Resizable Right Column */}
                             {/* Weekly Trends Graph - Resizable Right Column */}
@@ -1759,10 +2329,10 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, onO
                                     </div>
                                 )}
                             </motion.div>
-                        </div>
+                        </div >
 
                         {/* Shared Height Resize Handle Removed */}
-                    </div>
+                    </div >
                 );
             case 'github':
                 if (!enabledFeatures.github) return null;

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Sparkles, X, Check, Repeat, FileText } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
@@ -10,9 +10,10 @@ interface AiQuickAddModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSave: (note: Note, date: Date) => void;
+    wasTriggeredFromHidden?: boolean;
 }
 
-export function AiQuickAddModal({ isOpen, onClose, onSave }: AiQuickAddModalProps) {
+export function AiQuickAddModal({ isOpen, onClose, onSave, wasTriggeredFromHidden }: AiQuickAddModalProps) {
     const { accentColor } = useTheme();
 
     // AI Note State
@@ -68,6 +69,41 @@ export function AiQuickAddModal({ isOpen, onClose, onSave }: AiQuickAddModalProp
             }
         }
     }, [isOpen]);
+
+    // Reset and close modal (defined early for use in useEffect)
+    const resetAndClose = useCallback(async () => {
+        setAiInput('');
+        setAiProposedNote(null);
+        setErrorMessage(null);
+        setIsRecurring(false);
+
+        // If triggered from hidden, minimize the window
+        if (wasTriggeredFromHidden) {
+            try {
+                // @ts-ignore
+                await window.ipcRenderer?.invoke('close-ai-quick-add', true);
+            } catch (e) {
+                console.warn('[AiQuickAdd] Failed to minimize via IPC:', e);
+            }
+        }
+
+        onClose();
+    }, [wasTriggeredFromHidden, onClose]);
+
+    // Handle ESC key to close modal
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                resetAndClose();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isOpen, resetAndClose]);
 
     // --- AI Note Logic ---
     const handleAiSubmit = async () => {
@@ -173,14 +209,6 @@ export function AiQuickAddModal({ isOpen, onClose, onSave }: AiQuickAddModalProp
         } else {
             console.log('[AiQuickAdd] No aiProposedNote to save');
         }
-    };
-
-    const resetAndClose = () => {
-        setAiInput('');
-        setAiProposedNote(null);
-        setErrorMessage(null);
-        setIsRecurring(false);
-        onClose();
     };
 
     if (!isOpen) return null;

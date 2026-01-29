@@ -16,7 +16,7 @@ import { KeyboardShortcuts } from '../components/KeyboardShortcuts';
 import { getAppVersion } from '../utils/version';
 import { TutorialGallery } from '../components/TutorialGallery';
 import { TextGuide } from '../components/TextGuide';
-import logoPng from '../assets/ThoughtsPlus.png';
+import { getAppIcon } from '../assets/appIcons';
 
 
 // Types for multi-provider configuration
@@ -2180,7 +2180,7 @@ export function SettingsPage() {
                                         appIcon === icon.name ? "drop-shadow-md" : "opacity-80 group-hover:opacity-100"
                                     )}>
                                         <img
-                                            src={icon.name === 'ThoughtsPlus' ? logoPng : `/app-icons/${icon.name}.png`}
+                                            src={getAppIcon(icon.name)}
                                             alt={icon.display}
                                             className="w-full h-full object-contain"
                                         />

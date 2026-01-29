@@ -1,0 +1,44 @@
+{
+    "todos": [
+        {
+            "id": "todo-1706097600000",
+            "title": "Buy groceries",
+            "description": "Milk, eggs, bread, vegetables",
+            "tags": [
+                "shopping",
+                "personal"
+            ],
+            "completed": false,
+            "createdAt": "2026-01-24T10:00:00.000Z",
+            "order": 0,
+            "color": "#3b82f6"
+        },
+        {
+            "id": "todo-1706098200000",
+            "title": "Call dentist",
+            "description": "Schedule annual checkup",
+            "tags": [
+                "health",
+                "appointments"
+            ],
+            "completed": false,
+            "createdAt": "2026-01-24T10:10:00.000Z",
+            "order": 1,
+            "color": "#10b981"
+        },
+        {
+            "id": "todo-1706098800000",
+            "title": "Finish reading book",
+            "description": "Complete chapters 8-10",
+            "tags": [
+                "reading",
+                "personal"
+            ],
+            "completed": true,
+            "createdAt": "2026-01-23T15:00:00.000Z",
+            "completedAt": "2026-01-24T09:30:00.000Z",
+            "order": 2,
+            "color": "#8b5cf6"
+        }
+    ]
+}

@@ -25,9 +25,10 @@ export const DEFAULT_SHORTCUTS: ShortcutConfig[] = [
     { id: 'progress', label: 'Progress', key: 'P', modifier: 'Ctrl', description: 'Open Progress', enabled: true },
     { id: 'notebook', label: 'Notebook', key: 'N', modifier: 'Ctrl', description: 'Open Notebook', enabled: true },
     { id: 'settings', label: 'Settings', key: 'S', modifier: 'Ctrl', description: 'Open Settings', enabled: true },
-    { id: 'ai-quick-add', label: 'AI Quick Add', key: 'M', modifier: 'Ctrl', description: 'Open AI Quick Add modal', enabled: true },
-    { id: 'quick-timer', label: 'Quick Timer', key: 'Enter', modifier: 'Ctrl', description: 'Open Quick Timer modal', enabled: true },
-    { id: 'quick-capture', label: 'Quick Capture', key: 'N', modifier: 'Ctrl+Shift', description: 'Capture a note from anywhere', enabled: true, isGlobal: true },
+    { id: 'ai-quick-add', label: 'AI Quick Add', key: 'M', modifier: 'Ctrl', description: 'Open AI Quick Add modal', enabled: true, isGlobal: true },
+    { id: 'quick-timer', label: 'Quick Timer', key: 'T', modifier: 'Ctrl+Shift', description: 'Open Quick Timer modal', enabled: true, isGlobal: true },
+    { id: 'quick-capture', label: 'Quick Capture', key: 'N', modifier: 'Ctrl+Shift', description: 'Capture a note from anywhere, saved in workspace', enabled: true, isGlobal: true },
+    { id: 'quick-todo', label: 'Quick To-Do', key: 'K', modifier: 'Ctrl+Shift', description: 'Add a to-do from anywhere', enabled: true, isGlobal: true },
 ];
 
 // Keys to show on the keyboard (only relevant ones)
@@ -46,10 +47,102 @@ interface KeyboardShortcutsProps {
     className?: string;
 }
 
+// Check if a key is a modifier key
+const isModifierKey = (key: string) => ['Ctrl', 'Alt', 'Shift', 'Space'].includes(key);
+
+// Shortcut Item Component
+interface ShortcutItemProps {
+    shortcut: ShortcutConfig;
+    recordingId: string | null;
+    duplicates: string[];
+    accentColor: string;
+    startRecording: (id: string) => void;
+    toggleShortcut: (id: string) => void;
+}
+
+function ShortcutItem({
+    shortcut,
+    recordingId,
+    duplicates,
+    accentColor,
+    startRecording,
+    toggleShortcut
+}: ShortcutItemProps) {
+    return (
+        <motion.div
+            className={clsx(
+                "flex items-center justify-between p-3 rounded-lg border transition-all",
+                shortcut.enabled
+                    ? "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700"
+                    : "bg-gray-50 dark:bg-gray-900/50 border-gray-100 dark:border-gray-800 opacity-60",
+                duplicates.includes(shortcut.id) && "border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20"
+            )}
+        >
+            <div className="flex items-center gap-2 min-w-0">
+                <div className="flex items-center gap-1 shrink-0">
+                    {shortcut.isGlobal && (
+                        <span
+                            className="w-1.5 h-1.5 rounded-full shrink-0"
+                            style={{ backgroundColor: accentColor }}
+                            title="Global Shortcut"
+                        />
+                    )}
+                </div>
+                <div className="min-w-0">
+                    <p className="font-medium text-gray-900 dark:text-white text-xs truncate">{shortcut.label}</p>
+                    <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate">{shortcut.description}</p>
+                </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0 ml-2">
+                {/* Key Display / Recording */}
+                {recordingId === shortcut.id ? (
+                    <div
+                        className="px-2 py-1 rounded text-xs font-mono animate-pulse bg-gray-100 dark:bg-gray-700 font-medium"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        Recording...
+                    </div>
+                ) : (
+                    <button
+                        onClick={(e) => { e.stopPropagation(); startRecording(shortcut.id); }}
+                        className="flex items-center gap-1 px-2 py-1.5 rounded bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                        disabled={!shortcut.enabled}
+                    >
+                        <kbd className="min-w-[1.5rem] h-6 flex items-center justify-center rounded bg-white dark:bg-gray-600 text-xs font-mono font-bold text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-500 shadow-sm px-1.5">
+                            {shortcut.modifier === 'Ctrl' ? 'Ctrl' : shortcut.modifier === 'Ctrl+Shift' ? 'Ctrl+Shift' : 'Ctrl+Alt'}
+                        </kbd>
+                        <span className="text-xs text-gray-300 dark:text-gray-500 font-bold">+</span>
+                        <kbd className="min-w-[1.5rem] h-6 flex items-center justify-center rounded bg-white dark:bg-gray-600 text-xs font-mono font-bold text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-500 shadow-sm px-1.5">
+                            {shortcut.key}
+                        </kbd>
+                    </button>
+                )}
+
+                {/* Enable/Disable Toggle - Tiny */}
+                <button
+                    onClick={() => toggleShortcut(shortcut.id)}
+                    className={clsx(
+                        "w-8 h-4 rounded-full p-0.5 transition-colors duration-300 shrink-0",
+                        shortcut.enabled ? "" : "bg-gray-300 dark:bg-gray-600"
+                    )}
+                    style={shortcut.enabled ? { backgroundColor: accentColor } : undefined}
+                >
+                    <motion.div
+                        layout
+                        className="w-3 h-3 rounded-full bg-white shadow-sm"
+                        animate={{ x: shortcut.enabled ? 16 : 0 }}
+                        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                    />
+                </button>
+            </div>
+        </motion.div>
+    );
+}
+
 export function KeyboardShortcuts({ className }: KeyboardShortcutsProps) {
     const { accentColor } = useTheme();
     const [shortcuts, setShortcuts] = useState<ShortcutConfig[]>([]);
-    const [hoveredShortcut, setHoveredShortcut] = useState<string | null>(null);
     const [recordingId, setRecordingId] = useState<string | null>(null);
     const [error, setError] = useState<string>('');
 
@@ -59,12 +152,25 @@ export function KeyboardShortcuts({ className }: KeyboardShortcutsProps) {
         if (saved) {
             try {
                 const parsed = JSON.parse(saved);
-                // Merge with defaults to ensure all shortcuts exist
+                // Merge with defaults - preserve enabled state but use default keys if they've changed
                 const merged = DEFAULT_SHORTCUTS.map(def => {
                     const found = parsed.find((s: ShortcutConfig) => s.id === def.id);
-                    return found ? { ...def, ...found } : def;
+                    if (found) {
+                        // Always use the default key/modifier unless user has explicitly customized it
+                        // Check if the saved key is different from the old default (migration case)
+                        return {
+                            ...def,
+                            enabled: found.enabled !== undefined ? found.enabled : def.enabled,
+                            // Only use saved key if it's intentionally different from default
+                            key: found.key || def.key,
+                            modifier: found.modifier || def.modifier
+                        };
+                    }
+                    return def;
                 });
                 setShortcuts(merged);
+                // Save the merged version to fix any stale data
+                localStorage.setItem('keyboard-shortcuts', JSON.stringify(merged));
             } catch {
                 setShortcuts([...DEFAULT_SHORTCUTS]);
             }
@@ -117,13 +223,24 @@ export function KeyboardShortcuts({ className }: KeyboardShortcutsProps) {
         const shortcut = shortcuts.find(s => s.id === id);
         if (!shortcut) return;
 
-        // Special handling for global Quick Capture
+        // Special handling for global shortcuts
         if (shortcut.isGlobal) {
             try {
-                // @ts-ignore
-                await window.ipcRenderer.invoke('set-quick-capture-enabled', !shortcut.enabled);
+                if (shortcut.id === 'quick-capture') {
+                    // @ts-ignore
+                    await window.ipcRenderer.invoke('set-quick-capture-enabled', !shortcut.enabled);
+                } else if (shortcut.id === 'quick-todo') {
+                    // @ts-ignore
+                    await window.ipcRenderer.invoke('set-quick-todo-enabled', !shortcut.enabled);
+                } else if (shortcut.id === 'quick-timer') {
+                    // @ts-ignore
+                    await window.ipcRenderer.invoke('set-quick-timer-enabled', !shortcut.enabled);
+                } else if (shortcut.id === 'ai-quick-add') {
+                    // @ts-ignore
+                    await window.ipcRenderer.invoke('set-ai-quick-add-enabled', !shortcut.enabled);
+                }
             } catch (err) {
-                console.error('Failed to toggle quick capture:', err);
+                console.error(`Failed to toggle ${shortcut.id}:`, err);
             }
         }
 
@@ -132,20 +249,30 @@ export function KeyboardShortcuts({ className }: KeyboardShortcutsProps) {
         ));
     };
 
-
-
     // Reset all shortcuts to defaults
     const resetToDefaults = async () => {
         setError('');
         setShortcuts([...DEFAULT_SHORTCUTS]);
-        // Re-enable Quick Capture with default key
+        // Re-enable global shortcuts with default keys
         try {
             // @ts-ignore
             await window.ipcRenderer.invoke('set-quick-capture-enabled', true);
             // @ts-ignore
             await window.ipcRenderer.invoke('set-quick-capture-hotkey', 'CommandOrControl+Shift+N');
+            // @ts-ignore
+            await window.ipcRenderer.invoke('set-quick-todo-enabled', true);
+            // @ts-ignore
+            await window.ipcRenderer.invoke('set-quick-todo-hotkey', 'CommandOrControl+Shift+K');
+            // @ts-ignore
+            await window.ipcRenderer.invoke('set-quick-timer-enabled', true);
+            // @ts-ignore
+            await window.ipcRenderer.invoke('set-quick-timer-hotkey', 'CommandOrControl+Shift+T');
+            // @ts-ignore
+            await window.ipcRenderer.invoke('set-ai-quick-add-enabled', true);
+            // @ts-ignore
+            await window.ipcRenderer.invoke('set-ai-quick-add-hotkey', 'CommandOrControl+M');
         } catch (err) {
-            console.error('Failed to reset quick capture:', err);
+            console.error('Failed to reset global shortcuts:', err);
         }
     };
 
@@ -198,13 +325,26 @@ export function KeyboardShortcuts({ className }: KeyboardShortcutsProps) {
             // Update the shortcut
             const targetShortcut = shortcuts.find(s => s.id === recordingId);
 
-            // Handle global Quick Capture specially
+            // Handle global shortcuts specially
             if (targetShortcut?.isGlobal) {
                 const electronHotkey = `CommandOrControl+${modifier === 'Ctrl+Shift' ? 'Shift+' : modifier === 'Ctrl+Alt' ? 'Alt+' : ''}${key}`;
                 try {
-                    // @ts-ignore
-                    const result = await window.ipcRenderer.invoke('set-quick-capture-hotkey', electronHotkey);
-                    if (!result.success) {
+                    let result;
+                    if (targetShortcut.id === 'quick-capture') {
+                        // @ts-ignore
+                        result = await window.ipcRenderer.invoke('set-quick-capture-hotkey', electronHotkey);
+                    } else if (targetShortcut.id === 'quick-todo') {
+                        // @ts-ignore
+                        result = await window.ipcRenderer.invoke('set-quick-todo-hotkey', electronHotkey);
+                    } else if (targetShortcut.id === 'quick-timer') {
+                        // @ts-ignore
+                        result = await window.ipcRenderer.invoke('set-quick-timer-hotkey', electronHotkey);
+                    } else if (targetShortcut.id === 'ai-quick-add') {
+                        // @ts-ignore
+                        result = await window.ipcRenderer.invoke('set-ai-quick-add-hotkey', electronHotkey);
+                    }
+
+                    if (result && !result.success) {
                         setError(result.error || 'Failed to register hotkey');
                         setRecordingId(null);
                         return;
@@ -239,33 +379,8 @@ export function KeyboardShortcuts({ className }: KeyboardShortcutsProps) {
         const upperKey = key.toUpperCase();
         const usedKey = usedKeys.get(upperKey);
 
-        let isHovered = false;
-        if (hoveredShortcut) {
-            const hoveredConfig = shortcuts.find(s => s.id === hoveredShortcut);
-            if (hoveredConfig) {
-                // Check if this is the main key
-                if (hoveredConfig.key.toUpperCase() === upperKey) {
-                    isHovered = true;
-                }
-                // Check if this is a modifier key
-                const modifiers = hoveredConfig.modifier.split('+');
-                if (modifiers.includes(key)) {
-                    isHovered = true;
-                }
-            }
-        }
-
         const isDuplicate = usedKey && duplicates.includes(usedKey.shortcut.id);
 
-        if (isHovered) {
-            return {
-                backgroundColor: accentColor,
-                color: 'white',
-                transform: 'translateY(-2px)',
-                boxShadow: `0 4px 12px ${accentColor}50`,
-                borderColor: accentColor,
-            };
-        }
         if (isDuplicate) {
             return {
                 backgroundColor: '#ef4444',
@@ -281,9 +396,6 @@ export function KeyboardShortcuts({ className }: KeyboardShortcutsProps) {
         }
         return {};
     };
-
-    // Check if a key is a modifier key
-    const isModifierKey = (key: string) => ['Ctrl', 'Alt', 'Shift', 'Space'].includes(key);
 
     return (
         <div className={clsx("space-y-6", className)}>
@@ -365,8 +477,6 @@ export function KeyboardShortcuts({ className }: KeyboardShortcutsProps) {
                                             key === 'Space' && "min-w-[160px]"
                                         )}
                                         style={keyStyle}
-                                        onMouseEnter={() => usedKey && setHoveredShortcut(usedKey.shortcut.id)}
-                                        onMouseLeave={() => setHoveredShortcut(null)}
                                         whileHover={{ y: -1 }}
                                         transition={{ duration: 0.1 }}
                                     >
@@ -388,81 +498,50 @@ export function KeyboardShortcuts({ className }: KeyboardShortcutsProps) {
                 </p>
             </div>
 
-            {/* Shortcuts List - Grid Layout */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {shortcuts.map((shortcut) => (
-                    <motion.div
-                        key={shortcut.id}
-                        className={clsx(
-                            "flex items-center justify-between p-3 rounded-lg border transition-all",
-                            shortcut.enabled
-                                ? "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700"
-                                : "bg-gray-50 dark:bg-gray-900/50 border-gray-100 dark:border-gray-800 opacity-60",
-                            duplicates.includes(shortcut.id) && "border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20"
-                        )}
-                        onMouseEnter={() => setHoveredShortcut(shortcut.id)}
-                        onMouseLeave={() => setHoveredShortcut(null)}
-                    >
-                        <div className="flex items-center gap-2 min-w-0">
-                            <div className="flex items-center gap-1 shrink-0">
-                                {shortcut.isGlobal && (
-                                    <span
-                                        className="w-1.5 h-1.5 rounded-full shrink-0"
-                                        style={{ backgroundColor: accentColor }}
-                                        title="Global Shortcut"
-                                    />
-                                )}
-                            </div>
-                            <div className="min-w-0">
-                                <p className="font-medium text-gray-900 dark:text-white text-xs truncate">{shortcut.label}</p>
-                                <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate">{shortcut.description}</p>
-                            </div>
-                        </div>
+            {/* Shortcuts List - Grid Layout with Sections */}
+            <div className="space-y-6">
+                {/* Navigation Shortcuts Section */}
+                <div>
+                    <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                        <span className="w-1 h-4 rounded-full" style={{ backgroundColor: accentColor }}></span>
+                        Navigation Shortcuts
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {shortcuts.filter(s => !['ai-quick-add', 'quick-timer', 'quick-capture', 'quick-todo'].includes(s.id)).map((shortcut) => (
+                            <ShortcutItem
+                                key={shortcut.id}
+                                shortcut={shortcut}
+                                recordingId={recordingId}
+                                duplicates={duplicates}
+                                accentColor={accentColor}
+                                startRecording={startRecording}
+                                toggleShortcut={toggleShortcut}
+                            />
+                        ))}
+                    </div>
+                </div>
 
-                        <div className="flex items-center gap-2 shrink-0 ml-2">
-                            {/* Key Display / Recording */}
-                            {recordingId === shortcut.id ? (
-                                <div
-                                    className="px-2 py-1 rounded text-xs font-mono animate-pulse bg-gray-100 dark:bg-gray-700 font-medium"
-                                    onClick={(e) => e.stopPropagation()}
-                                >
-                                    Recording...
-                                </div>
-                            ) : (
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); startRecording(shortcut.id); }}
-                                    className="flex items-center gap-1 px-2 py-1.5 rounded bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
-                                    disabled={!shortcut.enabled}
-                                >
-                                    <kbd className="min-w-[1.5rem] h-6 flex items-center justify-center rounded bg-white dark:bg-gray-600 text-xs font-mono font-bold text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-500 shadow-sm px-1.5">
-                                        {shortcut.modifier === 'Ctrl' ? 'Ctrl' : shortcut.modifier === 'Ctrl+Shift' ? 'Ctrl+Shift' : 'Ctrl+Alt'}
-                                    </kbd>
-                                    <span className="text-xs text-gray-300 dark:text-gray-500 font-bold">+</span>
-                                    <kbd className="min-w-[1.5rem] h-6 flex items-center justify-center rounded bg-white dark:bg-gray-600 text-xs font-mono font-bold text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-500 shadow-sm px-1.5">
-                                        {shortcut.key}
-                                    </kbd>
-                                </button>
-                            )}
-
-                            {/* Enable/Disable Toggle - Tiny */}
-                            <button
-                                onClick={() => toggleShortcut(shortcut.id)}
-                                className={clsx(
-                                    "w-8 h-4 rounded-full p-0.5 transition-colors duration-300 shrink-0",
-                                    shortcut.enabled ? "" : "bg-gray-300 dark:bg-gray-600"
-                                )}
-                                style={shortcut.enabled ? { backgroundColor: accentColor } : undefined}
-                            >
-                                <motion.div
-                                    layout
-                                    className="w-3 h-3 rounded-full bg-white shadow-sm"
-                                    animate={{ x: shortcut.enabled ? 16 : 0 }}
-                                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                                />
-                            </button>
-                        </div>
-                    </motion.div>
-                ))}
+                {/* Quick Add Shortcuts Section */}
+                <div>
+                    <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                        <span className="w-1 h-4 rounded-full" style={{ backgroundColor: accentColor }}></span>
+                        Quick Add Shortcuts
+                        <span className="text-xs font-normal text-gray-500 dark:text-gray-400">(Frictionless capture)</span>
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {shortcuts.filter(s => ['ai-quick-add', 'quick-timer', 'quick-capture', 'quick-todo'].includes(s.id)).map((shortcut) => (
+                            <ShortcutItem
+                                key={shortcut.id}
+                                shortcut={shortcut}
+                                recordingId={recordingId}
+                                duplicates={duplicates}
+                                accentColor={accentColor}
+                                startRecording={startRecording}
+                                toggleShortcut={toggleShortcut}
+                            />
+                        ))}
+                    </div>
+                </div>
             </div>
 
             <p className="text-xs text-gray-400 dark:text-gray-500 text-center">
@@ -471,5 +550,3 @@ export function KeyboardShortcuts({ className }: KeyboardShortcutsProps) {
         </div>
     );
 }
-
-

@@ -53,6 +53,24 @@ export interface NotesData {
     [date: string]: Note[];
 }
 
+// Task (Checklist) - separate from calendar events
+export interface Task {
+    id: string;
+    title: string;
+    description?: string;
+    tags?: string[];
+    completed: boolean;
+    createdAt: string; // ISO date string
+    completedAt?: string; // ISO date string
+    order: number; // For drag-and-drop ordering
+    color?: string; // Hex color for the task
+}
+
+export interface TasksData {
+    tasks: Task[];
+    archived: Task[]; // Deleted tasks for undo functionality
+}
+
 export interface Milestone {
     id: string;
     title: string;           // e.g., "University Start", "First Day at New Job"

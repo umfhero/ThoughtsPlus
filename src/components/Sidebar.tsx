@@ -4,7 +4,7 @@ import clsx from 'clsx';
 import { useState, useEffect } from 'react';
 import { Page, NotesData } from '../types';
 import { DEFAULT_SHORTCUTS, ShortcutConfig } from './KeyboardShortcuts';
-import logoPng from '../assets/ThoughtsPlus.png';
+import { getAppIcon } from '../assets/appIcons';
 import { useDashboardLayout } from '../contexts/DashboardLayoutContext';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -529,7 +529,7 @@ export function Sidebar({ currentPage, setPage, notes, onMonthSelect, currentMon
                                 <div className={clsx("flex items-center shrink-0", isIconOnly ? "p-3 justify-center" : "p-6 gap-3")}>
                                     <div className={clsx("flex items-center justify-center shrink-0", isIconOnly ? "w-8 h-8" : "w-10 h-10")}>
                                         <img
-                                            src={appIcon === 'ThoughtsPlus' ? logoPng : `/app-icons/${appIcon}.png`}
+                                            src={getAppIcon(appIcon)}
                                             alt="Logo"
                                             className={isIconOnly ? "w-8 h-8" : "w-10 h-10"}
                                         />

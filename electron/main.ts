@@ -1167,6 +1167,406 @@ function setupIpcHandlers() {
         return true;
     });
 
+    // ============================================================================
+    // QUICK TO-DO GLOBAL HOTKEY
+    // ============================================================================
+    let quickTodoHotkey: string | null = null;
+    let wasWindowHiddenBeforeQuickTodo = false;
+
+    ipcMain.handle('get-quick-todo-hotkey', () => {
+        return deviceSettings.quickTodoHotkey || 'CommandOrControl+Shift+K';
+    });
+
+    ipcMain.handle('set-quick-todo-hotkey', async (_, hotkey: string) => {
+        if (quickTodoHotkey) {
+            try {
+                globalShortcut.unregister(quickTodoHotkey);
+            } catch (e) {
+                console.warn('Failed to unregister old quick-todo hotkey:', e);
+            }
+        }
+
+        deviceSettings.quickTodoHotkey = hotkey;
+        await saveDeviceSettings();
+
+        if (hotkey) {
+            try {
+                const registered = globalShortcut.register(hotkey, () => {
+                    console.log('Quick To-Do hotkey triggered!');
+                    if (win) {
+                        wasWindowHiddenBeforeQuickTodo = win.isMinimized() || !win.isVisible() || !win.isFocused();
+                        if (win.isMinimized()) win.restore();
+                        win.show();
+                        win.focus();
+                        win.webContents.send('open-quick-todo', { wasHidden: wasWindowHiddenBeforeQuickTodo });
+                    }
+                });
+
+                if (!registered) {
+                    console.warn('Failed to register quick-todo hotkey:', hotkey);
+                    return { success: false, error: 'Failed to register hotkey. It may be in use by another application.' };
+                }
+                quickTodoHotkey = hotkey;
+                console.log('Quick To-Do global hotkey registered:', hotkey);
+                return { success: true };
+            } catch (e: any) {
+                console.error('Error registering quick-todo hotkey:', e);
+                return { success: false, error: e.message || 'Failed to register hotkey' };
+            }
+        }
+
+        return { success: true };
+    });
+
+    ipcMain.handle('get-quick-todo-enabled', () => {
+        return deviceSettings.quickTodoEnabled !== false;
+    });
+
+    ipcMain.handle('set-quick-todo-enabled', async (_, enabled: boolean) => {
+        deviceSettings.quickTodoEnabled = enabled;
+        await saveDeviceSettings();
+
+        if (enabled) {
+            const hotkey = deviceSettings.quickTodoHotkey || 'CommandOrControl+Shift+K';
+            if (!quickTodoHotkey) {
+                try {
+                    const registered = globalShortcut.register(hotkey, () => {
+                        if (win) {
+                            wasWindowHiddenBeforeQuickTodo = win.isMinimized() || !win.isVisible() || !win.isFocused();
+                            if (win.isMinimized()) win.restore();
+                            win.show();
+                            win.focus();
+                            win.webContents.send('open-quick-todo', { wasHidden: wasWindowHiddenBeforeQuickTodo });
+                        }
+                    });
+                    if (registered) {
+                        quickTodoHotkey = hotkey;
+                        console.log('Quick To-Do global hotkey enabled:', hotkey);
+                    }
+                } catch (e) {
+                    console.warn('Failed to register quick-todo hotkey:', e);
+                }
+            }
+        } else {
+            if (quickTodoHotkey) {
+                try {
+                    globalShortcut.unregister(quickTodoHotkey);
+                    quickTodoHotkey = null;
+                    console.log('Quick To-Do global hotkey disabled');
+                } catch (e) {
+                    console.warn('Failed to unregister quick-todo hotkey:', e);
+                }
+            }
+        }
+
+        return true;
+    });
+
+    ipcMain.handle('close-quick-todo', (_, shouldHide: boolean) => {
+        console.log('[QuickTodo] Close requested, shouldHide:', shouldHide);
+        if (shouldHide && win) {
+            win.minimize();
+            console.log('[QuickTodo] Window minimized');
+        }
+        wasWindowHiddenBeforeQuickTodo = false;
+        return true;
+    });
+
+    // Initialize quick-todo hotkey on startup
+    setTimeout(async () => {
+        const enabled = deviceSettings.quickTodoEnabled !== false;
+        const hotkey = deviceSettings.quickTodoHotkey || 'CommandOrControl+Shift+K';
+
+        if (enabled && hotkey) {
+            try {
+                const registered = globalShortcut.register(hotkey, () => {
+                    if (win) {
+                        wasWindowHiddenBeforeQuickTodo = win.isMinimized() || !win.isVisible() || !win.isFocused();
+                        if (win.isMinimized()) win.restore();
+                        win.show();
+                        win.focus();
+                        win.webContents.send('open-quick-todo', { wasHidden: wasWindowHiddenBeforeQuickTodo });
+                    }
+                });
+                if (registered) {
+                    quickTodoHotkey = hotkey;
+                    console.log('[QuickTodo] Global hotkey initialized:', hotkey);
+                } else {
+                    console.warn('[QuickTodo] Failed to register hotkey:', hotkey);
+                }
+            } catch (e) {
+                console.warn('[QuickTodo] Failed to initialize global hotkey:', e);
+            }
+        }
+    }, 1000);
+
+    // ============================================================================
+    // QUICK TIMER GLOBAL HOTKEY
+    // ============================================================================
+    let quickTimerHotkey: string | null = null;
+    let wasWindowHiddenBeforeQuickTimer = false;
+
+    ipcMain.handle('get-quick-timer-hotkey', () => {
+        return deviceSettings.quickTimerHotkey || 'CommandOrControl+Shift+T';
+    });
+
+    ipcMain.handle('set-quick-timer-hotkey', async (_, hotkey: string) => {
+        if (quickTimerHotkey) {
+            try {
+                globalShortcut.unregister(quickTimerHotkey);
+            } catch (e) {
+                console.warn('Failed to unregister old quick-timer hotkey:', e);
+            }
+        }
+
+        deviceSettings.quickTimerHotkey = hotkey;
+        await saveDeviceSettings();
+
+        if (hotkey) {
+            try {
+                const registered = globalShortcut.register(hotkey, () => {
+                    console.log('Quick Timer hotkey triggered!');
+                    if (win) {
+                        wasWindowHiddenBeforeQuickTimer = win.isMinimized() || !win.isVisible() || !win.isFocused();
+                        if (win.isMinimized()) win.restore();
+                        win.show();
+                        win.focus();
+                        win.webContents.send('open-quick-timer', { wasHidden: wasWindowHiddenBeforeQuickTimer });
+                    }
+                });
+
+                if (!registered) {
+                    console.warn('Failed to register quick-timer hotkey:', hotkey);
+                    return { success: false, error: 'Failed to register hotkey. It may be in use by another application.' };
+                }
+                quickTimerHotkey = hotkey;
+                console.log('Quick Timer global hotkey registered:', hotkey);
+                return { success: true };
+            } catch (e: any) {
+                console.error('Error registering quick-timer hotkey:', e);
+                return { success: false, error: e.message || 'Failed to register hotkey' };
+            }
+        }
+
+        return { success: true };
+    });
+
+    ipcMain.handle('get-quick-timer-enabled', () => {
+        return deviceSettings.quickTimerEnabled !== false;
+    });
+
+    ipcMain.handle('set-quick-timer-enabled', async (_, enabled: boolean) => {
+        deviceSettings.quickTimerEnabled = enabled;
+        await saveDeviceSettings();
+
+        if (enabled) {
+            const hotkey = deviceSettings.quickTimerHotkey || 'CommandOrControl+Shift+T';
+            if (!quickTimerHotkey) {
+                try {
+                    const registered = globalShortcut.register(hotkey, () => {
+                        if (win) {
+                            wasWindowHiddenBeforeQuickTimer = win.isMinimized() || !win.isVisible() || !win.isFocused();
+                            if (win.isMinimized()) win.restore();
+                            win.show();
+                            win.focus();
+                            win.webContents.send('open-quick-timer', { wasHidden: wasWindowHiddenBeforeQuickTimer });
+                        }
+                    });
+                    if (registered) {
+                        quickTimerHotkey = hotkey;
+                        console.log('Quick Timer global hotkey enabled:', hotkey);
+                    }
+                } catch (e) {
+                    console.warn('Failed to register quick-timer hotkey:', e);
+                }
+            }
+        } else {
+            if (quickTimerHotkey) {
+                try {
+                    globalShortcut.unregister(quickTimerHotkey);
+                    quickTimerHotkey = null;
+                    console.log('Quick Timer global hotkey disabled');
+                } catch (e) {
+                    console.warn('Failed to unregister quick-timer hotkey:', e);
+                }
+            }
+        }
+
+        return true;
+    });
+
+    // Initialize quick-timer hotkey on startup
+    setTimeout(async () => {
+        const enabled = deviceSettings.quickTimerEnabled !== false;
+        const hotkey = deviceSettings.quickTimerHotkey || 'CommandOrControl+Shift+T';
+
+        if (enabled && hotkey) {
+            try {
+                const registered = globalShortcut.register(hotkey, () => {
+                    if (win) {
+                        wasWindowHiddenBeforeQuickTimer = win.isMinimized() || !win.isVisible() || !win.isFocused();
+                        if (win.isMinimized()) win.restore();
+                        win.show();
+                        win.focus();
+                        win.webContents.send('open-quick-timer', { wasHidden: wasWindowHiddenBeforeQuickTimer });
+                    }
+                });
+                if (registered) {
+                    quickTimerHotkey = hotkey;
+                    console.log('[QuickTimer] Global hotkey initialized:', hotkey);
+                } else {
+                    console.warn('[QuickTimer] Failed to register hotkey:', hotkey);
+                }
+            } catch (e) {
+                console.warn('[QuickTimer] Failed to initialize global hotkey:', e);
+            }
+        }
+    }, 1000);
+
+    // ============================================================================
+    // AI QUICK ADD GLOBAL HOTKEY
+    // ============================================================================
+    let aiQuickAddHotkey: string | null = null;
+    let wasWindowHiddenBeforeAiQuickAdd = false;
+
+    ipcMain.handle('get-ai-quick-add-hotkey', () => {
+        return deviceSettings.aiQuickAddHotkey || 'CommandOrControl+M';
+    });
+
+    ipcMain.handle('set-ai-quick-add-hotkey', async (_, hotkey: string) => {
+        if (aiQuickAddHotkey) {
+            try {
+                globalShortcut.unregister(aiQuickAddHotkey);
+            } catch (e) {
+                console.warn('Failed to unregister old ai-quick-add hotkey:', e);
+            }
+        }
+
+        deviceSettings.aiQuickAddHotkey = hotkey;
+        await saveDeviceSettings();
+
+        if (hotkey) {
+            try {
+                const registered = globalShortcut.register(hotkey, () => {
+                    console.log('AI Quick Add hotkey triggered!');
+                    if (win) {
+                        wasWindowHiddenBeforeAiQuickAdd = win.isMinimized() || !win.isVisible() || !win.isFocused();
+                        if (win.isMinimized()) win.restore();
+                        win.show();
+                        win.focus();
+                        win.webContents.send('open-ai-quick-add', { wasHidden: wasWindowHiddenBeforeAiQuickAdd });
+                    }
+                });
+
+                if (!registered) {
+                    console.warn('Failed to register ai-quick-add hotkey:', hotkey);
+                    return { success: false, error: 'Failed to register hotkey. It may be in use by another application.' };
+                }
+                aiQuickAddHotkey = hotkey;
+                console.log('AI Quick Add global hotkey registered:', hotkey);
+                return { success: true };
+            } catch (e: any) {
+                console.error('Error registering ai-quick-add hotkey:', e);
+                return { success: false, error: e.message || 'Failed to register hotkey' };
+            }
+        }
+
+        return { success: true };
+    });
+
+    ipcMain.handle('get-ai-quick-add-enabled', () => {
+        return deviceSettings.aiQuickAddEnabled !== false;
+    });
+
+    ipcMain.handle('set-ai-quick-add-enabled', async (_, enabled: boolean) => {
+        deviceSettings.aiQuickAddEnabled = enabled;
+        await saveDeviceSettings();
+
+        if (enabled) {
+            const hotkey = deviceSettings.aiQuickAddHotkey || 'CommandOrControl+M';
+            if (!aiQuickAddHotkey) {
+                try {
+                    const registered = globalShortcut.register(hotkey, () => {
+                        if (win) {
+                            wasWindowHiddenBeforeAiQuickAdd = win.isMinimized() || !win.isVisible() || !win.isFocused();
+                            if (win.isMinimized()) win.restore();
+                            win.show();
+                            win.focus();
+                            win.webContents.send('open-ai-quick-add', { wasHidden: wasWindowHiddenBeforeAiQuickAdd });
+                        }
+                    });
+                    if (registered) {
+                        aiQuickAddHotkey = hotkey;
+                        console.log('AI Quick Add global hotkey enabled:', hotkey);
+                    }
+                } catch (e) {
+                    console.warn('Failed to register ai-quick-add hotkey:', e);
+                }
+            }
+        } else {
+            if (aiQuickAddHotkey) {
+                try {
+                    globalShortcut.unregister(aiQuickAddHotkey);
+                    aiQuickAddHotkey = null;
+                    console.log('AI Quick Add global hotkey disabled');
+                } catch (e) {
+                    console.warn('Failed to unregister ai-quick-add hotkey:', e);
+                }
+            }
+        }
+
+        return true;
+    });
+
+    // Initialize ai-quick-add hotkey on startup
+    setTimeout(async () => {
+        const enabled = deviceSettings.aiQuickAddEnabled !== false;
+        const hotkey = deviceSettings.aiQuickAddHotkey || 'CommandOrControl+M';
+
+        if (enabled && hotkey) {
+            try {
+                const registered = globalShortcut.register(hotkey, () => {
+                    if (win) {
+                        wasWindowHiddenBeforeAiQuickAdd = win.isMinimized() || !win.isVisible() || !win.isFocused();
+                        if (win.isMinimized()) win.restore();
+                        win.show();
+                        win.focus();
+                        win.webContents.send('open-ai-quick-add', { wasHidden: wasWindowHiddenBeforeAiQuickAdd });
+                    }
+                });
+                if (registered) {
+                    aiQuickAddHotkey = hotkey;
+                    console.log('[AiQuickAdd] Global hotkey initialized:', hotkey);
+                } else {
+                    console.warn('[AiQuickAdd] Failed to register hotkey:', hotkey);
+                }
+            } catch (e) {
+                console.warn('[AiQuickAdd] Failed to initialize global hotkey:', e);
+            }
+        }
+    }, 1000);
+
+    // Handler to close ai-quick-add and optionally hide window
+    ipcMain.handle('close-ai-quick-add', (_, shouldHide: boolean) => {
+        console.log('[AiQuickAdd] Close requested, shouldHide:', shouldHide);
+        if (shouldHide && win) {
+            win.minimize();
+            console.log('[AiQuickAdd] Window minimized');
+        }
+        wasWindowHiddenBeforeAiQuickAdd = false;
+        return true;
+    });
+
+    // Handler to close quick-timer and optionally hide window
+    ipcMain.handle('close-quick-timer', (_, shouldHide: boolean) => {
+        console.log('[QuickTimer] Close requested, shouldHide:', shouldHide);
+        if (shouldHide && win) {
+            win.minimize();
+            console.log('[QuickTimer] Window minimized');
+        }
+        return true;
+    });
+
     ipcMain.handle('validate-api-key', async (_, key, provider: AIProvider = 'gemini') => {
         try {
             if (!key) return { valid: false, error: 'Please enter an API key.' };
@@ -1822,6 +2222,68 @@ Format: [{"q":"question here","a":"answer here"}]`;
                 return { success: true };
             } catch (e) { return { success: false, error: e }; }
         });
+    });
+
+    // Todos IPC handlers - separate tasks.json file
+    ipcMain.handle('get-todos', async () => {
+        try {
+            const dir = path.dirname(currentDataPath);
+            const todosPath = path.join(dir, 'tasks.json');
+
+            console.log('[Todos] Loading from:', todosPath);
+
+            if (!existsSync(todosPath)) {
+                console.log('[Todos] File does not exist, returning empty array');
+                return { todos: [] };
+            }
+
+            const fileContent = await fs.readFile(todosPath, 'utf-8');
+            const rawData = JSON.parse(fileContent);
+
+            // Validate data structure
+            if (!rawData || typeof rawData !== 'object') {
+                console.error('[Todos] Invalid data structure, returning empty array');
+                return { todos: [] };
+            }
+
+            if (!Array.isArray(rawData.todos)) {
+                console.error('[Todos] todos is not an array, returning empty array');
+                return { todos: [] };
+            }
+
+            console.log('[Todos] Loaded', rawData.todos.length, 'todos');
+            return rawData;
+        } catch (e) {
+            console.error('[Todos] Error loading todos:', e);
+            return { todos: [] };
+        }
+    });
+
+    ipcMain.handle('save-todos', async (_, todos) => {
+        try {
+            // Validate input
+            if (!Array.isArray(todos)) {
+                console.error('[Todos] Invalid input - todos is not an array');
+                return { success: false, error: 'Invalid input: todos must be an array' };
+            }
+
+            const dir = path.dirname(currentDataPath);
+            if (!existsSync(dir)) {
+                await fs.mkdir(dir, { recursive: true });
+            }
+
+            const todosPath = path.join(dir, 'tasks.json');
+            const dataToSave = { todos };
+
+            console.log('[Todos] Saving', todos.length, 'todos to:', todosPath);
+            await atomicWriteFile(todosPath, JSON.stringify(dataToSave, null, 2));
+            console.log('[Todos] Save successful');
+
+            return { success: true };
+        } catch (e) {
+            console.error('[Todos] Error saving todos:', e);
+            return { success: false, error: String(e) };
+        }
     });
 
     ipcMain.handle('get-current-data-path', async () => {

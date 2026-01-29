@@ -6,6 +6,7 @@ import { AiQuickAddModal } from './components/AiQuickAddModal';
 import { ShortcutsOverlay } from './components/ShortcutsOverlay';
 import { SetupWizard } from './components/SetupWizard';
 import { QuickCaptureOverlay } from './components/QuickCaptureOverlay';
+import { QuickToDoAddModal } from './components/QuickTaskAddModal';
 import { useNotification } from './contexts/NotificationContext';
 import { TimerProvider } from './contexts/TimerContext';
 import { TimerAlertOverlay, TimerMiniIndicator } from './components/TimerAlertOverlay';
@@ -64,6 +65,8 @@ function App() {
     const [checkingSetup, setCheckingSetup] = useState(true);
     const [isQuickCaptureOpen, setIsQuickCaptureOpen] = useState(false);
     const [wasWindowHiddenBeforeQuickCapture, setWasWindowHiddenBeforeQuickCapture] = useState(false);
+    const [isQuickTodoOpen, setIsQuickTodoOpen] = useState(false);
+    const [wasWindowHiddenBeforeQuickTodo, setWasWindowHiddenBeforeQuickTodo] = useState(false);
     const [showRatingPrompt, setShowRatingPrompt] = useState(false);
 
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -72,6 +75,8 @@ function App() {
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [isAiModalOpen, setIsAiModalOpen] = useState(false);
     const [isQuickTimerOpen, setIsQuickTimerOpen] = useState(false);
+    const [wasWindowHiddenBeforeAiQuickAdd, setWasWindowHiddenBeforeAiQuickAdd] = useState(false);
+    const [wasWindowHiddenBeforeQuickTimer, setWasWindowHiddenBeforeQuickTimer] = useState(false);
     const { addNotification } = useNotification();
 
     // Tutorial State
@@ -181,10 +186,46 @@ function App() {
         // @ts-ignore
         window.ipcRenderer?.on('open-quick-capture', handleOpenQuickCapture);
 
+        // Listen for quick to-do trigger from main process (global hotkey)
+        // @ts-ignore
+        const handleOpenQuickTodo = (_event: any, data?: { wasHidden?: boolean }) => {
+            console.log('[QuickTodo] Event received from main process, wasHidden:', data?.wasHidden);
+            setIsQuickTodoOpen(true);
+            setWasWindowHiddenBeforeQuickTodo(data?.wasHidden || false);
+        };
+        // @ts-ignore
+        window.ipcRenderer?.on('open-quick-todo', handleOpenQuickTodo);
+
+        // Listen for quick timer trigger from main process (global hotkey)
+        // @ts-ignore
+        const handleOpenQuickTimer = (_event: any, data?: { wasHidden?: boolean }) => {
+            console.log('[QuickTimer] Event received from main process, wasHidden:', data?.wasHidden);
+            setIsQuickTimerOpen(true);
+            setWasWindowHiddenBeforeQuickTimer(data?.wasHidden || false);
+        };
+        // @ts-ignore
+        window.ipcRenderer?.on('open-quick-timer', handleOpenQuickTimer);
+
+        // Listen for AI quick add trigger from main process (global hotkey)
+        // @ts-ignore
+        const handleOpenAiQuickAdd = (_event: any, data?: { wasHidden?: boolean }) => {
+            console.log('[AiQuickAdd] Event received from main process, wasHidden:', data?.wasHidden);
+            setIsAiModalOpen(true);
+            setWasWindowHiddenBeforeAiQuickAdd(data?.wasHidden || false);
+        };
+        // @ts-ignore
+        window.ipcRenderer?.on('open-ai-quick-add', handleOpenAiQuickAdd);
+
         return () => {
             window.removeEventListener('companion-mode-changed', handleCompanionModeChange as EventListener);
             // @ts-ignore
             window.ipcRenderer?.off('open-quick-capture', handleOpenQuickCapture);
+            // @ts-ignore
+            window.ipcRenderer?.off('open-quick-todo', handleOpenQuickTodo);
+            // @ts-ignore
+            window.ipcRenderer?.off('open-quick-timer', handleOpenQuickTimer);
+            // @ts-ignore
+            window.ipcRenderer?.off('open-ai-quick-add', handleOpenAiQuickAdd);
         };
     }, []);
 
@@ -887,8 +928,12 @@ function App() {
                         setIsMockMode={setIsMockMode}
                         isAiModalOpen={isAiModalOpen}
                         setIsAiModalOpen={setIsAiModalOpen}
+                        wasWindowHiddenBeforeAiQuickAdd={wasWindowHiddenBeforeAiQuickAdd}
+                        setWasWindowHiddenBeforeAiQuickAdd={setWasWindowHiddenBeforeAiQuickAdd}
                         isQuickTimerOpen={isQuickTimerOpen}
                         setIsQuickTimerOpen={setIsQuickTimerOpen}
+                        wasWindowHiddenBeforeQuickTimer={wasWindowHiddenBeforeQuickTimer}
+                        setWasWindowHiddenBeforeQuickTimer={setWasWindowHiddenBeforeQuickTimer}
                         handleNavigateToNote={handleNavigateToNote}
                         handleMonthSelect={handleMonthSelect}
                         handleAddNote={handleAddNote}
@@ -911,6 +956,10 @@ function App() {
                         setIsQuickCaptureOpen={setIsQuickCaptureOpen}
                         wasWindowHiddenBeforeQuickCapture={wasWindowHiddenBeforeQuickCapture}
                         setWasWindowHiddenBeforeQuickCapture={setWasWindowHiddenBeforeQuickCapture}
+                        isQuickTodoOpen={isQuickTodoOpen}
+                        setIsQuickTodoOpen={setIsQuickTodoOpen}
+                        wasWindowHiddenBeforeQuickTodo={wasWindowHiddenBeforeQuickTodo}
+                        setWasWindowHiddenBeforeQuickTodo={setWasWindowHiddenBeforeQuickTodo}
                         handleAddQuickNote={handleAddQuickNote}
                         handleUpdateQuickNote={handleUpdateQuickNote}
                         handleDeleteQuickNote={handleDeleteQuickNote}
@@ -949,8 +998,12 @@ interface AppContentProps {
     setIsMockMode: (value: boolean) => void;
     isAiModalOpen: boolean;
     setIsAiModalOpen: (value: boolean) => void;
+    wasWindowHiddenBeforeAiQuickAdd: boolean;
+    setWasWindowHiddenBeforeAiQuickAdd: (value: boolean) => void;
     isQuickTimerOpen: boolean;
     setIsQuickTimerOpen: (value: boolean) => void;
+    wasWindowHiddenBeforeQuickTimer: boolean;
+    setWasWindowHiddenBeforeQuickTimer: (value: boolean) => void;
     handleNavigateToNote: (date: Date, noteId: string) => void;
     handleMonthSelect: (monthIndex: number) => void;
     handleAddNote: (note: Note, date: Date) => void;
@@ -973,6 +1026,10 @@ interface AppContentProps {
     setIsQuickCaptureOpen: (value: boolean) => void;
     wasWindowHiddenBeforeQuickCapture: boolean;
     setWasWindowHiddenBeforeQuickCapture: (value: boolean) => void;
+    isQuickTodoOpen: boolean;
+    setIsQuickTodoOpen: (value: boolean) => void;
+    wasWindowHiddenBeforeQuickTodo: boolean;
+    setWasWindowHiddenBeforeQuickTodo: (value: boolean) => void;
     handleAddQuickNote: (note: QuickNote) => void;
     handleUpdateQuickNote: (note: QuickNote) => void;
     handleDeleteQuickNote: (noteId: string) => void;
@@ -1042,12 +1099,14 @@ function NotebookPageWithNerdbook({
 
 function AppContent(props: AppContentProps) {
     const { effectiveSidebarIconOnly } = useDashboardLayout();
+    const { addNotification } = useNotification();
     const {
         currentPage, setCurrentPage, activeNotes, activeUserName,
         isSidebarCollapsed, setIsSidebarCollapsed, showDev, isEditMode,
         setIsEditMode, isLoading, currentMonth, setCurrentMonth,
         selectedDate, setNotes, isMockMode, setIsMockMode,
-        isAiModalOpen, setIsAiModalOpen, isQuickTimerOpen, setIsQuickTimerOpen,
+        isAiModalOpen, setIsAiModalOpen, wasWindowHiddenBeforeAiQuickAdd, setWasWindowHiddenBeforeAiQuickAdd,
+        isQuickTimerOpen, setIsQuickTimerOpen, wasWindowHiddenBeforeQuickTimer, setWasWindowHiddenBeforeQuickTimer,
         handleNavigateToNote, handleMonthSelect, handleAddNote, handleUpdateNote,
         setIsSetupDemoMode, setShowSetup, companionMode,
 
@@ -1056,6 +1115,8 @@ function AppContent(props: AppContentProps) {
         snapshots, handleAddSnapshot, handleDeleteSnapshot,
         notebookNotes, isQuickCaptureOpen, setIsQuickCaptureOpen,
         wasWindowHiddenBeforeQuickCapture, setWasWindowHiddenBeforeQuickCapture,
+        isQuickTodoOpen, setIsQuickTodoOpen,
+        wasWindowHiddenBeforeQuickTodo, setWasWindowHiddenBeforeQuickTodo,
         handleAddQuickNote, handleUpdateQuickNote, handleDeleteQuickNote,
         nerdbooks, handleAddNerdbook, handleUpdateNerdbook, handleDeleteNerdbook,
         showRatingPrompt, setShowRatingPrompt,
@@ -1220,8 +1281,12 @@ function AppContent(props: AppContentProps) {
 
             <AiQuickAddModal
                 isOpen={isAiModalOpen}
-                onClose={() => setIsAiModalOpen(false)}
+                onClose={() => {
+                    setIsAiModalOpen(false);
+                    setWasWindowHiddenBeforeAiQuickAdd(false);
+                }}
                 onSave={handleAddNote}
+                wasTriggeredFromHidden={wasWindowHiddenBeforeAiQuickAdd}
             />
 
             <ShortcutsOverlay currentPage={currentPage} />
@@ -1235,7 +1300,11 @@ function AppContent(props: AppContentProps) {
             {/* Quick Timer Modal */}
             <QuickTimerModal
                 isOpen={isQuickTimerOpen}
-                onClose={() => setIsQuickTimerOpen(false)}
+                onClose={() => {
+                    setIsQuickTimerOpen(false);
+                    setWasWindowHiddenBeforeQuickTimer(false);
+                }}
+                wasTriggeredFromHidden={wasWindowHiddenBeforeQuickTimer}
             />
             <TimerMiniIndicator isSidebarCollapsed={isSidebarCollapsed} />
 
@@ -1248,6 +1317,59 @@ function AppContent(props: AppContentProps) {
                 }}
                 onSaveNote={handleAddQuickNote}
                 wasTriggeredFromHidden={wasWindowHiddenBeforeQuickCapture}
+            />
+
+            {/* Quick To-Do Modal - triggered by global hotkey */}
+            <QuickToDoAddModal
+                isOpen={isQuickTodoOpen}
+                onClose={() => {
+                    setIsQuickTodoOpen(false);
+                    setWasWindowHiddenBeforeQuickTodo(false);
+                }}
+                onSaveTask={async (task) => {
+                    try {
+                        // Load existing todos from backend
+                        // @ts-ignore
+                        const data = await window.ipcRenderer.invoke('get-todos');
+                        const existingTodos = data?.todos || [];
+
+                        // Create new todo at the top (order 0)
+                        const newTodo = {
+                            id: `todo-${Date.now()}`,
+                            ...task,
+                            createdAt: new Date().toISOString(),
+                            order: 0,
+                        };
+
+                        // Reorder existing todos and add new one at the top
+                        const reorderedTodos = existingTodos.map((todo: any) => ({ ...todo, order: todo.order + 1 }));
+                        const updatedTodos = [newTodo, ...reorderedTodos];
+
+                        // Save to backend (tasks.json)
+                        // @ts-ignore
+                        await window.ipcRenderer.invoke('save-todos', updatedTodos);
+
+                        // Dispatch event to notify Dashboard to reload
+                        window.dispatchEvent(new CustomEvent('todos-changed'));
+
+                        // Show notification
+                        addNotification({
+                            title: 'To-Do Added',
+                            message: `"${task.title}" has been added to your checklist.`,
+                            type: 'success',
+                            duration: 3000
+                        });
+                    } catch (err) {
+                        console.error('Failed to save todo:', err);
+                        addNotification({
+                            title: 'Error',
+                            message: 'Failed to save to-do. Please try again.',
+                            type: 'error',
+                            duration: 3000
+                        });
+                    }
+                }}
+                wasTriggeredFromHidden={wasWindowHiddenBeforeQuickTodo}
             />
 
             {/* Rating Prompt - shown after positive user experiences */}

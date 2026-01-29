@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 interface QuickTimerModalProps {
     isOpen: boolean;
     onClose: () => void;
+    wasTriggeredFromHidden?: boolean;
 }
 
 interface QuickTimerPreset {
@@ -23,7 +24,7 @@ const quickPresets: QuickTimerPreset[] = [
     { label: '30m', seconds: 1800 },
 ];
 
-export function QuickTimerModal({ isOpen, onClose }: QuickTimerModalProps) {
+export function QuickTimerModal({ isOpen, onClose, wasTriggeredFromHidden }: QuickTimerModalProps) {
     const { history, startTimer, startStopwatch } = useTimer();
     const { accentColor } = useTheme();
     const [selectedTab, setSelectedTab] = useState<'presets' | 'recent'>('presets');
@@ -42,14 +43,23 @@ export function QuickTimerModal({ isOpen, onClose }: QuickTimerModalProps) {
 
     // Close on escape
     useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
+        const handleKeyDown = async (e: KeyboardEvent) => {
             if (e.key === 'Escape' && isOpen) {
+                // If triggered from hidden, minimize the window
+                if (wasTriggeredFromHidden) {
+                    try {
+                        // @ts-ignore
+                        await window.ipcRenderer?.invoke('close-quick-timer', true);
+                    } catch (e) {
+                        console.warn('[QuickTimer] Failed to minimize via IPC:', e);
+                    }
+                }
                 onClose();
             }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isOpen, onClose]);
+    }, [isOpen, onClose, wasTriggeredFromHidden]);
 
     const handleStartPreset = (preset: QuickTimerPreset) => {
         startTimer(preset.seconds, preset.label);
