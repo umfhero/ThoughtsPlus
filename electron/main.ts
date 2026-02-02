@@ -2906,6 +2906,88 @@ Format: [{"q":"question here","a":"answer here"}]`;
         return wsDir;
     });
 
+    // Read a workspace file content (for web export)
+    ipcMain.handle('read-workspace-file', async (_, filePath) => {
+        try {
+            if (!existsSync(filePath)) {
+                return null;
+            }
+            const content = await fs.readFile(filePath, 'utf-8');
+            return content;
+        } catch (e) {
+            console.error('Failed to read workspace file:', e);
+            return null;
+        }
+    });
+
+    // List all workspace files with their contents (for web export)
+    ipcMain.handle('list-all-workspace-files', async () => {
+        try {
+            const wsDir = await ensureWorkspaceDir();
+            const result: { files: any[]; folders: any[] } = { files: [], folders: [] };
+
+            const nativeExtensions = ['.exec', '.brd', '.nbm', '.nt', '.deck'];
+
+            const scanDirectory = async (dir: string, parentId: string | null = null, depth: number = 0): Promise<void> => {
+                if (depth > 5) return; // Limit recursion
+
+                const entries = await fs.readdir(dir, { withFileTypes: true });
+
+                for (const entry of entries) {
+                    const fullPath = path.join(dir, entry.name);
+
+                    if (entry.isDirectory() && !entry.name.startsWith('.')) {
+                        const folderId = `folder-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+                        result.folders.push({
+                            id: folderId,
+                            name: entry.name,
+                            parentId
+                        });
+                        await scanDirectory(fullPath, folderId, depth + 1);
+                    } else if (entry.isFile()) {
+                        const ext = path.extname(entry.name).toLowerCase();
+                        if (nativeExtensions.includes(ext)) {
+                            try {
+                                const contentRaw = await fs.readFile(fullPath, 'utf-8');
+                                let content: any;
+
+                                // Parse JSON for native files, keep as string for .nt
+                                if (ext === '.nt') {
+                                    content = contentRaw;
+                                } else {
+                                    try {
+                                        content = JSON.parse(contentRaw);
+                                    } catch {
+                                        content = contentRaw;
+                                    }
+                                }
+
+                                result.files.push({
+                                    id: `file-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+                                    name: path.basename(entry.name, ext),
+                                    type: ext.substring(1), // Remove the dot
+                                    parentId,
+                                    path: fullPath,
+                                    content
+                                });
+                            } catch (e) {
+                                console.error(`Failed to read file ${fullPath}:`, e);
+                            }
+                        }
+                    }
+                }
+            };
+
+            await scanDirectory(wsDir);
+            console.log(`[Web Export] Scanned workspace: ${result.files.length} files, ${result.folders.length} folders`);
+            return result;
+        } catch (e) {
+            console.error('Failed to list workspace files:', e);
+            return { files: [], folders: [] };
+        }
+    });
+
+
     // ============================================================================
     // FILE SYSTEM WATCHER - Auto-detect new files in workspace
     // ============================================================================

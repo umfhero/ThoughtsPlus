@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Folder, Palette, Sparkles, Check, ExternalLink, Clipboard, AlertCircle, LayoutDashboard, Github, NotebookPen, Calendar as CalendarIcon, RefreshCw, Bell, BellOff, Type, Upload, FileUp, Timer, Heart, Sidebar as SidebarIcon, Settings2, X, Trash2, Plus, ChevronDown, ChevronUp, History, Info, Save, Bug, TrendingUp, PlayCircle, Volume2, VolumeX, Moon, Download, AlertTriangle, Square, Layers } from 'lucide-react';
+import { Folder, Palette, Sparkles, Check, ExternalLink, Clipboard, AlertCircle, LayoutDashboard, Github, NotebookPen, Calendar as CalendarIcon, RefreshCw, Bell, BellOff, Type, Upload, FileUp, Timer, Heart, Sidebar as SidebarIcon, Settings2, X, Trash2, Plus, ChevronDown, ChevronUp, History, Info, Save, Bug, TrendingUp, PlayCircle, Volume2, VolumeX, Moon, Download, AlertTriangle, Square, Layers, Globe, QrCode } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import clsx from 'clsx';
 import { useTheme } from '../contexts/ThemeContext';
@@ -18,6 +18,7 @@ import { TutorialGallery } from '../components/TutorialGallery';
 import { TextGuide } from '../components/TextGuide';
 import { getAppIcon } from '../assets/appIcons';
 import { useFlatGridDividers } from '../hooks/useFlatGridDividers';
+import { WebExportModal } from '../components/WebExportModal';
 
 
 // Types for multi-provider configuration
@@ -120,6 +121,9 @@ export function SettingsPage() {
     // App Icon change tracking
     const [iconJustChanged, setIconJustChanged] = useState(false);
     const [initialAppIcon, setInitialAppIcon] = useState<string>('');
+
+    // Web Export Modal
+    const [showWebExportModal, setShowWebExportModal] = useState(false);
 
     const { theme, accentColor, setTheme, setAccentColor, appIcon, setAppIcon, containersEnabled, setContainersEnabled, curvesEnabled, setCurvesEnabled, customThemeColors, setCustomThemeColors, savedThemes, saveCurrentTheme, loadTheme, deleteTheme, updateTheme } = useTheme();
     const { addNotification, isSuppressed, toggleSuppression } = useNotification();
@@ -2284,7 +2288,7 @@ export function SettingsPage() {
                                 >
                                     <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
                                     <p className="text-xs text-blue-700 dark:text-blue-300">
-                                        Note: Taskbar icon will update after restarting the app.
+                                        Note: Window icon changes immediately. Taskbar icon updates after restart (standalone installer only - Microsoft Store version cannot change taskbar icon).
                                     </p>
                                 </motion.div>
                             )}
@@ -2514,7 +2518,66 @@ export function SettingsPage() {
                     </p>
                 </div>
 
+                {/* Web Export Section */}
+                <motion.div
+                    initial={{ y: -15, scale: 0.97 }}
+                    animate={{ y: 0, scale: 1 }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.4 }}
+                    className="mt-6 p-5 rounded-3xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50 overflow-hidden"
+                    data-flat-top
+                >
+                    <div className="flex items-center gap-3 mb-4 min-w-0">
+                        <div className="p-2 rounded-xl bg-gray-100 dark:bg-gray-700/50 text-cyan-600 dark:text-cyan-400 shrink-0">
+                            <Globe className="w-4 h-4" />
+                        </div>
+                        <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 truncate">Web Export</h2>
+                    </div>
 
+                    {/* 2x2 Grid Layout */}
+                    <div className="grid grid-cols-2 gap-3">
+                        {/* Top Left - Description */}
+                        <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-700/30 border border-gray-100 dark:border-gray-700">
+                            <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                                Access your data anywhere at <span className="font-mono text-[10px] bg-gray-100 dark:bg-gray-600 px-1 py-0.5 rounded">thoughtsplus.me/app</span>
+                            </p>
+                        </div>
+
+                        {/* Top Right - Export Button */}
+                        <button
+                            onClick={() => setShowWebExportModal(true)}
+                            className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold text-white transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 text-sm"
+                            style={{ backgroundColor: accentColor }}
+                        >
+                            <QrCode className="w-4 h-4" />
+                            <span>Export</span>
+                        </button>
+
+                        {/* Bottom Left - Note */}
+                        <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                            <p className="text-[10px] text-amber-700 dark:text-amber-300 leading-relaxed">
+                                <strong>Note:</strong> Web changes don't sync back to desktop
+                            </p>
+                        </div>
+
+                        {/* Bottom Right - Open Web Button */}
+                        <button
+                            onClick={() => {
+                                // @ts-ignore
+                                window.ipcRenderer.invoke('open-external', 'https://thoughtsplus.me/app/');
+                            }}
+                            className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gray-100 dark:bg-gray-700/50 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 transition-all text-sm font-medium"
+                        >
+                            <ExternalLink className="w-4 h-4" />
+                            <span>Open Web</span>
+                        </button>
+                    </div>
+                </motion.div>
+
+                {/* Web Export Modal */}
+                <WebExportModal
+                    isOpen={showWebExportModal}
+                    onClose={() => setShowWebExportModal(false)}
+                />
 
                 {/* Multi-Provider Configuration Modal */}
                 {
