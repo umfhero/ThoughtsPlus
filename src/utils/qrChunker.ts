@@ -20,9 +20,10 @@ export interface QRChunk {
     d: string;
 }
 
-// Target size per QR chunk (~1.2KB for 'H' error correction level)
-// QR v40 with H correction holds ~1273 bytes, so 1200 is safe
-const MAX_CHUNK_SIZE = 1200;
+// Target size per QR chunk - reduced for easier scanning on mobile
+// Smaller chunks = simpler QR codes that scan faster and more reliably
+// QR v21 with H correction holds ~852 bytes, targeting 800 for safety
+const MAX_CHUNK_SIZE = 800;
 
 /**
  * Simple hash function for chunk validation

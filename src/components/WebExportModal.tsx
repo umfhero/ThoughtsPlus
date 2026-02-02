@@ -21,7 +21,8 @@ import {
     Smartphone,
     Monitor,
     Copy,
-    ExternalLink
+    ExternalLink,
+    PlayCircle
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import { compressAndChunk, generateQRData, getCompressedSize, QRChunk } from '../utils/qrChunker';
@@ -63,6 +64,7 @@ export function WebExportModal({ isOpen, onClose }: WebExportModalProps) {
     const [mode, setMode] = useState<'select' | 'json' | 'qr'>('select');
     const [copied, setCopied] = useState(false);
     const [fullscreenQr, setFullscreenQr] = useState(false);
+    const [autoRotate, setAutoRotate] = useState(false);
 
     // Generate export data when modal opens
     useEffect(() => {
@@ -90,6 +92,19 @@ export function WebExportModal({ isOpen, onClose }: WebExportModalProps) {
         }
     }, [mode, qrChunks]);
 
+    // Auto-rotation effect for QR codes
+    useEffect(() => {
+        if (autoRotate && qrChunks.length > 1) {
+            const interval = setInterval(() => {
+                setCurrentQrIndex(prev => {
+                    const next = prev + 1;
+                    return next >= qrChunks.length ? 0 : next;
+                });
+            }, 3000); // Cycle every 3 seconds
+            return () => clearInterval(interval);
+        }
+    }, [autoRotate, qrChunks.length]);
+
     const generateExportData = async () => {
         setLoading(true);
         console.log('[WebExport] Starting export data generation...');
@@ -99,14 +114,13 @@ export function WebExportModal({ isOpen, onClose }: WebExportModalProps) {
             const calendarData = await window.ipcRenderer.invoke('get-data');
             console.log('[WebExport] Calendar data loaded:', calendarData ? 'success' : 'empty');
 
-            // Use the new IPC handler that lists all workspace files with content
-            // @ts-ignore
-            const workspaceResult = await window.ipcRenderer.invoke('list-all-workspace-files');
-            console.log('[WebExport] Workspace data loaded:', workspaceResult?.files?.length || 0, 'files,', workspaceResult?.folders?.length || 0, 'folders');
+            // Workspace data excluded from export
+            const workspaceResult = { files: [], folders: [] };
+            // console.log('[WebExport] Workspace data loaded:', workspaceResult?.files?.length || 0, 'files,', workspaceResult?.folders?.length || 0, 'folders');
 
-            // Flashcards are stored in the main data file
-            const flashcardsData = calendarData?.flashcards || { decks: [] };
-            console.log('[WebExport] Flashcards loaded:', flashcardsData?.decks?.length || 0, 'decks');
+            // Flashcards excluded from export
+            const flashcardsData = { decks: [] };
+            // console.log('[WebExport] Flashcards loaded:', flashcardsData?.decks?.length || 0, 'decks');
 
             const appVersion = await getAppVersion();
             console.log('[WebExport] App version:', appVersion);
@@ -183,13 +197,13 @@ export function WebExportModal({ isOpen, onClose }: WebExportModalProps) {
             const qrData = generateQRData(chunk);
             try {
                 const url = await QRCode.toDataURL(qrData, {
-                    width: 512,  // Higher resolution for sharper display
-                    margin: 2,
+                    width: 768,  // Larger size for better mobile scanning
+                    margin: 3,   // Increased margin for better scanning reliability
                     color: {
                         dark: theme === 'dark' ? '#ffffff' : '#000000',
                         light: theme === 'dark' ? '#1f2937' : '#ffffff'
                     },
-                    errorCorrectionLevel: 'H'  // High error correction for better scanning
+                    errorCorrectionLevel: 'H'  // High error correction for best scanning reliability
                 });
                 dataUrls.push(url);
                 console.log(`[WebExport] Generated QR code ${dataUrls.length}/${qrChunks.length}`);
@@ -285,7 +299,7 @@ export function WebExportModal({ isOpen, onClose }: WebExportModalProps) {
                                         <ol className="list-decimal list-inside space-y-1 text-xs">
                                             <li>Export your data from this app</li>
                                             <li>Import it on the web at thoughtsplus.me/app</li>
-                                            <li>Access your calendar and workspace anywhere!</li>
+                                            <li>Access your calendar anywhere!</li>
                                         </ol>
                                     </div>
                                 </div>
@@ -313,11 +327,11 @@ export function WebExportModal({ isOpen, onClose }: WebExportModalProps) {
                                                     Download JSON File
                                                 </h4>
                                                 <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200">
-                                                    100%
+                                                    20%
                                                 </span>
                                             </div>
                                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                                <strong>Full export:</strong> Calendar, workspace, flashcards, settings
+                                                <strong>Full export:</strong> Calendar and settings
                                             </p>
                                             <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">
                                                 Transfers all your data
@@ -412,18 +426,6 @@ export function WebExportModal({ isOpen, onClose }: WebExportModalProps) {
                                                 {Object.values(exportData?.data.calendar || {}).flat().length}
                                             </span>
                                         </div>
-                                        <div className="flex justify-between">
-                                            <span>Workspace Files:</span>
-                                            <span className="font-medium text-gray-800 dark:text-gray-200">
-                                                {exportData?.data.workspace.files.length || 0}
-                                            </span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span>Flashcard Decks:</span>
-                                            <span className="font-medium text-gray-800 dark:text-gray-200">
-                                                {exportData?.data.flashcards?.decks?.length || 0}
-                                            </span>
-                                        </div>
                                         <div className="flex justify-between pt-2 border-t border-gray-200 dark:border-gray-600">
                                             <span>Export Size:</span>
                                             <span className="font-medium text-gray-800 dark:text-gray-200">
@@ -473,7 +475,7 @@ export function WebExportModal({ isOpen, onClose }: WebExportModalProps) {
                                                 <img
                                                     src={qrDataUrls[currentQrIndex]}
                                                     alt={`QR Code ${currentQrIndex + 1} of ${qrChunks.length}`}
-                                                    className="w-64 h-64 rounded-xl border-2 border-gray-200 dark:border-gray-600 transition-transform group-hover:scale-[1.02]"
+                                                    className="w-80 h-80 rounded-xl border-2 border-gray-200 dark:border-gray-600 transition-transform group-hover:scale-[1.02]"
                                                     style={{ imageRendering: 'pixelated' }}
                                                 />
                                                 {/* Badge moved to bottom to avoid blocking QR corners */}
@@ -484,9 +486,31 @@ export function WebExportModal({ isOpen, onClose }: WebExportModalProps) {
                                                 </div>
                                                 {/* Click me tag - always visible */}
                                                 <div className="absolute -top-2 left-1/2 -translate-x-1/2 px-2.5 py-1 rounded-md bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-800 text-[10px] font-medium shadow-md">
-                                                    Click me
+                                                    Click to enlarge
                                                 </div>
                                             </div>
+
+                                            {/* Auto-rotate toggle */}
+                                            {qrChunks.length > 1 && (
+                                                <div className="mt-3">
+                                                    <button
+                                                        onClick={() => setAutoRotate(!autoRotate)}
+                                                        className="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2 mx-auto"
+                                                    >
+                                                        {autoRotate ? (
+                                                            <>
+                                                                <PlayCircle className="w-4 h-4" style={{ color: accentColor }} />
+                                                                Auto-rotating...
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <PlayCircle className="w-4 h-4" />
+                                                                Start Auto-Rotate
+                                                            </>
+                                                        )}
+                                                    </button>
+                                                </div>
+                                            )}
 
                                             {/* Navigation */}
                                             {qrChunks.length > 1 && (
@@ -536,7 +560,7 @@ export function WebExportModal({ isOpen, onClose }: WebExportModalProps) {
                                 <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
                                     <p className="text-xs text-blue-700 dark:text-blue-300">
                                         <strong>Instructions:</strong> Open thoughtsplus.me/app on your phone, go to Settings, and tap "Scan QR Code".
-                                        {qrChunks.length > 1 && ` Scan all ${qrChunks.length} QR codes in order.`}
+                                        {qrChunks.length > 1 && ` Scan all ${qrChunks.length} QR codes in order, or use auto-rotate to continuously scan.`}
                                     </p>
                                 </div>
 
@@ -630,6 +654,6 @@ export function WebExportModal({ isOpen, onClose }: WebExportModalProps) {
                     </motion.div>
                 )}
             </motion.div>
-        </AnimatePresence>
+        </AnimatePresence >
     );
 }
