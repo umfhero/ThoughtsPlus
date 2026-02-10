@@ -2055,7 +2055,7 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, isL
                                             </p>
                                         ) : (
                                             <AnimatePresence mode="popLayout">
-                                                {filteredEventsForTab.slice(0, 10).map((event) => {
+                                                {filteredEventsForTab.map((event) => {
                                                     const { date, note, dateKey } = event;
                                                     return (
                                                         <motion.div
