@@ -1,6 +1,11 @@
 {
   "roadmap": [
     {
+      "task": "Bugfix: For users in the UK, when we switched to BST (UTC+1) on March 29, 2026, handleUpdateNote receives a date like 2026-03-31 (parsed via parseISO as midnight local time), calling .toISOString() converts it to UTC, shifting it back to 2026-03-30T23:00:00.000Z causing events not being able to be completed.",
+      "status": "completed",
+      "plannedRelease": "1 Apr 2026 (v6.0.10)"
+    },
+    {
       "task": "Auto Update (will be replaced in future with microsoft store distribution)",
       "status": "completed",
       "plannedRelease": "11 Dec 2025 (v5.0.0)"

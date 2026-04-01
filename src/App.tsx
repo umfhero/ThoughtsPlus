@@ -18,6 +18,14 @@ import { Page, Note, NotesData, Milestone, MilestonesData, LifeChapter, LifeChap
 import { DashboardLayoutProvider, useDashboardLayout } from './contexts/DashboardLayoutContext';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { ratingPrompt } from './utils/ratingPrompt';
+
+/** Returns a local-time YYYY-MM-DD string (timezone-safe). */
+const toLocalDateKey = (date: Date): string => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+};
 import { TutorialManager } from './components/TutorialManager';
 
 // Lazy load pages for better performance
@@ -478,7 +486,7 @@ function App() {
             recurrenceCount: note.recurrence?.count
         });
 
-        const dateKey = date.toISOString().split('T')[0];
+        const dateKey = toLocalDateKey(date);
 
         if (isMockMode) {
             const existingNotes = mockNotesState[dateKey] || [];
@@ -526,7 +534,7 @@ function App() {
 
                     if (endDate && currentDate > endDate) break;
 
-                    const dk = currentDate.toISOString().split('T')[0];
+                    const dk = toLocalDateKey(currentDate);
                     if (!newNotesMap[dk]) newNotesMap[dk] = [];
                     newNotesMap[dk].push({ ...note, id: crypto.randomUUID(), seriesId });
                     count++;
@@ -557,7 +565,7 @@ function App() {
     };
 
     const handleUpdateNote = (note: Note, date: Date) => {
-        const dateKey = date.toISOString().split('T')[0];
+        const dateKey = toLocalDateKey(date);
 
         if (isMockMode) {
             const existingNotes = mockNotesState[dateKey] || [];
@@ -1264,7 +1272,7 @@ function AppContent(props: AppContentProps) {
                                             const snapshot: Snapshot = {
                                                 id: crypto.randomUUID(),
                                                 type: 'monthly',
-                                                date: now.toISOString().split('T')[0],
+                                                date: toLocalDateKey(now),
                                                 content: 'This is a test snapshot generated from Dev Tools. Use this to test the snapshot display and functionality.',
                                                 tags: ['test', 'dev'],
                                                 sentiment: 'neutral'
