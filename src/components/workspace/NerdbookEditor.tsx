@@ -4,7 +4,7 @@ import {
     Plus, Trash2, Edit2, Check, X, ChevronDown,
     Code, Save, Scissors,
     Clipboard, Play, Square, Copy, ArrowUp, ArrowDown, RotateCcw,
-    Sun, Moon, Palette, Monitor, Wand2
+    Sun, Moon, Palette, Monitor, Wand2, LocateFixed
 } from 'lucide-react';
 import { NerdNotebook, NerdCell, NerdCellType } from '../../types';
 import { WorkspaceFile } from '../../types/workspace';
@@ -159,6 +159,10 @@ export function NerdbookEditor({ contentId, filePath, onNotebookChange, workspac
     });
     const [showCodeThemeDropdown, setShowCodeThemeDropdown] = useState(false);
     const codeThemeDropdownRef = useRef<HTMLDivElement>(null);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+    // Follow cursor: auto-scroll to keep active cell centered
+    const [followCursor, setFollowCursor] = useState(false);
 
     const useCodeDarkTheme = useMemo(() => {
         if (codeTheme === 'dark') return true;
@@ -170,6 +174,113 @@ export function NerdbookEditor({ contentId, filePath, onNotebookChange, workspac
     useEffect(() => {
         localStorage.setItem('nerdbook-code-theme', codeTheme);
     }, [codeTheme]);
+
+    // Follow cursor: smooth-scroll so the caret stays ~20% from the bottom of the viewport
+    const followScrollRef = useRef<{ timer: ReturnType<typeof setTimeout> | null; animFrame: number | null }>({ timer: null, animFrame: null });
+
+    const triggerFollowScroll = useCallback(() => {
+        if (!followCursor) return;
+        const cellId = selectedCellId;
+        if (!cellId || cellMode !== 'edit') return;
+        const textarea = textareaRefs.current[cellId];
+        const container = scrollContainerRef.current;
+        if (!textarea || !container) return;
+
+        const getCaretViewportY = (): number | null => {
+            const selStart = textarea.selectionStart;
+            const textBefore = textarea.value.substring(0, selStart);
+
+            const mirror = document.createElement('div');
+            const style = window.getComputedStyle(textarea);
+            mirror.style.position = 'absolute';
+            mirror.style.visibility = 'hidden';
+            mirror.style.whiteSpace = 'pre-wrap';
+            mirror.style.wordWrap = 'break-word';
+            mirror.style.width = style.width;
+            mirror.style.font = style.font;
+            mirror.style.fontSize = style.fontSize;
+            mirror.style.lineHeight = style.lineHeight;
+            mirror.style.letterSpacing = style.letterSpacing;
+            mirror.style.padding = style.padding;
+            mirror.style.border = style.border;
+            mirror.style.boxSizing = style.boxSizing;
+            mirror.textContent = textBefore || 'X';
+            document.body.appendChild(mirror);
+            const mirrorHeight = mirror.scrollHeight;
+            document.body.removeChild(mirror);
+
+            const textareaRect = textarea.getBoundingClientRect();
+            return textareaRect.top + mirrorHeight - textarea.scrollTop;
+        };
+
+        const easedScrollTo = (targetTop: number) => {
+            if (followScrollRef.current.animFrame) cancelAnimationFrame(followScrollRef.current.animFrame);
+            const start = container.scrollTop;
+            const distance = targetTop - start;
+            if (Math.abs(distance) < 2) return;
+            const duration = Math.min(600, 250 + Math.abs(distance) * 0.6);
+            const startTime = performance.now();
+            const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+            const step = (now: number) => {
+                const elapsed = now - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                container.scrollTop = start + distance * easeOutCubic(progress);
+                if (progress < 1) {
+                    followScrollRef.current.animFrame = requestAnimationFrame(step);
+                } else {
+                    followScrollRef.current.animFrame = null;
+                }
+            };
+            followScrollRef.current.animFrame = requestAnimationFrame(step);
+        };
+
+        const scrollToCaret = () => {
+            const caretY = getCaretViewportY();
+            if (caretY === null) return;
+            const containerRect = container.getBoundingClientRect();
+            const targetY = containerRect.top + containerRect.height * 0.8;
+            const upperBound = containerRect.top + containerRect.height * 0.3;
+            if (caretY > targetY) {
+                easedScrollTo(container.scrollTop + (caretY - targetY));
+            } else if (caretY < upperBound) {
+                easedScrollTo(container.scrollTop + (caretY - upperBound));
+            }
+        };
+
+        if (followScrollRef.current.timer) clearTimeout(followScrollRef.current.timer);
+        followScrollRef.current.timer = setTimeout(scrollToCaret, 150);
+    }, [followCursor, selectedCellId, cellMode]);
+
+    // Trigger follow-scroll on content changes (typing)
+    useEffect(() => {
+        triggerFollowScroll();
+        return () => {
+            if (followScrollRef.current.timer) clearTimeout(followScrollRef.current.timer);
+        };
+    }, [triggerFollowScroll, notebook?.cells]);
+
+    // Trigger follow-scroll on click / arrow-key navigation inside the textarea
+    useEffect(() => {
+        if (!followCursor || !selectedCellId || cellMode !== 'edit') return;
+        const textarea = textareaRefs.current[selectedCellId];
+        if (!textarea) return;
+
+        const handleInteraction = () => triggerFollowScroll();
+        textarea.addEventListener('click', handleInteraction);
+        textarea.addEventListener('keyup', handleInteraction);
+
+        return () => {
+            textarea.removeEventListener('click', handleInteraction);
+            textarea.removeEventListener('keyup', handleInteraction);
+        };
+    }, [followCursor, selectedCellId, cellMode, triggerFollowScroll]);
+
+    // Cleanup follow-scroll animation on unmount
+    useEffect(() => {
+        return () => {
+            if (followScrollRef.current.animFrame) cancelAnimationFrame(followScrollRef.current.animFrame);
+        };
+    }, []);
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -2041,12 +2152,28 @@ sys.stderr = StringIO()
                         >
                             {cellMode === 'command' ? 'Command' : 'Edit'}
                         </div>
+
+                        {/* Follow cursor toggle */}
+                        <button
+                            onClick={() => setFollowCursor(f => !f)}
+                            className={clsx(
+                                "flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-colors",
+                                followCursor
+                                    ? "text-white"
+                                    : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                            )}
+                            style={followCursor ? { backgroundColor: accentColor } : undefined}
+                            title={followCursor ? 'Follow cursor ON – click to disable' : 'Follow cursor – auto-scroll to active cell'}
+                        >
+                            <LocateFixed className="w-3.5 h-3.5" />
+                            Follow
+                        </button>
                     </div>
                 </div>
             </div>
 
             {/* Cells Container */}
-            <div className="flex-1 overflow-y-auto scrollbar-none bg-white dark:bg-gray-900">
+            <div ref={scrollContainerRef} className="flex-1 overflow-y-auto scrollbar-none bg-white dark:bg-gray-900">
                 <div className="w-full max-w-[95%] xl:max-w-[90%] mx-auto py-6 px-2">
                     <AnimatePresence>
                         {notebook.cells.map((cell, index) => {
