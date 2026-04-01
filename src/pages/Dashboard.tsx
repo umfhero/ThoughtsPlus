@@ -322,7 +322,11 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, isL
     useEffect(() => {
         const tipShown = localStorage.getItem('dashboard_edit_tip_shown');
         if (!tipShown && !isSuppressed) {
-            setTimeout(() => setShowEditTip(true), 2000);
+            setTimeout(() => {
+                setShowEditTip(true);
+                // Mark as shown immediately so navigating away won't re-trigger it
+                localStorage.setItem('dashboard_edit_tip_shown', 'true');
+            }, 2000);
         }
     }, [isSuppressed]);
 
@@ -1356,6 +1360,9 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, isL
 
     const filteredEventsForTab = getFilteredEvents();
 
+    // Debounce ref for briefing generation
+    const briefingDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
     // Effect to generate AI summary
     useEffect(() => {
         const fetchBriefing = async () => {
@@ -1469,12 +1476,18 @@ export function Dashboard({ notes, onNavigateToNote, userName, onUpdateNote, isL
             }
         };
 
-        fetchBriefing();
+        // Debounce: clear any pending call and wait 3s before generating
+        // This prevents rapid note changes (e.g. bulk completions) from firing multiple AI calls
+        if (briefingDebounceRef.current) clearTimeout(briefingDebounceRef.current);
+        briefingDebounceRef.current = setTimeout(() => fetchBriefing(), 3000);
 
         // Update every hour
-        const interval = setInterval(fetchBriefing, 60 * 60 * 1000);
+        const interval = setInterval(() => fetchBriefing(), 60 * 60 * 1000);
 
-        return () => clearInterval(interval);
+        return () => {
+            clearInterval(interval);
+            if (briefingDebounceRef.current) clearTimeout(briefingDebounceRef.current);
+        };
     }, [notes, isLoading]); // Re-run when notes change
 
     const importanceColors = {
