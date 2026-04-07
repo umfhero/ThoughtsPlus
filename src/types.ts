@@ -41,6 +41,7 @@ export interface Note {
     completed?: boolean;
     completedLate?: boolean;
     missed?: boolean; // Explicitly marked as missed by user
+    reminder?: number[]; // Array of minutes before event to trigger reminders (0 = at event time, 5, 10, 15, 30, 60)
     recurrence?: {
         type: 'daily' | 'weekly' | 'fortnightly' | 'monthly';
         endDate?: string; // ISO date string

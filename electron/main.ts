@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, Menu, shell, nativeImage, safeStorage, globalShortcut } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, Menu, shell, nativeImage, safeStorage, globalShortcut, Notification } from 'electron'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import fs from 'node:fs/promises'
@@ -52,7 +52,163 @@ dotenv.config({ path: envPath });
 process.env.DIST = path.join(__dirname, '../dist')
 process.env.VITE_PUBLIC = app.isPackaged ? process.env.DIST : path.join(__dirname, '../public')
 
+// Set AppUserModelId early — required for Windows desktop notifications (especially in dev mode)
+if (process.platform === 'win32') {
+    app.setAppUserModelId('com.thoughtsplus.app');
+}
+
 let win: BrowserWindow | null
+
+// ============================================================================
+// BACKGROUND EVENT REMINDER SYSTEM
+// ============================================================================
+// Runs in the main process so notifications fire even when the window is
+// minimized, hidden, or unfocused. Reads calendar data directly from disk.
+// ============================================================================
+let remindersEnabled = true;
+const triggeredReminderKeys = new Set<string>();
+let reminderInterval: ReturnType<typeof setInterval> | null = null;
+
+function toLocalDateKeyMain(date: Date): string {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
+
+async function checkRemindersBackground() {
+    if (!remindersEnabled) {
+        console.log('[Reminder] Check skipped - reminders disabled');
+        return;
+    }
+
+    try {
+        if (!existsSync(currentDataPath)) return;
+        const rawData = JSON.parse(await fs.readFile(currentDataPath, 'utf-8'));
+        if (!rawData.notes) return;
+
+        const now = new Date();
+        const nowMs = now.getTime();
+        const todayKey = toLocalDateKeyMain(now);
+        const todayNotes = rawData.notes[todayKey];
+
+        const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+        const eventsWithReminders = Array.isArray(todayNotes)
+            ? todayNotes.filter((n: any) => n.reminder && Array.isArray(n.reminder) && n.reminder.length > 0 && n.time && !n.completed && !n.missed)
+            : [];
+        console.log(`[Reminder] Check @ ${timeStr} | Today: ${Array.isArray(todayNotes) ? todayNotes.length : 0} events, ${eventsWithReminders.length} with reminders, ${triggeredReminderKeys.size} already triggered`);
+
+        if (!Array.isArray(todayNotes) || todayNotes.length === 0) return;
+
+        // Clean up triggered keys at midnight
+        if (now.getHours() === 0 && now.getMinutes() === 0) {
+            triggeredReminderKeys.clear();
+        }
+
+        interface ReminderAlertData {
+            id: string;
+            noteId: string;
+            date: string;
+            note: any;
+            triggeredAt: number;
+        }
+        const newAlerts: ReminderAlertData[] = [];
+
+        for (const note of todayNotes) {
+            if (!note.time || note.completed || note.missed) continue;
+            if (!note.reminder || !Array.isArray(note.reminder) || note.reminder.length === 0) continue;
+
+            const [h, m] = note.time.split(':').map(Number);
+            const eventTime = new Date(now);
+            eventTime.setHours(h, m, 0, 0);
+
+            for (const mins of note.reminder) {
+                const reminderTime = new Date(eventTime.getTime() - mins * 60 * 1000);
+                const reminderKey = `${todayKey}-${note.id}-${mins}`;
+
+                const pastReminder = nowMs >= reminderTime.getTime();
+                const withinWindow = nowMs <= eventTime.getTime() + 5 * 60 * 1000;
+                const alreadyTriggered = triggeredReminderKeys.has(reminderKey);
+
+                console.log(`[Reminder]   "${note.title}" @ ${note.time} | reminder=${mins}min | past=${pastReminder} window=${withinWindow} triggered=${alreadyTriggered}`);
+
+                if (pastReminder && withinWindow && !alreadyTriggered) {
+                    triggeredReminderKeys.add(reminderKey);
+                    newAlerts.push({
+                        id: reminderKey,
+                        noteId: note.id,
+                        date: todayKey,
+                        note: { ...note, _triggerMinutes: mins },
+                        triggeredAt: nowMs,
+                    });
+                }
+            }
+        }
+
+        if (newAlerts.length > 0) {
+            console.log(`[Reminder] >>> FIRING ${newAlerts.length} notification(s):`);
+            newAlerts.forEach(a => console.log(`[Reminder]   - "${a.note.title}" @ ${a.note.time} (${a.note._triggerMinutes}min before)`));
+            console.log(`[Reminder] Notification.isSupported() = ${Notification.isSupported()}`);
+
+            const title = newAlerts.length === 1
+                ? newAlerts[0].note.title
+                : `${newAlerts.length} upcoming events`;
+            const body = newAlerts.length === 1
+                ? `${newAlerts[0].note.time} - ${newAlerts[0].note.description || 'Event reminder'}`
+                : newAlerts.map((a: ReminderAlertData) => `${a.note.time} ${a.note.title}`).join(', ');
+
+            // Fire native desktop notification (works even when window is minimized/hidden)
+            try {
+                console.log(`[Reminder] Native notification: "${title}" - "${body}"`);
+
+                const notification = new Notification({
+                    title,
+                    body,
+                    icon: app.isPackaged
+                        ? path.join(process.resourcesPath, 'icon.png')
+                        : path.join(process.env.VITE_PUBLIC || '', 'app-icons/default.png'),
+                    silent: false,
+                });
+                notification.on('click', () => {
+                    console.log('[Reminder] Notification clicked - restoring window');
+                    if (win) {
+                        if (win.isMinimized()) win.restore();
+                        win.show();
+                        win.focus();
+                    }
+                });
+                notification.show();
+                console.log('[Reminder] notification.show() called successfully');
+            } catch (e) {
+                console.error('[Reminder] Failed to show native notification:', e);
+            }
+
+            // Flash the taskbar
+            if (win) {
+                win.flashFrame(true);
+                setTimeout(() => { if (win) win.flashFrame(false); }, 5000);
+            }
+
+            // Only show in-app overlay if the window is focused (avoid double notification)
+            if (win && win.webContents && win.isFocused()) {
+                console.log('[Reminder] Window focused - sending in-app overlay');
+                win.webContents.send('event-reminder-alerts', newAlerts);
+            } else {
+                console.log('[Reminder] Window not focused - desktop notification only');
+            }
+        }
+    } catch (e) {
+        console.error('[Reminder] Background check error:', e);
+    }
+}
+
+function startReminderChecker() {
+    // Check every 30 seconds
+    if (reminderInterval) clearInterval(reminderInterval);
+    // Initial check after 5 seconds (give time for data path to be set)
+    setTimeout(() => checkRemindersBackground(), 5000);
+    reminderInterval = setInterval(() => checkRemindersBackground(), 30000);
+}
 
 // ============================================================================
 // DEV MODE DATA ISOLATION
@@ -743,11 +899,6 @@ app.on('will-quit', () => {
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit() })
 app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow() })
 
-// Set app user model ID for Windows to ensure proper taskbar icon
-if (process.platform === 'win32') {
-    app.setAppUserModelId('com.thoughtsplus.app');
-}
-
 
 // Register all IPC handlers BEFORE app is ready
 function setupIpcHandlers() {
@@ -787,6 +938,38 @@ function setupIpcHandlers() {
                 if (win) win.flashFrame(false);
             }, 5000);
         }
+        return true;
+    });
+
+    // Show native desktop notification for event reminders (manual trigger from renderer)
+    ipcMain.handle('show-event-reminder', (_, data: { title: string; body: string }) => {
+        try {
+            const notification = new Notification({
+                title: data.title,
+                body: data.body,
+                icon: app.isPackaged
+                    ? path.join(process.resourcesPath, 'icon.png')
+                    : path.join(process.env.VITE_PUBLIC || '', 'app-icons/default.png'),
+                silent: false,
+            });
+            notification.on('click', () => {
+                if (win) {
+                    if (win.isMinimized()) win.restore();
+                    win.show();
+                    win.focus();
+                }
+            });
+            notification.show();
+            return true;
+        } catch (error) {
+            console.error('Failed to show event reminder notification:', error);
+            return false;
+        }
+    });
+
+    // Allow renderer to update reminder enabled state
+    ipcMain.handle('set-reminders-enabled', (_, enabled: boolean) => {
+        remindersEnabled = enabled;
         return true;
     });
 
@@ -4647,4 +4830,7 @@ app.whenReady().then(async () => {
     await enableAutoLaunchOnFirstRun();
 
     createWindow();
+
+    // Start background reminder checker (runs even when window is minimized)
+    startReminderChecker();
 });

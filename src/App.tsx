@@ -10,6 +10,7 @@ import { QuickToDoAddModal } from './components/QuickTaskAddModal';
 import { useNotification } from './contexts/NotificationContext';
 import { TimerProvider } from './contexts/TimerContext';
 import { TimerAlertOverlay, TimerMiniIndicator } from './components/TimerAlertOverlay';
+import { EventReminderOverlay, ReminderAlert } from './components/EventReminderOverlay';
 import { UpdateNotification } from './components/UpdateNotification';
 import { QuickTimerModal } from './components/QuickTimerModal';
 import { RatingPrompt } from './components/RatingPrompt';
@@ -76,6 +77,9 @@ function App() {
     const [isQuickTodoOpen, setIsQuickTodoOpen] = useState(false);
     const [wasWindowHiddenBeforeQuickTodo, setWasWindowHiddenBeforeQuickTodo] = useState(false);
     const [showRatingPrompt, setShowRatingPrompt] = useState(false);
+
+    // Event Reminder State
+    const [reminderAlerts, setReminderAlerts] = useState<ReminderAlert[]>([]);
 
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -358,6 +362,51 @@ function App() {
         };
     }, []);
 
+    // Event Reminder Listener - receives alerts from main process background checker
+    useEffect(() => {
+        const handleReminderAlerts = (_event: any, newAlerts: ReminderAlert[]) => {
+            const remindersEnabled = localStorage.getItem('event-reminders-enabled') !== 'false';
+            const isSuppressed = localStorage.getItem('notification-suppression') === 'true';
+            if (!remindersEnabled || isSuppressed) return;
+
+            setReminderAlerts(prev => {
+                const existingIds = new Set(prev.map(a => a.id));
+                const fresh = newAlerts.filter(a => !existingIds.has(a.id));
+                return [...prev, ...fresh];
+            });
+        };
+
+        // @ts-ignore
+        window.ipcRenderer?.on('event-reminder-alerts', handleReminderAlerts);
+
+        // Sync enabled state to main process on mount and when it changes
+        const syncEnabled = () => {
+            const enabled = localStorage.getItem('event-reminders-enabled') !== 'false';
+            // @ts-ignore
+            window.ipcRenderer?.invoke('set-reminders-enabled', enabled);
+        };
+        syncEnabled();
+        window.addEventListener('storage', syncEnabled);
+
+        return () => {
+            // @ts-ignore
+            window.ipcRenderer?.off('event-reminder-alerts', handleReminderAlerts);
+            window.removeEventListener('storage', syncEnabled);
+        };
+    }, []);
+
+    // Clean up old reminder overlays at midnight
+    useEffect(() => {
+        const checkMidnight = () => {
+            const now = new Date();
+            if (now.getHours() === 0 && now.getMinutes() === 0) {
+                setReminderAlerts([]);
+            }
+        };
+        const interval = setInterval(checkMidnight, 60000);
+        return () => clearInterval(interval);
+    }, []);
+
     // Auto-hide scrollbar logic
     useEffect(() => {
         let scrollTimeout: NodeJS.Timeout;
@@ -469,6 +518,23 @@ function App() {
         setSelectedDate(date);
         setCurrentPage('calendar');
         setCurrentMonth(date);
+    };
+
+    // Event Reminder Handlers
+    const handleDismissReminder = (alertId: string) => {
+        setReminderAlerts(prev => prev.filter(a => a.id !== alertId));
+    };
+
+    const handleDismissAllReminders = () => {
+        setReminderAlerts([]);
+    };
+
+    const handleViewReminderEvent = (date: string, _noteId: string) => {
+        const [y, m, d] = date.split('-').map(Number);
+        const eventDate = new Date(y, m - 1, d);
+        setSelectedDate(eventDate);
+        setCurrentMonth(eventDate);
+        setCurrentPage('calendar');
     };
 
     const handleMonthSelect = (monthIndex: number) => {
@@ -979,6 +1045,10 @@ function App() {
                         setShowRatingPrompt={setShowRatingPrompt}
                         activeTutorialId={activeTutorialId}
                         setActiveTutorialId={setActiveTutorialId}
+                        reminderAlerts={reminderAlerts}
+                        handleDismissReminder={handleDismissReminder}
+                        handleDismissAllReminders={handleDismissAllReminders}
+                        handleViewReminderEvent={handleViewReminderEvent}
                     />
                 </TimerProvider>
             </DashboardLayoutProvider>
@@ -1049,6 +1119,10 @@ interface AppContentProps {
     setShowRatingPrompt: (value: boolean) => void;
     activeTutorialId: string | null;
     setActiveTutorialId: (id: string | null) => void;
+    reminderAlerts: ReminderAlert[];
+    handleDismissReminder: (alertId: string) => void;
+    handleDismissAllReminders: () => void;
+    handleViewReminderEvent: (date: string, noteId: string) => void;
 }
 
 // Wrapper component to handle switching between Notebook and Nerdbook views
@@ -1128,7 +1202,8 @@ function AppContent(props: AppContentProps) {
         handleAddQuickNote, handleUpdateQuickNote, handleDeleteQuickNote,
         nerdbooks, handleAddNerdbook, handleUpdateNerdbook, handleDeleteNerdbook,
         showRatingPrompt, setShowRatingPrompt,
-        activeTutorialId, setActiveTutorialId
+        activeTutorialId, setActiveTutorialId,
+        reminderAlerts, handleDismissReminder, handleDismissAllReminders, handleViewReminderEvent
     } = props;
 
     // Check if we're on workspace page - it needs full width layout
@@ -1307,6 +1382,15 @@ function AppContent(props: AppContentProps) {
 
             {/* Timer overlays - visible on all pages */}
             <TimerAlertOverlay isSidebarCollapsed={isSidebarCollapsed} />
+
+            {/* Event Reminder overlay - visible on all pages */}
+            <EventReminderOverlay
+                alerts={reminderAlerts}
+                onDismiss={handleDismissReminder}
+                onDismissAll={handleDismissAllReminders}
+                onViewEvent={handleViewReminderEvent}
+                isSidebarCollapsed={isSidebarCollapsed}
+            />
 
             {/* Update notification - checks for new versions */}
             <UpdateNotification isSidebarCollapsed={isSidebarCollapsed} />

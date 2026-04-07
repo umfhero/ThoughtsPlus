@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Plus, X, Trash2, Sparkles, Edit2, Search, Repeat, Flag } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, X, Trash2, Sparkles, Edit2, Search, Repeat, Flag, BellRing } from 'lucide-react';
+import { ScrollTimePicker, getDefaultTime } from '../components/ScrollTimePicker';
 import {
     format,
     addMonths,
@@ -48,7 +49,7 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
     const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
-    const [time, setTime] = useState('09:00');
+    const [time, setTime] = useState(getDefaultTime);
     const [importance, setImportance] = useState<Note['importance']>('misc');
 
     // Recurrence State
@@ -57,6 +58,9 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
     const [recurrenceEndMode, setRecurrenceEndMode] = useState<'count' | 'date'>('count');
     const [recurrenceCount, setRecurrenceCount] = useState(5);
     const [recurrenceEndDate, setRecurrenceEndDate] = useState('');
+
+    // Reminder State
+    const [selectedReminders, setSelectedReminders] = useState<number[]>([]);
 
     // AI Quick Add State
     const [isAiModalOpen, setIsAiModalOpen] = useState(false);
@@ -155,8 +159,9 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
         setEditingNoteId(null);
         setTitle('');
         setDescription('');
-        setTime('09:00');
+        setTime(getDefaultTime());
         setImportance('misc');
+        setSelectedReminders([]);
         setIsRecurring(false);
         setRecurrenceType('weekly');
         setRecurrenceEndMode('count');
@@ -214,6 +219,7 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
         setDescription(note.description);
         setTime(note.time);
         setImportance(note.importance);
+        setSelectedReminders(note.reminder || []);
     };
 
     const saveNotes = async (newNotes: NotesData) => {
@@ -247,6 +253,7 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
                 summary: summary || undefined,
                 time,
                 importance,
+                reminder: selectedReminders.length > 0 ? selectedReminders : undefined,
                 recurrence: isRecurring ? {
                     type: recurrenceType,
                     count: recurrenceEndMode === 'count' ? recurrenceCount : undefined,
@@ -730,13 +737,7 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
                                     style={{ '--tw-ring-color': `${accentColor}33` } as any}
                                 />
                                 <div className="flex flex-col lg:flex-row gap-2">
-                                    <input
-                                        type="time"
-                                        value={time}
-                                        onChange={(e) => setTime(e.target.value)}
-                                        className="w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 cursor-pointer [color-scheme:light] dark:[color-scheme:dark]"
-                                        style={{ '--tw-ring-color': `${accentColor}33` } as any}
-                                    />
+                                    <ScrollTimePicker value={time} onChange={setTime} />
                                     <select
                                         value={importance}
                                         onChange={(e) => setImportance(e.target.value as any)}
@@ -759,6 +760,43 @@ export function CalendarPage({ notes, setNotes, initialSelectedDate, currentMont
                                         <option value="high">High</option>
                                         <option value="misc">Misc</option>
                                     </select>
+                                </div>
+
+                                {/* Reminder Checkboxes */}
+                                <div className="border-t border-gray-200 dark:border-gray-600 pt-3 mt-1">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <BellRing className="w-4 h-4 text-gray-500" />
+                                        <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">Reminders</span>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-1.5 pl-6">
+                                        {[
+                                            { value: 0, label: 'At event time' },
+                                            { value: 5, label: '5 min before' },
+                                            { value: 10, label: '10 min before' },
+                                            { value: 15, label: '15 min before' },
+                                            { value: 30, label: '30 min before' },
+                                            { value: 60, label: '1 hour before' },
+                                            { value: 120, label: '2 hours before' },
+                                            { value: 1440, label: '1 day before' },
+                                        ].map(opt => (
+                                            <label key={opt.value} className="flex items-center gap-1.5 cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedReminders.includes(opt.value)}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                            setSelectedReminders(prev => [...prev, opt.value].sort((a, b) => b - a));
+                                                        } else {
+                                                            setSelectedReminders(prev => prev.filter(v => v !== opt.value));
+                                                        }
+                                                    }}
+                                                    className="rounded border-gray-300 focus:ring-2"
+                                                    style={{ accentColor: accentColor, '--tw-ring-color': `${accentColor}33` } as any}
+                                                />
+                                                <span className="text-xs text-gray-600 dark:text-gray-400">{opt.label}</span>
+                                            </label>
+                                        ))}
+                                    </div>
                                 </div>
 
                                 {/* Recurrence Options */}

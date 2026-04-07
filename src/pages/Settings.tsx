@@ -117,6 +117,9 @@ export function SettingsPage() {
     // Additional Settings State (Local UI State for demonstration of enriched containers)
     const [notificationSound, setNotificationSound] = useState(true);
     const [quietMode, setQuietMode] = useState(false);
+    const [eventRemindersEnabled, setEventRemindersEnabled] = useState(() => {
+        return localStorage.getItem('event-reminders-enabled') !== 'false';
+    });
 
     // App Icon change tracking
     const [iconJustChanged, setIconJustChanged] = useState(false);
@@ -1674,6 +1677,38 @@ export function SettingsPage() {
                                             layout
                                             className="w-4 h-4 rounded-full bg-white shadow-md"
                                             animate={{ x: quietMode ? 16 : 0 }}
+                                            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                                        />
+                                    </div>
+                                </button>
+                            </div>
+
+                            <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600 min-w-0">
+                                <div className="flex items-center gap-3 min-w-0 flex-1">
+                                    <Bell className="w-4 h-4 text-gray-400" />
+                                    <div className="min-w-0 flex-1">
+                                        <span className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate block">Event Reminders</span>
+                                        <span className="text-xs text-gray-500 dark:text-gray-400 truncate block">Desktop alerts for upcoming events</span>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        const next = !eventRemindersEnabled;
+                                        setEventRemindersEnabled(next);
+                                        localStorage.setItem('event-reminders-enabled', String(next));
+                                        // @ts-ignore - sync to main process for background notifications
+                                        window.ipcRenderer?.invoke('set-reminders-enabled', next);
+                                    }}
+                                    className={clsx(
+                                        "w-9 h-5 rounded-full p-0.5 transition-colors duration-300 focus:outline-none shrink-0"
+                                    )}
+                                    style={{ backgroundColor: eventRemindersEnabled ? accentColor : undefined }}
+                                >
+                                    <div className={clsx("w-full h-full rounded-full transition-colors duration-300", !eventRemindersEnabled && "bg-gray-300 dark:bg-gray-600")}>
+                                        <motion.div
+                                            layout
+                                            className="w-4 h-4 rounded-full bg-white shadow-md"
+                                            animate={{ x: eventRemindersEnabled ? 16 : 0 }}
                                             transition={{ type: "spring", stiffness: 500, damping: 30 }}
                                         />
                                     </div>

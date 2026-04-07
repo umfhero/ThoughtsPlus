@@ -544,6 +544,15 @@ body.is-scrolling ::-webkit-scrollbar-thumb {
   /* Gray-500 */
 }
 
+/* Hide scrollbar completely */
+.hide-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* Thin scrollbar for specific containers */
 .thin-scrollbar::-webkit-scrollbar {
   width: 10px;
