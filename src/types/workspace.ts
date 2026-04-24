@@ -131,6 +131,8 @@ export interface WorkspaceData {
     openTabs: string[];     // Array of file IDs for open tabs
     activeTabId: string | null; // Currently active tab
     sidebarVisible: boolean; // Whether sidebar is visible
+    explorerPosition?: 'left' | 'right'; // Explorer sidebar position (default: 'left')
+    explorerWidth?: number; // Explorer sidebar width in pixels (default: 220, min: 160, max: 500)
     migrationComplete: boolean; // Legacy migration from old data format
     fileBasedMigrationComplete?: boolean; // Migration to individual files
     sessions?: WorkspaceSession[]; // Saved sessions

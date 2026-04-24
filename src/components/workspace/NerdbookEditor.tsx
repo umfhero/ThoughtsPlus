@@ -2174,7 +2174,7 @@ sys.stderr = StringIO()
 
             {/* Cells Container */}
             <div ref={scrollContainerRef} className="flex-1 overflow-y-auto scrollbar-none bg-white dark:bg-gray-900">
-                <div className="w-full max-w-[95%] xl:max-w-[90%] mx-auto py-6 px-2">
+                <div className="w-full max-w-[95%] xl:max-w-[80rem] mx-auto py-6 px-4 xl:px-8">
                     <AnimatePresence>
                         {notebook.cells.map((cell, index) => {
                             const isSelected = selectedCellId === cell.id;

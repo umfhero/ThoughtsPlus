@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FileTree, ContentArea, NerdbookEditor, BoardEditor, TabBar, LinkedNotesGraph, ImageGallery, ConnectionsPanel, NodeMapEditor, FlashcardsGallery, AiFlashcardGenerator } from '../components/workspace';
 import {
@@ -81,6 +81,7 @@ export function WorkspacePage({
     setPage,
     onSidebarTransition,
 }: WorkspacePageProps) {
+    const explorerResizeRefCallback = useRef<{ startX: number; startWidth: number } | null>(null);
     // Workspace data state
     const [workspaceData, setWorkspaceData] = useState<WorkspaceData>({
         files: [],
@@ -100,6 +101,11 @@ export function WorkspacePage({
     const [noteContents, setNoteContents] = useState<Record<string, string>>({});
     const [sidebarVisible, setSidebarVisible] = useState(true);
     const [sidebarManuallyToggled, setSidebarManuallyToggled] = useState(false);
+    const [explorerPosition, setExplorerPosition] = useState<'left' | 'right'>('left');
+    const [explorerWidth, setExplorerWidth] = useState(220);
+    const [isResizingExplorer, setIsResizingExplorer] = useState(false);
+    const explorerResizeRef = useRef<{ startX: number; startWidth: number } | null>(null);
+    const [selectedFileIds, setSelectedFileIds] = useState<Set<string>>(new Set());
 
     // Modal state
     const [renameModal, setRenameModal] = useState<{
@@ -185,10 +191,14 @@ export function WorkspacePage({
                         setWorkspaceData(migrationResult.workspaceData);
                         setExpandedFolders(new Set(migrationResult.workspaceData.expandedFolders));
                         setSidebarVisible(migrationResult.workspaceData.sidebarVisible ?? true);
+                        setExplorerPosition(migrationResult.workspaceData.explorerPosition ?? 'left');
+                        setExplorerWidth(migrationResult.workspaceData.explorerWidth ?? 220);
                     } else {
                         setWorkspaceData(data);
                         setExpandedFolders(new Set(data.expandedFolders));
                         setSidebarVisible(data.sidebarVisible ?? true);
+                        setExplorerPosition(data.explorerPosition ?? 'left');
+                        setExplorerWidth(data.explorerWidth ?? 220);
                     }
                 } else {
                     // Migration already complete, but check if any files are missing filePath
@@ -230,6 +240,8 @@ export function WorkspacePage({
                             setWorkspaceData(updatedData);
                             setExpandedFolders(new Set(updatedData.expandedFolders));
                             setSidebarVisible(updatedData.sidebarVisible ?? true);
+                            setExplorerPosition(updatedData.explorerPosition ?? 'left');
+                            setExplorerWidth(updatedData.explorerWidth ?? 220);
                             console.log(`[Workspace] Migrated ${migrationResult.files.length} files to individual storage`);
 
                             // Fix any old .nt files that have JSON structure
@@ -251,6 +263,8 @@ export function WorkspacePage({
                     setWorkspaceData(data);
                     setExpandedFolders(new Set(data.expandedFolders));
                     setSidebarVisible(data.sidebarVisible ?? true);
+                    setExplorerPosition(data.explorerPosition ?? 'left');
+                    setExplorerWidth(data.explorerWidth ?? 220);
                 }
             } catch (error) {
                 console.error('Failed to load workspace:', error);
@@ -296,6 +310,8 @@ export function WorkspacePage({
                 setWorkspaceData(data);
                 setExpandedFolders(new Set(data.expandedFolders));
                 setSidebarVisible(data.sidebarVisible ?? true);
+                setExplorerPosition(data.explorerPosition ?? 'left');
+                setExplorerWidth(data.explorerWidth ?? 220);
             } catch (error) {
                 console.error('[Workspace] Failed to reload workspace:', error);
             }
@@ -703,6 +719,47 @@ export function WorkspacePage({
 
         saveWorkspaceData({ ...workspaceData, sidebarVisible: newVisible });
     }, [sidebarVisible, workspaceData, saveWorkspaceData]);
+
+    // Handle explorer position toggle (left/right)
+    const handleToggleExplorerPosition = useCallback(() => {
+        const newPosition = explorerPosition === 'left' ? 'right' : 'left';
+        setExplorerPosition(newPosition);
+        saveWorkspaceData({ ...workspaceData, explorerPosition: newPosition });
+    }, [explorerPosition, workspaceData, saveWorkspaceData]);
+
+    // Handle explorer width resize via drag
+    const handleExplorerResizeStart = useCallback((e: React.MouseEvent) => {
+        e.preventDefault();
+        setIsResizingExplorer(true);
+        explorerResizeRefCallback.current = { startX: e.clientX, startWidth: explorerWidth };
+
+        const handleMouseMove = (ev: MouseEvent) => {
+            if (!explorerResizeRefCallback.current) return;
+            const { startX, startWidth } = explorerResizeRefCallback.current;
+            const delta = explorerPosition === 'left' ? ev.clientX - startX : startX - ev.clientX;
+            const newWidth = Math.max(160, Math.min(500, startWidth + delta));
+            setExplorerWidth(newWidth);
+        };
+
+        const handleMouseUp = () => {
+            setIsResizingExplorer(false);
+            explorerResizeRefCallback.current = null;
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            // Save the final width
+            setExplorerWidth(prevWidth => {
+                saveWorkspaceData({ ...workspaceData, explorerWidth: prevWidth });
+                return prevWidth;
+            });
+        };
+
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+    }, [explorerWidth, explorerPosition, workspaceData, saveWorkspaceData]);
 
     const handleFolderToggle = useCallback((folderId: string) => {
         setExpandedFolders(prev => {
@@ -1335,25 +1392,27 @@ export function WorkspacePage({
                 openTabs={openTabFiles}
                 activeTabId={workspaceData.activeTabId}
                 sidebarVisible={sidebarVisible}
+                explorerPosition={explorerPosition}
                 onTabSelect={handleFileSelect}
                 onTabClose={handleTabClose}
                 onToggleSidebar={handleToggleSidebar}
+                onToggleExplorerPosition={handleToggleExplorerPosition}
                 onBack={handleBack}
                 onRename={handleInlineRename}
                 onReorderTabs={handleReorderTabs}
             />
 
             {/* Main content area */}
-            <div className="flex-1 flex min-h-0">
+            <div className={`flex-1 flex min-h-0 ${explorerPosition === 'right' ? 'flex-row-reverse' : 'flex-row'}`}>
                 {/* File Tree Sidebar */}
                 <AnimatePresence initial={false}>
                     {sidebarVisible && (
                         <motion.div
                             initial={{ width: 0, opacity: 0 }}
-                            animate={{ width: 220, opacity: 1 }}
+                            animate={{ width: explorerWidth, opacity: 1 }}
                             exit={{ width: 0, opacity: 0 }}
                             transition={{ duration: 0.2 }}
-                            className="flex-shrink-0 overflow-hidden"
+                            className="flex-shrink-0 overflow-hidden relative"
                         >
                             <FileTree
                                 files={workspaceData.files}
@@ -1378,6 +1437,24 @@ export function WorkspacePage({
                                 onOpenFile={handleOpenExternalFile}
                                 onTurnIntoFlashcards={handleTurnIntoFlashcards}
                                 onFolderColorChange={handleFolderColorChange}
+                                selectedFileIds={selectedFileIds}
+                                onSelectedFileIdsChange={setSelectedFileIds}
+                                onMultiDelete={(ids) => {
+                                    // Delete multiple files
+                                    ids.forEach(id => {
+                                        const file = workspaceData.files.find(f => f.id === id);
+                                        const folder = workspaceData.folders.find(f => f.id === id);
+                                        if (file || folder) {
+                                            handleDelete(id, !!folder);
+                                        }
+                                    });
+                                    setSelectedFileIds(new Set());
+                                }}
+                            />
+                            {/* Resize handle */}
+                            <div
+                                className={`absolute top-0 bottom-0 w-1 cursor-col-resize z-30 hover:bg-blue-500/40 transition-colors ${isResizingExplorer ? 'bg-blue-500/60' : ''} ${explorerPosition === 'left' ? 'right-0' : 'left-0'}`}
+                                onMouseDown={handleExplorerResizeStart}
                             />
                         </motion.div>
                     )}
@@ -1525,7 +1602,7 @@ export function WorkspacePage({
                 file={connectionsModalFile}
                 workspaceFiles={workspaceData.files}
                 getFileContent={getFileContent}
-                sidebarWidth={sidebarVisible ? 220 : 0}
+                sidebarWidth={sidebarVisible ? explorerWidth : 0}
                 onAddConnection={async (fromFileId, toFileName) => {
                     // Add @mention to the file content
                     const file = workspaceData.files.find(f => f.id === fromFileId);
@@ -1602,7 +1679,7 @@ export function WorkspacePage({
                 }}
                 initialFileId={aiFlashcardInitialFileId}
                 workspaceFiles={workspaceData.files}
-                sidebarWidth={sidebarVisible ? 220 : 0}
+                sidebarWidth={sidebarVisible ? explorerWidth : 0}
                 onGenerate={handleGenerateFlashcards}
             />
         </div>
