@@ -43,6 +43,8 @@ jobs:
           mkdir -p release/macos
           mv release/*.dmg release/macos/ 2>/dev/null || true
           mv release/*.blockmap release/macos/ 2>/dev/null || true
+          mv release/*.zip release/macos/ 2>/dev/null || true
+          mv release/*mac.yml release/macos/ 2>/dev/null || true
       
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
@@ -96,6 +98,7 @@ jobs:
         run: |
           mkdir -p release/linux
           mv release/*.AppImage release/linux/ 2>/dev/null || true
+          mv release/*linux.yml release/linux/ 2>/dev/null || true
       
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
