@@ -14,6 +14,8 @@ interface TabBarProps {
     onBack: () => void;
     onRename?: (fileId: string, newName: string) => void;
     onReorderTabs?: (newOrder: string[]) => void;
+    explorerPosition?: 'left' | 'right';
+    onToggleExplorerPosition?: () => void;
 }
 
 /**

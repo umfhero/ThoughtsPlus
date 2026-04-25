@@ -104,7 +104,6 @@ export function WorkspacePage({
     const [explorerPosition, setExplorerPosition] = useState<'left' | 'right'>('left');
     const [explorerWidth, setExplorerWidth] = useState(220);
     const [isResizingExplorer, setIsResizingExplorer] = useState(false);
-    const explorerResizeRef = useRef<{ startX: number; startWidth: number } | null>(null);
     const [selectedFileIds, setSelectedFileIds] = useState<Set<string>>(new Set());
 
     // Modal state
@@ -1439,9 +1438,9 @@ export function WorkspacePage({
                                 onFolderColorChange={handleFolderColorChange}
                                 selectedFileIds={selectedFileIds}
                                 onSelectedFileIdsChange={setSelectedFileIds}
-                                onMultiDelete={(ids) => {
+                                onMultiDelete={(ids: string[]) => {
                                     // Delete multiple files
-                                    ids.forEach(id => {
+                                    ids.forEach((id: string) => {
                                         const file = workspaceData.files.find(f => f.id === id);
                                         const folder = workspaceData.folders.find(f => f.id === id);
                                         if (file || folder) {

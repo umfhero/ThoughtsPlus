@@ -30,6 +30,9 @@ interface FileTreeProps {
     onOpenFile?: () => void;
     onTurnIntoFlashcards?: (fileId: string) => void;
     onFolderColorChange?: (folderId: string, color: string) => void;
+    selectedFileIds?: Set<string>;
+    onSelectedFileIdsChange?: (ids: Set<string>) => void;
+    onMultiDelete?: (ids: string[]) => void;
 }
 
 interface ContextMenuState {

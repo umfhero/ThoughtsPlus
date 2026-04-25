@@ -12,6 +12,9 @@ on:
         description: 'Force a specific version (optional, leave blank to auto-detect)'
         required: false
         type: string
+        
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   sync-version:
