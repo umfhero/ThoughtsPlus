@@ -13,6 +13,17 @@
 [![Linux](https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black)](https://github.com/umfhero/ThoughtsPlus/releases/latest)
 [![Website](https://img.shields.io/badge/Website-Visit_Site-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white)](https://thoughtsplus.me/)
 
+
+## Star History
+
+<a href="https://www.star-history.com/?repos=umfhero%2FThoughtsPlus&type=timeline&legend=bottom-right">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=umfhero/ThoughtsPlus&type=timeline&theme=dark&legend=bottom-right" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=umfhero/ThoughtsPlus&type=timeline&legend=bottom-right" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=umfhero/ThoughtsPlus&type=timeline&legend=bottom-right" />
+ </picture>
+</a>
+
 ### Platform Support
 
 | Platform | Formats | Architecture |
