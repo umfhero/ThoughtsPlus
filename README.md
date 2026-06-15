@@ -13,6 +13,8 @@
 [![Linux](https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black)](https://github.com/umfhero/ThoughtsPlus/releases/latest)
 [![Website](https://img.shields.io/badge/Website-Visit_Site-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white)](https://thoughtsplus.me/)
 
+
+
 ### Platform Support
 
 | Platform | Formats | Architecture |
